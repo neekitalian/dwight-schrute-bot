@@ -28,6 +28,14 @@ input/model identity; cross-platform checks compare behavior numerically, not
 binary model equality. Existing frozen-release checksum enforcement is unchanged.
 These hosted results remain synthetic and do not establish a trading edge.
 
+The reporting framework refresh also reached RUNNING and completed the hosted
+synthetic callback. Its committed source is `00a2392ab36e93fce678c086d76246f98a8c80dc`
+and Space commit is `d917637855eeda801fef23aa4acd66c4b9ceb35c`. The served app
+shows the revised TradingView monitoring wording. The public bundle contains 39
+allowlisted files. Private experiment reports, campaign recipients and credentials
+were not uploaded. The interface remains the fixed synthetic demo; the new
+milestone reports run privately on the experiment host.
+
 ## Local development
 
 Use a separate virtual environment to avoid changing the validated trading CLI
