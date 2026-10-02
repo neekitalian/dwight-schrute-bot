@@ -30,6 +30,8 @@ are documented research proposals; no transformer is loaded, evaluated or credit
 
 - **Performance:** simulated equity, drawdown, returns, session P&L and trade risk multiples.
   Compare VWAP, a simple volume filter and Dwight on the same later test sessions.
+- **Walk-forward:** three chronological long-only tests, with training and validation dates,
+  per-window P&L and a final 40-session period kept unscored. Runs only when requested.
 - **Trade explorer:** select a session and policy to inspect candles, session VWAP, EMA20,
   long and short simulated entries, exits and the trade ledger. Times use New York.
 - **Model analysis:** held out calibration and fitted logistic score contributions.
@@ -43,6 +45,12 @@ commission and slippage. Each has 500 calendar days of invented bars. The cost c
 under changed costs, so it is neither an independent path nor pure cost attribution. Results
 across these fixtures are software checks, not evidence of a QQQ trading edge.
 
+The separate walk-forward view uses seed 42, expanding training windows and matching long-only
+policies. Its reduced sample requirements test the software rather than establish statistical
+power. Every window is shown, including weak results. Independent window results are not joined
+into an account equity curve, and the final reserved period is never scored. This policy differs
+from the Performance tab's long-and-short test, so their results are not interchangeable.
+
 The first request trains and independently replays the policies on CPU, then checks them against
 the saved evidence. Later requests reuse a bounded process memory cache. Temporary input files,
 trade files and artifact files are removed; JSON results and model coefficients remain in memory
@@ -54,11 +62,13 @@ configured in the public Space; the private local workflow supports them.
 This app has no credential entry, user uploads, custom code, broker operation or model promotion
 action. It does not ingest private journals or expose the milestone email campaign. The original
 inputless `/synthetic_experiment` endpoint is retained; `/dashboard` accepts only the fixed cases
-and evaluated strategy names. Public charts use generated data only.
+and evaluated strategy names. The inputless `/walkforward` endpoint evaluates the fixed window
+plan. Public charts use generated data only.
 
 Actual QQQ history, transformer experiments, forward shadow observation and the complete paper
 execution lifecycle still need validation. Paper Trading by TradingView is a separate simulator;
-the planned manual proposal and result import workflow is not implemented here. Continuous
+the repository's private manual proposal and normalized fill import CLI does not place orders or
+run in this public app. Native TradingView export compatibility still needs testing. Continuous
 broker workers and milestone reporting belong on a separately supervised host with durable state.
 The 12 hour, 24 hour, 48 hour and one week observation clocks have not started.
 
