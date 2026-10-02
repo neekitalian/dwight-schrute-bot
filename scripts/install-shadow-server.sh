@@ -8,10 +8,12 @@ fi
 revision=$2
 if [[ $(id -u) != 0 ]]; then echo 'Run as root on the selected Ubuntu host.' >&2; exit 2; fi
 if ! grep -q '^ID=ubuntu$' /etc/os-release; then echo 'Ubuntu is required.' >&2; exit 2; fi
-if systemctl is-active --quiet dwight-shadow.service; then
-  echo 'An active shadow worker must be reviewed and stopped before replacing its release.' >&2
-  exit 2
-fi
+for service in dwight-shadow.service dwight-alert-inbox.service; do
+  if systemctl is-active --quiet "$service"; then
+    echo "Active $service must be reviewed and stopped before replacing its release." >&2
+    exit 2
+  fi
+done
 for path in /opt/dwight /var/lib/dwight /etc/dwight; do
   if [[ -L $path ]]; then echo "Refusing symlink: $path" >&2; exit 2; fi
 done
@@ -45,7 +47,8 @@ runuser -u dwight -- env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_
 install -m 644 deploy/linux/dwight-shadow.service /etc/systemd/system/dwight-shadow.service
 install -m 644 deploy/linux/dwight-reports.service /etc/systemd/system/dwight-reports.service
 install -m 644 deploy/linux/dwight-reports.timer /etc/systemd/system/dwight-reports.timer
-systemd-analyze verify /etc/systemd/system/dwight-shadow.service /etc/systemd/system/dwight-reports.service /etc/systemd/system/dwight-reports.timer
+install -m 644 deploy/linux/dwight-alert-inbox.service /etc/systemd/system/dwight-alert-inbox.service
+systemd-analyze verify /etc/systemd/system/dwight-shadow.service /etc/systemd/system/dwight-reports.service /etc/systemd/system/dwight-reports.timer /etc/systemd/system/dwight-alert-inbox.service
 systemctl daemon-reload
 # No environment file, credentials or release is fabricated or overwritten.
 # Activation is a separate step after real-data evaluation and release checks.

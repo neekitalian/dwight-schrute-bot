@@ -8,6 +8,7 @@ from .analytics import CASE_IDS, CASE_LABELS, VARIANT_LABELS, run_dashboard_expe
 from .charts import default_session, diagnostics_figure, equity_figure, outcomes_figure, session_figure, sessions
 from . import presentation as ui
 from . import walkforward_view as walkforward
+from . import starter
 from .research import COMPARISON_HEADERS, present_experiment, run_synthetic_experiment
 
 
@@ -72,6 +73,14 @@ def build_app():
             case = gr.Dropdown(choices=[(CASE_LABELS[k], k) for k in CASE_IDS], value="seed42", label="Fixed research case", scale=3)
             gr.Markdown("**Four reproducible tests.** The first visit trains and audits all four cases on CPU. Later visits reuse this process's results.", elem_classes="dw-note")
             refresh = gr.Button("Evaluate case", variant="primary", scale=1)
+        with gr.Tab("Start here"):
+            gr.Markdown(starter.INTRO)
+            html(starter.FLOW)
+            gr.Markdown(starter.DOWNLOAD)
+            starter_choice = gr.Dropdown(choices=list(starter.CHOICES), value=starter.CHOICES[0], label="What would you like to do first?")
+            starter_steps = gr.Markdown(starter.plan(starter.CHOICES[0]))
+            starter_choice.input(starter.plan, starter_choice, starter_steps, api_name="starter_plan")
+            gr.Markdown(starter.BOUNDARY)
         with gr.Tab("Performance"):
             cards = html('<div class="dw-callout">Computing the fixed synthetic experiments…</div>')
             note = gr.Markdown()

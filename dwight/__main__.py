@@ -78,8 +78,21 @@ def _import_manual_snapshot(journal, path, kind):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Dwight: paper-first research framework")
+    parser = argparse.ArgumentParser(description="Dwight: QQQ research and TradingView alert toolkit")
+    from . import __version__
+    parser.add_argument("--version", action="version", version=f"Dwight {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
+    p = commands.add_parser('init-workspace', help='Create a private QQQ research workspace without credentials or orders')
+    p.add_argument('directory', type=Path)
+    p = commands.add_parser('toolkit-status', help='Check private workspace preparation without network or credential values')
+    p.add_argument('directory', type=Path)
+    p = commands.add_parser('tradingview-serve', help='Serve a local authenticated observation inbox; cannot place orders')
+    p.add_argument('--state', type=Path, default=Path('runs/tradingview/inbox.sqlite3'))
+    p.add_argument('--host', default='127.0.0.1', help='Loopback only; use a reviewed TLS proxy for external delivery')
+    p.add_argument('--port', type=int, default=8765)
+    p = commands.add_parser('tradingview-list', help='List unreviewed TradingView observations; these are not trades')
+    p.add_argument('--state', type=Path, default=Path('runs/tradingview/inbox.sqlite3'))
+    p.add_argument('--limit', type=int, default=100)
     commands.add_parser("strategies", help="List registered strategies")
     commands.add_parser("doctor", help="Check preparation; never prints credential values")
     p = commands.add_parser("replay", help="Historical CSV replay with simulated fills")
@@ -188,8 +201,34 @@ def main():
     p.add_argument('--receipt', required=True)
     args = parser.parse_args()
     try:
-        load_env()
-        if args.command == "strategies":
+        # Onboarding checks only the selected workspace, without importing an
+        # unrelated current-directory .env into this process.
+        if args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list'}:
+            load_env()
+        if args.command == 'init-workspace':
+            from .toolkit import init_workspace
+            result = init_workspace(args.directory)
+        elif args.command == 'toolkit-status':
+            from .toolkit import toolkit_status
+            result = toolkit_status(args.directory)
+        elif args.command == 'tradingview-serve':
+            from .tradingview import TradingViewInbox, capability_from_env, make_server
+            capability = capability_from_env()
+            inbox = TradingViewInbox(args.state)
+            with make_server(inbox, host=args.host, port=args.port, capability=capability) as server:
+                print(json.dumps({'status': 'listening', 'host': server.server_address[0],
+                                  'port': server.server_address[1], 'mode': 'unreviewed_observations',
+                                  'submits_orders': False}), flush=True)
+                try:
+                    server.serve_forever(poll_interval=0.2)
+                except KeyboardInterrupt:
+                    pass
+            return
+        elif args.command == 'tradingview-list':
+            from .tradingview import TradingViewInbox
+            result = {'mode': 'unreviewed_observations', 'submits_orders': False,
+                      'events': TradingViewInbox(args.state).list_events(limit=args.limit)}
+        elif args.command == "strategies":
             result = {key: {"mode": "historical_replay", "asset_class": "equities", "allowed_symbols": ['QQQ']} for key in STRATEGIES}
         elif args.command == "replay":
             config = json.loads(args.config.read_text()) if args.config else {}

@@ -1,0 +1,94 @@
+"""Public onboarding directions only. No workspace, account or credential access."""
+REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
+RELEASE = REPOSITORY + '/releases/tag/v0.3.0'
+CHOICES = (
+    'Explore the research demo',
+    'Research my own QQQ history',
+    'Connect TradingView alerts',
+    'Record TradingView paper trades',
+)
+INTRO = '''### A small toolkit for learning before trading
+
+Start with a repeatable VWAP strategy, measure what changes, and keep a record of every decision.
+Dwight 0.3.0 packages historical research, model experiments and a private TradingView observation inbox.
+This public app demonstrates the research using invented prices. It does not host your trading account.
+'''
+FLOW = '''<div class="dw-flow">
+<div class="dw-node"><span>01 / PREPARE</span><b>Create your workspace</b><small>Private configuration, datasets and journals on your machine or server.</small></div>
+<div class="dw-arrow">→</div><div class="dw-node"><span>02 / MEASURE</span><b>Replay QQQ history</b><small>Compare a fixed baseline, costs and features on later periods.</small></div>
+<div class="dw-arrow">→</div><div class="dw-node"><span>03 / OBSERVE</span><b>Connect your tools</b><small>Capture TradingView alerts. Review before any manual paper action.</small></div>
+<div class="dw-arrow">→</div><div class="dw-node"><span>04 / REVIEW</span><b>Keep the evidence</b><small>Inspect fills, missed data and model results before changing a strategy.</small></div></div>'''
+DOWNLOAD = f'''[Download the versioned toolkit]({RELEASE}) · [Setup guide]({REPOSITORY}/blob/main/docs/quickstart.md) · [Source]({REPOSITORY})
+
+**What the release includes:** a Python CLI, a private workspace initializer, historical-data validation,
+VWAP replay, model comparisons, portable reports, a local alert inbox, and deployment templates.
+Your market data, account credentials and trained private models are supplied separately.
+'''
+PLANS = {
+    CHOICES[0]: '''### Explore without an account
+
+1. Open **Performance** to compare the baseline and classifier on fixed synthetic cases.
+2. Open **Walk-forward** to inspect training, validation and later test windows.
+3. Open **Transformer connections** to see where price and news models could contribute.
+
+Displayed returns belong to invented prices. They test the process and do not estimate future QQQ returns.
+No signup, wallet or trading credentials are needed for this demo.''',
+    CHOICES[1]: f'''### Keep historical research private
+
+Download and extract the toolkit, then follow the included setup guide. After installing its requirements:
+
+```sh
+dwight init-workspace ./my-dwight
+dwight toolkit-status ./my-dwight
+dwight download-qqq-sample --output ./my-dwight/private-data/firstrate
+```
+
+Run `scripts/review_qqq_sample.py` with the downloaded manifest to create the private report.
+The available official sample is useful for checking the complete process; it is too short to train a deployment model.
+For model research, collect substantially more QQQ history and preserve the same feed definition for future observation.
+
+[Complete private research steps]({REPOSITORY}/blob/main/docs/quickstart.md)''',
+    CHOICES[2]: f'''### TradingView to a private observation inbox
+
+TradingView chart → closed five minute bar alert → your HTTPS endpoint → Dwight inbox → human review.
+
+The toolkit includes a QQQ Pine observer template and a local receiver. After preparing the private endpoint capability:
+
+```sh
+dwight tradingview-serve --state ./my-dwight/runs/tradingview/inbox.sqlite3
+dwight tradingview-list --state ./my-dwight/runs/tradingview/inbox.sqlite3
+```
+
+Run the list command in a separate terminal. External TradingView delivery requires your own verified HTTPS proxy,
+TradingView 2FA and an alert configured in your account. The Pine template still needs compilation and delivery
+verification in TradingView. No webhook is connected through this public Space.
+
+Received alerts remain unreviewed observations. They are not broker orders, fills, authenticated market-data entitlements,
+or proof that the VWAP strategy should enter a position.
+
+[Connection guide]({REPOSITORY}/blob/main/docs/tradingview-alerts.md)''',
+    CHOICES[3]: f'''### Use your native TradingView paper account
+
+Dwight records a proposal → you review it → you enter an order in **Paper Trading by TradingView** →
+you normalize and import execution evidence → Dwight reports the imported fills.
+
+Pine alerts cannot automatically place orders in TradingView's built-in paper account. That simulator is separate
+from an Alpaca paper account. The toolkit does not silently switch accounts or automate the browser.
+
+The private journal tracks imported executions; it does not claim to know total account equity. A native TradingView
+CSV export adapter has not yet been verified, so follow the explicit normalization schema.
+
+[Manual paper workflow]({REPOSITORY}/blob/main/docs/manual-paper.md)''',
+}
+BOUNDARY = '''**Model status.** The original classifier and the additional session features are research components.
+A short real QQQ sample has been replayed privately, but it did not meet the training gates. Transformer and FinRL
+performance remain unmeasured. No profitable model is bundled or promised.
+
+**License and scope** The reusable core is Apache 2.0. This release is a research preview.
+Managed execution is not implemented. Market-data rights and third-party model licenses remain separate.'''
+
+
+def plan(choice):
+    if choice not in PLANS:
+        raise ValueError('Choose one of the supported toolkit paths')
+    return PLANS[choice]

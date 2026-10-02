@@ -5,7 +5,7 @@ These checks establish implementation behavior, not investment performance or br
 | Check | Result |
 |---|---|
 | Package build/install | Editable Dwight 0.2.0 installed successfully on Python 3.11 |
-| Full local unit suite | 261 tests ran: 255 passed and six optional-dependency checks skipped (four Gym, two Gradio). Includes real sample ingestion/provenance/TLS, private artifact permissions, end-to-end private replay, feature comparison, manual FIFO/import audit, CLI evidence modes, walk-forward leakage/holdout checks and the public view. All 12 public walk-forward tests separately passed in the Hugging Face environment. |
+| Full local unit suite | 297 tests ran: 290 passed and seven optional-dependency checks skipped (four Gym, three Gradio). Includes workspace onboarding, durable TradingView observations, source-bundle integrity, real sample ingestion/provenance/TLS, private artifact permissions, end-to-end private replay, feature comparison, manual FIFO/import audit, CLI evidence modes and walk-forward leakage/holdout checks. All 17 Space onboarding, walk-forward and bundle tests separately passed in the Hugging Face environment. Gradio teardown emitted event-loop ResourceWarnings; assertions passed. |
 | Robustness batch | Three fixed synthetic seeds plus a doubled cost case completed with MLflow records; all four audits passed; the model beat the baseline in only one of the three ordinary cases |
 | Visual report | Four private HTML reports and PNG chart pairs generated; browser loaded the comparison page and both example charts without horizontal overflow |
 | Milestone delivery | Private ledger initialized for 12, 24, 48 and 168 hours; observation clock not started; no emails sent; no mail provider connected |

@@ -28,6 +28,8 @@ are documented research proposals; no transformer is loaded, evaluated or credit
 
 ## Explore the app
 
+- **Start here:** four setup paths and a versioned source toolkit download. Directions
+  keep private historical research and TradingView paper workflows off the public Space.
 - **Performance:** simulated equity, drawdown, returns, session P&L and trade risk multiples.
   Compare VWAP, a simple volume filter and Dwight on the same later test sessions.
 - **Walk-forward:** three chronological long-only tests, with training and validation dates,
@@ -65,8 +67,9 @@ inputless `/synthetic_experiment` endpoint is retained; `/dashboard` accepts onl
 and evaluated strategy names. The inputless `/walkforward` endpoint evaluates the fixed window
 plan. Public charts use generated data only.
 
-Actual QQQ history, transformer experiments, forward shadow observation and the complete paper
-execution lifecycle still need validation. Paper Trading by TradingView is a separate simulator;
+A private 11-session official QQQ sample has been validated and replayed; it is too small to
+qualify a model. Transformer performance, forward shadow observation and the complete paper
+execution lifecycle remain unverified. Paper Trading by TradingView is a separate simulator;
 the repository's private manual proposal and normalized fill import CLI does not place orders or
 run in this public app. Native TradingView export compatibility still needs testing. Continuous
 broker workers and milestone reporting belong on a separately supervised host with durable state.

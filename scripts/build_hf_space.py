@@ -15,12 +15,12 @@ FILES = (
     "docs/architecture.md", "docs/workflow.md", "docs/vwap.md",
     "docs/validation.md", "docs/huggingface.md",
     "docs/manual-paper.md", "docs/walkforward.md", "docs/finrl-research.md",
-    "docs/real-data.md", "docs/enrichment.md",
+    "docs/real-data.md", "docs/enrichment.md", "docs/quickstart.md", "docs/tradingview-alerts.md", "docs/toolkit-release.md",
     "docs/experiments-and-reports.md", "docs/server-experiment.md", "docs/transformer-research.md",
     "dwight/__init__.py", "dwight/__main__.py", "dwight/runner.py",
     "dwight/store.py", "dwight/research.py", "dwight/data.py",
     "dwight/experiments.py", "dwight/ops.py", "dwight/shadow.py",
-    "dwight/firstrate.py", "dwight/enrichment.py",
+    "dwight/firstrate.py", "dwight/enrichment.py", "dwight/toolkit.py", "dwight/tradingview.py",
     "dwight/walkforward.py", "dwight/manual.py", "dwight/context.py", "dwight/finrl.py",
     "dwight/paper.py", "dwight/recorder.py", "dwight/connectors/__init__.py",
     "dwight/audit.py", "dwight/reporting.py", "dwight/campaign.py",
@@ -30,7 +30,7 @@ FILES = (
     "deploy/huggingface/research.py", "deploy/huggingface/analytics.py",
     "deploy/huggingface/charts.py", "deploy/huggingface/presentation.py",
     "deploy/huggingface/transformer_analysis.py",
-    "deploy/huggingface/walkforward_view.py",
+    "deploy/huggingface/walkforward_view.py", "deploy/huggingface/starter.py",
 )
 MAPPED_FILES = {
     "README.md": "PROJECT-README.md",

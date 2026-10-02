@@ -1,0 +1,26 @@
+[Unit]
+Description=Dwight private TradingView observation inbox
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=dwight
+Group=dwight
+WorkingDirectory=/var/lib/dwight
+EnvironmentFile=/etc/dwight/alerts.env
+Environment=PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ExecStart=/opt/dwight/.venv/bin/dwight tradingview-serve --host 127.0.0.1 --port 8765 --state /var/lib/dwight/tradingview/inbox.sqlite3
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/dwight
+MemoryMax=256M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

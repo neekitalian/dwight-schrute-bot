@@ -1,0 +1,25 @@
+//@version=6
+// UNCOMPILED TEMPLATE: validate in TradingView's Pine Editor before use.
+// Observation bridge only. No strategy entries, orders, approvals, or fills.
+// This is not a Pine replica of Dwight's VWAP model or a trading signal.
+indicator("Dwight QQQ 5m observation bridge — template", overlay = true)
+
+string source = "dwight_qqq_observer"
+string version = "observer-v1"
+bool chartAllowed = syminfo.ticker == "QQQ" and syminfo.prefix == "NASDAQ" and timeframe.isminutes and timeframe.multiplier == 5 and chart.is_standard
+bool dataPresent = not na(open) and not na(high) and not na(low) and not na(close) and not na(volume)
+bool observe = chartAllowed and session.ismarket and barstate.isrealtime and barstate.isconfirmed and dataPresent
+
+stamp(int value) => str.format_time(value, "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC")
+number(float value) => str.tostring(value, "0.########")
+
+if observe
+    string eventId = "QQQ-5-" + str.tostring(time_close) + "-" + version
+    string message = '{"schema_version":1,"kind":"bar_observation","symbol":"QQQ","exchange":"NASDAQ","timeframe":"5","bar_closed":true'
+    message += ',"event_id":"' + eventId + '","source":"' + source + '","strategy_version":"' + version + '"'
+    message += ',"bar_open_at":"' + stamp(time) + '","bar_close_at":"' + stamp(time_close) + '","sent_at":"' + stamp(timenow) + '"'
+    message += ',"open":' + number(open) + ',"high":' + number(high) + ',"low":' + number(low) + ',"close":' + number(close) + ',"volume":' + number(volume) + '}'
+    alert(message, alert.freq_once_per_bar_close)
+
+// Marker only indicates a locally observed eligible bar, not webhook delivery.
+plotchar(observe, title = "Observation eligible; delivery unverified", char = "·", location = location.bottom, color = color.gray)

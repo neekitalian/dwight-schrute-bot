@@ -1,6 +1,8 @@
 # Dwight Schrute Bot
 
-A paper-first framework for reproducible trading research. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
+A small toolkit for reproducible QQQ research and reviewed paper trading. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
+
+**0.3.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.3.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 
@@ -11,6 +13,8 @@ A paper-first framework for reproducible trading research. The first integrated 
 **Deployment boundary:** the deployable service is shadow only and cannot submit orders. The paper library is mock-tested; the CLI permits read-only account checks. An unattended paper execution loop and a Polymarket fill simulator remain unfinished. Synthetic models cannot run in live shadow. No account is connected and no order has been submitted.
 
 Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
+
+The [TradingView observation inbox](docs/tradingview-alerts.md) receives validated QQQ five-minute bar messages into a private, durable journal. It is separate from model decisions and manual proposals. The local HTTP flow is tested; the Pine observer template still needs compilation and a real delivery test in TradingView. Linux service and HTTPS proxy templates are provided, but no public endpoint is activated.
 
 [Real QQQ sample research](docs/real-data.md) now validates an official vendor download and reproduces a private historical replay. The observed 11-session sample is too small to train a deployable model. [Feature enrichment](docs/enrichment.md) compares four additional causal session features with the original classifier using fixed chronological windows. More features have not established better performance.
 
@@ -93,6 +97,8 @@ dwight/
   experiments.py           causal features, evaluation, JSON model, MLflow
   walkforward.py           successive unseen tests and reserved final holdout
   manual.py                human paper proposals and FIFO fill journal
+  toolkit.py               private workspace setup and preparation checks
+  tradingview.py           authenticated observation inbox without execution
   context.py               timestamped QQQ research context, expiry and provenance
   finrl.py                 optional offline skip/take RL environment and trainer seam
   ops.py                   preparation checks and release integrity
