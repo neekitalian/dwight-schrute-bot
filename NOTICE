@@ -1,0 +1,8 @@
+Dwight Schrute Bot
+Includes the Apache-2.0 VWAP replay engine from:
+https://github.com/neekitalian/VWAP-Trading-Strategy
+Branch: codex/vwap-paper-bot
+Commit: 532618ed5b415c974bb5be3da3330cd638c38931
+Files: vwap_bot/*, examples/make_demo.py, examples/config.json,
+tests/test_vwap.py, docs/vwap.md.
+The engine is vendored unchanged. Its license is retained in docs/VWAP-LICENSE.

@@ -1,0 +1,11 @@
+{
+  "capital": 10000,
+  "risk_fraction": 0.0025,
+  "reward_r": 2,
+  "max_losses": 2,
+  "slippage": 0.01,
+  "commission": 0.005,
+  "tick": 0.01,
+  "point_value": 1,
+  "max_leverage": 1
+}
