@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import sqlite3
 import stat
+from uuid import uuid4
 
 
 ACCOUNT = "tradingview_native_paper"
@@ -235,6 +236,12 @@ class ManualPaperJournal:
                 connection.execute("CREATE TABLE fills (fill_id TEXT PRIMARY KEY, filled_at TEXT NOT NULL, sequence INTEGER NOT NULL, proposal_id TEXT REFERENCES proposals(proposal_id), payload TEXT NOT NULL, UNIQUE(filled_at, sequence))")
             if connection.execute("SELECT version, account FROM metadata").fetchall() != [(1, ACCOUNT)]:
                 raise ManualPaperError("unsupported journal schema or account")
+            # Additive v1 migration: the stable instance identity distinguishes
+            # a new journal recreated at the same path from its predecessor.
+            if "journal_identity" not in tables:
+                connection.execute("CREATE TABLE journal_identity (singleton INTEGER PRIMARY KEY CHECK(singleton=1), instance_id TEXT NOT NULL)")
+                connection.execute("INSERT INTO journal_identity VALUES (1, ?)", (uuid4().hex,))
+            _journal_identity(connection)
             if connection.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
                 raise ManualPaperError("journal integrity check failed")
             if connection.execute("PRAGMA foreign_key_check").fetchall():
@@ -432,83 +439,209 @@ class ManualPaperJournal:
     def report(self, now=None):
         now = _clock(now)
         with self._db() as connection:
+            instance_id = _journal_identity(connection)
             self._expire(connection, now)
             proposals = self._read_proposals(connection)
             fills = self._read_fills(connection)
             if fills and fills[-1]["filled_at"] > now:
                 raise ManualPaperError("report clock cannot precede imported fills")
-            accounting = _accounting(fills)
             events = [dict(zip(("proposal_id", "status", "changed_at"), row)) for row in connection.execute(
                 "SELECT proposal_id, status, changed_at FROM events ORDER BY id")]
-        by_id = {p["proposal_id"]: p for p in proposals}
-        audit = []
-        linked_entry_quantities = {}
-        for fill in fills:
-            proposal = by_id.get(fill["proposal_id"])
-            issues = []
-            confirmation_at = confirmation_timing = None
-            proposed_quantity = linked_quantity = excess_quantity = None
-            if not proposal:
-                issues.append("no_proposal_link")
-            elif fill["side"] == "buy":
-                if fill["filled_at"] < proposal["available_at"]:
-                    issues.append("entry_before_proposal_available")
-                if fill["filled_at"] >= proposal["expires_at"]:
-                    issues.append("entry_after_proposal_expired")
-                if proposal["status"] != "confirmed":
-                    issues.append("proposal_not_manually_confirmed")
-                    confirmation_timing = "not_confirmed"
-                else:
-                    # Confirmation is a human acknowledgment, not required
-                    # pre-trade approval. Expose timing without inventing an
-                    # execution-policy violation for an acknowledgment later
-                    # than the imported fill. Confirmed status is terminal, so
-                    # status_at is its original recorded confirmation time.
-                    confirmation_at = proposal["status_at"]
-                    confirmation_timing = (
-                        "before_fill" if confirmation_at < fill["filled_at"] else
-                        "after_fill" if confirmation_at > fill["filled_at"] else
-                        "at_fill"
-                    )
-                # Partial buys share a proposal budget. Selling shares does
-                # not authorize reusing the same entry proposal. Reimports
-                # cannot inflate this sum because fill identities are unique.
-                with localcontext() as context:
-                    context.prec = 80
-                    total = linked_entry_quantities.get(proposal["proposal_id"], ZERO) + Decimal(fill["quantity"])
-                    linked_entry_quantities[proposal["proposal_id"]] = total
-                    proposed = Decimal(proposal["quantity"])
-                    proposed_quantity, linked_quantity = _text(proposed), _text(total)
-                    excess_quantity = _text(max(ZERO, total-proposed))
-                    if total > proposed:
-                        issues.append("entry_quantity_exceeds_proposal")
-            audit.append({"fill_id": fill["fill_id"], "proposal_id": fill["proposal_id"],
-                          "issues": issues,
-                          "human_confirmation_at": confirmation_at,
-                          "confirmation_timing": confirmation_timing,
-                          "proposed_entry_quantity": proposed_quantity,
-                          "linked_entry_quantity_to_date": linked_quantity,
-                          "entry_quantity_excess": excess_quantity,
-                          "entry_price_difference":
-                          _money(Decimal(fill["price"]) - Decimal(proposal["entry"]))
-                          if proposal and fill["side"] == "buy" else None})
-        is_open = Decimal(accounting["open_position"]["quantity"]) > ZERO
-        return {"schema_version": 1, "account": ACCOUNT, "as_of": now,
-                "mode": "manual_evidence", "submits_orders": False, "broker_verified": False,
-                "data_kind": fills[0]["data_kind"] if fills else "no_fills",
-                "performance_scope": "imported_fills_only", "currency": "USD",
-                "reconciliation_status": "unknown_open_positions" if is_open else "unverified_no_account_snapshot",
-                "account_equity": None, "account_return_pct": None, "unrealized_pnl": None,
-                "proposals": proposals, "proposal_events": events, "fills": fills,
-                "fill_audit": audit, **accounting,
-                "limitations": [
-                    "Human confirmation is not a broker order acknowledgement.",
-                    "Confirmation timing describes recorded evidence; it is not proof of pre-trade approval or execution.",
-                    "Quantity deviations compare cumulative linked buys with a proposal; unlinked fills cannot be attributed.",
-                    "CSV is a documented normalized format, not a native TradingView export adapter.",
-                    "Imported evidence is user supplied; completeness and account balance are unverified.",
-                    "FIFO starts with zero inventory and excludes deposits, withdrawals, dividends and interest.",
-                    "Realized PnL is not account equity, total return, or marked-to-market performance.",
-                    "Missing quotes leave open-position marks and unrealized PnL unknown.",
-                    "Planned stops are instructions for the human; this journal cannot enforce them.",
-                ]}
+            # Preserve rollback of expiration if accounting or audit fails.
+            result = _assemble_report(proposals, fills, events, now)
+            result["journal_instance_id"] = instance_id
+        return result
+
+    @contextmanager
+    def _snapshot_db(self):
+        """Read one existing database version without reserving a writer lock."""
+        connection = None
+        try:
+            connection = sqlite3.connect(self.path.as_uri() + "?mode=ro", uri=True, timeout=15)
+            connection.execute("PRAGMA query_only=ON")
+            connection.execute("PRAGMA trusted_schema=OFF")
+            connection.execute("BEGIN")
+            # BEGIN is deferred: this first read actually acquires the SQLite
+            # snapshot. Capture time is sampled by the caller only afterward.
+            if connection.execute("SELECT version, account FROM metadata").fetchall() != [(1, ACCOUNT)]:
+                raise ManualPaperError("unsupported journal schema or account")
+            yield connection
+        except sqlite3.DatabaseError as exc:
+            raise ManualPaperError("manual journal snapshot is invalid or unavailable") from exc
+        finally:
+            if connection is not None:
+                connection.rollback()
+                connection.close()
+
+    def snapshot_at(self, cutoff: datetime, now=None):
+        """Capture imported executions through an inclusive event-time cutoff.
+
+        This does not expire proposals or modify journal state. All source rows
+        come from one SQLite read snapshot; proposal status is reconstructed
+        from its recorded history through the cutoff. The v1 journal has no
+        import timestamps, so this is evidence captured at generation time,
+        never a claim about which fills were known at the historical cutoff.
+        Save the returned snapshot to freeze a milestone; later imports can
+        legitimately change a newly generated snapshot for the same cutoff.
+        """
+        if not isinstance(cutoff, datetime):
+            raise ManualPaperError("cutoff must be a timezone-aware datetime")
+        cutoff = _clock(cutoff)
+        with self._snapshot_db() as connection:
+            captured_at = _clock(now)
+            if cutoff > captured_at:
+                raise ManualPaperError("snapshot cutoff cannot follow capture time")
+            instance_id = _journal_identity(connection)
+            current = self._read_proposals(connection)
+            source_fills = self._read_fills(connection)
+            source_events = connection.execute(
+                "SELECT id, proposal_id, status, changed_at FROM events ORDER BY id").fetchall()
+            proposals, events = _proposals_at(current, source_events, cutoff)
+            fills = [fill for fill in source_fills if fill["filled_at"] <= cutoff]
+            available_ids = {proposal["proposal_id"] for proposal in proposals}
+            for fill in fills:
+                if fill["proposal_id"] is not None and fill["proposal_id"] not in available_ids:
+                    raise ManualPaperError(
+                        "snapshot fill references a proposal unavailable at cutoff; original evidence link is retained")
+        result = _assemble_report(proposals, fills, events, cutoff)
+        result.update({
+            "cutoff": cutoff, "captured_at": captured_at, "journal_instance_id": instance_id,
+            "snapshot_basis": "executions_through_cutoff_evidence_captured_at_generation",
+            "import_provenance": "not_recorded", "knowledge_at_cutoff_unknown": True,
+            "evidence_status": "imported_fills_through_cutoff" if fills else "no_imported_fills_through_cutoff",
+        })
+        result["limitations"].extend([
+            "Executions and proposal events after the inclusive cutoff are excluded; all earlier imported opening fills remain in FIFO history.",
+            "Import timestamps were not recorded. Evidence captured at generation may include late imports; knowledge at the historical cutoff is unknown.",
+            "No imported fills through the cutoff does not establish that no trading occurred or that the account was flat.",
+        ])
+        return result
+
+
+def _journal_identity(connection):
+    """Read the additive v1 identity; never repair it from a read-only view."""
+    try:
+        rows = connection.execute("SELECT singleton, instance_id FROM journal_identity").fetchall()
+    except sqlite3.DatabaseError as exc:
+        raise ManualPaperError("journal instance identity is missing or invalid") from exc
+    if (len(rows) != 1 or rows[0][0] != 1 or not isinstance(rows[0][1], str)
+            or re.fullmatch(r"[0-9a-f]{32}", rows[0][1]) is None):
+        raise ManualPaperError("journal instance identity is missing or invalid")
+    return rows[0][1]
+
+
+def _proposals_at(proposals, source_events, cutoff):
+    """Validate recorded transitions, then reconstruct the cutoff status view."""
+    by_id = {proposal["proposal_id"]: proposal for proposal in proposals}
+    histories = {identifier: [] for identifier in by_id}
+    for event_id, identifier, status, changed_at in source_events:
+        if (type(event_id) is not int or event_id < 1 or identifier not in by_id
+                or status not in STATUSES or _stamp(changed_at, "event changed_at") != changed_at):
+            raise ManualPaperError("stored proposal event history is inconsistent")
+        proposal, history = by_id[identifier], histories[identifier]
+        if not history:
+            if status != "pending" or changed_at != proposal["created_at"]:
+                raise ManualPaperError("stored proposal event history has no valid creation event")
+        elif (history[-1]["status"] != "pending" or status == "pending"
+              or changed_at < history[-1]["changed_at"]):
+            raise ManualPaperError("stored proposal event history has an invalid transition")
+        if (not proposal["available_at"] <= proposal["created_at"] < proposal["expires_at"]
+                or (status == "expired" and changed_at < proposal["expires_at"])
+                or (status in {"confirmed", "skipped"} and changed_at >= proposal["expires_at"])):
+            raise ManualPaperError("stored proposal event history violates availability or expiry")
+        history.append({"proposal_id": identifier, "status": status, "changed_at": changed_at})
+    selected = []
+    for proposal in proposals:
+        history = histories[proposal["proposal_id"]]
+        if (not history or history[-1]["status"] != proposal["status"]
+                or history[-1]["changed_at"] != proposal["status_at"]):
+            raise ManualPaperError("stored proposal event history disagrees with current status")
+        if proposal["created_at"] > cutoff:
+            continue
+        previous = [event for event in history if event["changed_at"] <= cutoff][-1]
+        view = {**proposal, "status": previous["status"], "status_at": previous["changed_at"],
+                "status_basis": "recorded_event"}
+        if view["status"] == "pending" and proposal["expires_at"] <= cutoff:
+            # This is a derived view only, not a fabricated persisted event.
+            view.update(status="expired", status_at=proposal["expires_at"], status_basis="derived_expiry")
+        selected.append(view)
+    events = [{"proposal_id": identifier, "status": status, "changed_at": changed_at}
+              for _, identifier, status, changed_at in source_events if changed_at <= cutoff]
+    return selected, events
+
+
+def _assemble_report(proposals, fills, events, as_of):
+    """Pure accounting and audit assembly shared by live and cutoff reports."""
+    accounting = _accounting(fills)
+    by_id = {p["proposal_id"]: p for p in proposals}
+    audit = []
+    linked_entry_quantities = {}
+    for fill in fills:
+        proposal = by_id.get(fill["proposal_id"])
+        issues = []
+        confirmation_at = confirmation_timing = None
+        proposed_quantity = linked_quantity = excess_quantity = None
+        if not proposal:
+            issues.append("no_proposal_link")
+        elif fill["side"] == "buy":
+            if fill["filled_at"] < proposal["available_at"]:
+                issues.append("entry_before_proposal_available")
+            if fill["filled_at"] >= proposal["expires_at"]:
+                issues.append("entry_after_proposal_expired")
+            if proposal["status"] != "confirmed":
+                issues.append("proposal_not_manually_confirmed")
+                confirmation_timing = "not_confirmed"
+            else:
+                # Confirmation is a human acknowledgment, not required
+                # pre-trade approval. Expose timing without inventing an
+                # execution-policy violation for an acknowledgment later
+                # than the imported fill. Confirmed status is terminal, so
+                # status_at is its original recorded confirmation time.
+                confirmation_at = proposal["status_at"]
+                confirmation_timing = (
+                    "before_fill" if confirmation_at < fill["filled_at"] else
+                    "after_fill" if confirmation_at > fill["filled_at"] else
+                    "at_fill"
+                )
+            # Partial buys share a proposal budget. Selling shares does
+            # not authorize reusing the same entry proposal. Reimports
+            # cannot inflate this sum because fill identities are unique.
+            with localcontext() as context:
+                context.prec = 80
+                total = linked_entry_quantities.get(proposal["proposal_id"], ZERO) + Decimal(fill["quantity"])
+                linked_entry_quantities[proposal["proposal_id"]] = total
+                proposed = Decimal(proposal["quantity"])
+                proposed_quantity, linked_quantity = _text(proposed), _text(total)
+                excess_quantity = _text(max(ZERO, total-proposed))
+                if total > proposed:
+                    issues.append("entry_quantity_exceeds_proposal")
+        audit.append({"fill_id": fill["fill_id"], "proposal_id": fill["proposal_id"],
+                      "issues": issues,
+                      "human_confirmation_at": confirmation_at,
+                      "confirmation_timing": confirmation_timing,
+                      "proposed_entry_quantity": proposed_quantity,
+                      "linked_entry_quantity_to_date": linked_quantity,
+                      "entry_quantity_excess": excess_quantity,
+                      "entry_price_difference":
+                      _money(Decimal(fill["price"]) - Decimal(proposal["entry"]))
+                      if proposal and fill["side"] == "buy" else None})
+    is_open = Decimal(accounting["open_position"]["quantity"]) > ZERO
+    return {"schema_version": 1, "account": ACCOUNT, "as_of": as_of,
+            "mode": "manual_evidence", "submits_orders": False, "broker_verified": False,
+            "data_kind": fills[0]["data_kind"] if fills else "no_fills",
+            "performance_scope": "imported_fills_only", "currency": "USD",
+            "reconciliation_status": "unknown_open_positions" if is_open else "unverified_no_account_snapshot",
+            "account_equity": None, "account_return_pct": None, "unrealized_pnl": None,
+            "proposals": proposals, "proposal_events": events, "fills": fills,
+            "fill_audit": audit, **accounting,
+            "limitations": [
+                "Human confirmation is not a broker order acknowledgement.",
+                "Confirmation timing describes recorded evidence; it is not proof of pre-trade approval or execution.",
+                "Quantity deviations compare cumulative linked buys with a proposal; unlinked fills cannot be attributed.",
+                "CSV is a documented normalized format, not a native TradingView export adapter.",
+                "Imported evidence is user supplied; completeness and account balance are unverified.",
+                "FIFO starts with zero inventory and excludes deposits, withdrawals, dividends and interest.",
+                "Realized PnL is not account equity, total return, or marked-to-market performance.",
+                "Missing quotes leave open-position marks and unrealized PnL unknown.",
+                "Planned stops are instructions for the human; this journal cannot enforce them.",
+            ]}

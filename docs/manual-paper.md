@@ -122,8 +122,9 @@ Public methods:
 - `set_status(proposal_id, status, now=None)` records `confirmed`, `skipped`, or `expired`. Terminal status cannot be changed. Explicit expiration is accepted only at or after expiry.
 - `import_fills(csv_path)` atomically imports a normalized CSV and returns inserted/duplicate counts.
 - `report(now=None)` returns JSON-serializable evidence, fills, FIFO matches, realized PnL, and the remaining position. It also expires pending proposals.
+- `snapshot_at(cutoff, now=None)` reads one consistent journal snapshot, includes executions through the inclusive cutoff, and reconstructs proposal status from its event history without changing the live journal. The native-paper milestone ledger freezes this result for each report.
 
-`now` is an optional timezone-aware Python datetime for deterministic tests. Production defaults to the current UTC time. Journal status time cannot go backwards, and a report cannot use a time before its latest imported fill. This is a current evidence report, not a historical as-of query engine.
+`now` is an optional timezone-aware Python datetime for deterministic tests. Production defaults to the current UTC time. Journal status time cannot go backwards, and `report()` cannot use a time before its latest imported fill. Use `snapshot_at()` for a historical execution cutoff. It labels evidence capture time separately: the journal does not record fill import timestamps, so a cutoff snapshot cannot establish what was known at that earlier time. Later imports can change a newly requested snapshot; saved milestone reports remain frozen.
 
 All proposal fields shown above are required; unknown fields are rejected. `signal_at <= available_at < expires_at` is required and a new proposal must already be available and not expired. Long prices require `0 < stop < entry < target`. Quantity and prices must be positive finite decimals with at most eight decimal places and magnitude at most 10^12. Calculated stop risk and reward exclude costs and gap/slippage risk; these are explanatory calculations, not portfolio risk enforcement.
 
@@ -193,4 +194,4 @@ New journal directories use mode 0700 and database files mode 0600. SQLite trans
 
 Keep journal files, original exports, reports and proposal JSON under private paths such as ignored `runs/` or `private-data/`. Do not include them in the public Hugging Face Space, GitHub, logs or screenshots. This module has no email transport. Exported report files must receive private file permissions from the caller.
 
-Local use and CSV reconciliation do not require DigitalOcean. An always-on server becomes useful for live data observation and scheduled report generation. It does not automate the native TradingView paper account, and this journal is not yet connected to the milestone scheduler or public dashboard.
+Local use and CSV reconciliation do not require DigitalOcean. An always-on server becomes useful for live data observation and scheduled report generation. The separate [native-paper milestone ledger](manual-milestones.md) freezes preparation, records human-supplied account evidence and generates private reports at 12, 24, 48 and 168 elapsed hours after an explicitly checked start. It does not automate the native TradingView paper account or publish account data to a dashboard.

@@ -1,6 +1,6 @@
 # Dwight toolkit product boundary
 
-Dwight 0.4.0 is a small research preview for one QQQ strategy and one private workspace. Its useful product is the repeatable process: prepare data, replay a baseline, test added features, inspect evidence, connect observations and keep a manual paper journal.
+Dwight 0.5.0 is a small research preview for one QQQ strategy and one private workspace. Its useful product is the repeatable process: prepare data, replay a baseline, test added features, inspect evidence, connect observations and keep a manual paper journal.
 
 The downloadable toolkit contains source, configuration templates, a workspace initializer, data validation, research commands, private reports, a TradingView observation inbox and deployment runbooks. The Hugging Face app is a public demonstration using synthetic data. Neither package includes a proven profitable model or a managed brokerage account.
 
@@ -21,6 +21,7 @@ Market-data redistribution rights and model-weight licenses remain separate. Kee
 5. Configure a private TradingView observation inbox and verify actual alert delivery.
 6. Review proposals and manually place orders in TradingView's native paper account.
 7. Import normalized executions and review discrepancies before any broader integration.
+8. Review private reports at fixed 12, 24, 48 and 168 hour deadlines using the [native paper milestone workflow](manual-milestones.md). Keep source evidence, email delivery records and corrections with the experiment.
 
 An Alpaca API paper account is a separate future execution route. Native TradingView paper automation is not implemented or advertised. The inbox cannot turn a received alert into an order or a recorded fill.
 

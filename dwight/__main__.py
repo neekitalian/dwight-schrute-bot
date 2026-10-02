@@ -153,6 +153,35 @@ def main():
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument('--synthetic', action='store_true', help='Invented fixtures for software validation only')
     mode.add_argument('--real-data', action='store_true', help='Observed QQQ CSV; source verification still requires provenance')
+    p = commands.add_parser('manual-campaign-init', help='Freeze private native-paper milestone preparation; does not start its clock')
+    p.add_argument('directory', type=Path)
+    p.add_argument('--signals', type=Path, required=True)
+    p.add_argument('--state', type=Path, required=True, help='Dedicated native-paper journal')
+    p.add_argument('--recipient', action='append', required=True, help='Private report recipient; repeat for each address')
+    p.add_argument('--allocation', required=True, help='Explicit human-declared USD allocation; not verified account equity')
+    p = commands.add_parser('manual-campaign-account', help='Archive human-supplied account evidence; no account connection or clock start')
+    p.add_argument('evidence_json', type=Path)
+    p.add_argument('--campaign', type=Path, required=True)
+    p = commands.add_parser('manual-campaign-start', help='Start native-paper milestones after account evidence and fresh observation checks')
+    p.add_argument('snapshot_id')
+    p.add_argument('--campaign', type=Path, required=True)
+    p = commands.add_parser('manual-campaign-status', help='Inspect private native-paper milestones and evidence status')
+    p.add_argument('--campaign', type=Path, required=True)
+    p = commands.add_parser('manual-campaign-report-due', help='Generate due native-paper reports at fixed cutoffs; sends no email')
+    p.add_argument('--campaign', type=Path, required=True)
+    p = commands.add_parser('manual-campaign-report', help='Freeze one due native-paper milestone report')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--hours', type=int, choices=[12, 24, 48, 168], required=True)
+    p = commands.add_parser('manual-campaign-claim-mail', help='Claim one native-paper report recipient before a separate mail-provider call')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--hours', type=int, choices=[12, 24, 48, 168], required=True)
+    p.add_argument('--recipient', required=True)
+    p = commands.add_parser('manual-campaign-confirm-mail', help='Record provider receipt evidence; does not send email')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--hours', type=int, choices=[12, 24, 48, 168], required=True)
+    p.add_argument('--recipient', required=True)
+    p.add_argument('--claim', required=True)
+    p.add_argument('--receipt', required=True)
     p = commands.add_parser('manual-observe', help='Read Alpaca QQQ data and retain baseline observations; no simulated or broker orders')
     p.add_argument('--signals', type=Path, default=Path('runs/manual-signals'))
     p.add_argument('--feed', choices=['sip', 'iex'], required=True)
@@ -242,7 +271,8 @@ def main():
     try:
         # Onboarding checks only the selected workspace, without importing an
         # unrelated current-directory .env into this process.
-        if args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list'}:
+        if (args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list'}
+                and not args.command.startswith('manual-campaign-')):
             load_env()
         if args.command == 'init-workspace':
             from .toolkit import init_workspace
@@ -310,6 +340,26 @@ def main():
                                            quantity=args.quantity,
                                            price_observed_at=args.price_observed_at,
                                            journal_path=args.state)
+        elif args.command.startswith('manual-campaign-'):
+            from . import manual_campaign
+            if args.command == 'manual-campaign-init':
+                result = manual_campaign.initialize(args.directory, args.signals, args.state,
+                                                    args.recipient, args.allocation)
+            elif args.command == 'manual-campaign-account':
+                result = manual_campaign.record_account(args.campaign, args.evidence_json)
+            elif args.command == 'manual-campaign-start':
+                result = manual_campaign.start(args.campaign, args.snapshot_id)
+            elif args.command == 'manual-campaign-status':
+                result = manual_campaign.status(args.campaign)
+            elif args.command == 'manual-campaign-report':
+                result = manual_campaign.report(args.campaign, args.hours)
+            elif args.command == 'manual-campaign-report-due':
+                result = manual_campaign.report_due(args.campaign)
+            elif args.command == 'manual-campaign-claim-mail':
+                result = manual_campaign.claim_delivery(args.campaign, args.hours, args.recipient)
+            else:
+                result = manual_campaign.confirm_delivery(args.campaign, args.hours, args.recipient,
+                                                          args.claim, args.receipt)
         elif args.command.startswith('manual-'):
             from .manual import ManualPaperJournal
             journal = ManualPaperJournal(args.state)

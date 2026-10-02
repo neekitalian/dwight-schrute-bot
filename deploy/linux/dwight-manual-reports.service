@@ -1,0 +1,17 @@
+[Unit]
+Description=Generate due Dwight native-paper evidence reports
+After=dwight-manual-observer.service
+
+[Service]
+Type=oneshot
+User=dwight
+Group=dwight
+WorkingDirectory=/opt/dwight
+Environment=PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ExecStart=/opt/dwight/.venv/bin/dwight manual-campaign-report-due --campaign /var/lib/dwight/manual-campaign
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/dwight

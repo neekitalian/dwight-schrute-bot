@@ -8,7 +8,7 @@ fi
 revision=$2
 if [[ $(id -u) != 0 ]]; then echo 'Run as root on the selected Ubuntu host.' >&2; exit 2; fi
 if ! grep -q '^ID=ubuntu$' /etc/os-release; then echo 'Ubuntu is required.' >&2; exit 2; fi
-for service in dwight-shadow.service dwight-alert-inbox.service dwight-manual-observer.service; do
+for service in dwight-shadow.service dwight-alert-inbox.service dwight-manual-observer.service dwight-reports.service dwight-reports.timer dwight-manual-reports.service dwight-manual-reports.timer; do
   if systemctl is-active --quiet "$service"; then
     echo "Active $service must be reviewed and stopped before replacing its release." >&2
     exit 2
@@ -49,7 +49,9 @@ install -m 644 deploy/linux/dwight-reports.service /etc/systemd/system/dwight-re
 install -m 644 deploy/linux/dwight-reports.timer /etc/systemd/system/dwight-reports.timer
 install -m 644 deploy/linux/dwight-alert-inbox.service /etc/systemd/system/dwight-alert-inbox.service
 install -m 644 deploy/linux/dwight-manual-observer.service /etc/systemd/system/dwight-manual-observer.service
-systemd-analyze verify /etc/systemd/system/dwight-shadow.service /etc/systemd/system/dwight-reports.service /etc/systemd/system/dwight-reports.timer /etc/systemd/system/dwight-alert-inbox.service /etc/systemd/system/dwight-manual-observer.service
+install -m 644 deploy/linux/dwight-manual-reports.service /etc/systemd/system/dwight-manual-reports.service
+install -m 644 deploy/linux/dwight-manual-reports.timer /etc/systemd/system/dwight-manual-reports.timer
+systemd-analyze verify /etc/systemd/system/dwight-shadow.service /etc/systemd/system/dwight-reports.service /etc/systemd/system/dwight-reports.timer /etc/systemd/system/dwight-alert-inbox.service /etc/systemd/system/dwight-manual-observer.service /etc/systemd/system/dwight-manual-reports.service /etc/systemd/system/dwight-manual-reports.timer
 systemctl daemon-reload
 # No environment file, credentials or release is fabricated or overwritten.
 # Activation is a separate step after real-data evaluation and release checks.

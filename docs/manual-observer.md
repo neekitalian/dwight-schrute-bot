@@ -96,6 +96,10 @@ Do not compare their trade counts as though they were identical policies.
 The TradingView webhook inbox remains a separate collection path. Its alert
 payloads do not supply this observer's Alpaca session history. Neither path
 automatically starts a paper experiment clock or sends milestone emails.
+The separate [native-paper milestone ledger](manual-milestones.md) can use the
+observer's durable records after its own preparation, account-evidence and
+explicit start checks. It preserves the distinction between observation
+coverage, imported executions and unknown account results.
 
 ## Existing Linux host
 

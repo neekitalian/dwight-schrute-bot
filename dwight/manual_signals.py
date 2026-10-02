@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import sqlite3
 import stat
+from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from vwap_bot.engine import Bar, Config
@@ -112,6 +113,15 @@ def _bar_payload(bar):
                      for key in ("open", "high", "low", "close", "volume")}})
 
 
+def _store_identity(value):
+    try:
+        if not isinstance(value, str) or str(UUID(value)) != value:
+            raise ValueError
+        return value
+    except ValueError:
+        raise ManualSignalError("private signal store instance identity is invalid") from None
+
+
 def _canonical_stop(raw, tick):
     """Remove float multiplication noise without changing the engine tick level."""
     if isinstance(raw, bool) or len(str(raw)) > 80:
@@ -191,6 +201,8 @@ class ManualSignalStore:
                 if old is not None and old != expected:
                     raise ManualSignalError("state directory belongs to a different feed or strategy identity")
                 self.db.execute("INSERT OR IGNORE INTO metadata VALUES('identity',?)", (expected,))
+                self.db.execute("INSERT OR IGNORE INTO metadata VALUES('store_instance_id',?)", (str(uuid4()),))
+                self.store_instance_id = _store_identity(self._meta("store_instance_id"))
             if self.db.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
                 raise ManualSignalError("private signal state integrity check failed")
         except ManualSignalError:
@@ -247,15 +259,19 @@ class ManualSignalStore:
             self.db.execute("INSERT OR REPLACE INTO metadata VALUES('last_clock',?)", (stamp,))
 
     def _status(self, status, now, **details):
+        with self.db:
+            return self._record_status(status, now, **details)
+
+    def _record_status(self, status, now, **details):
+        """Write in the caller's transaction, alongside any new evidence."""
         result = {"mode": "manual_signal_observer", "status": status,
                   "observed_at": _timestamp(now, "now"), "strategy_identity": self.identity,
                   "symbol": self.symbol, "feed": self.feed, "model": MODEL,
                   "signals": [], **details, **SAFETY}
-        with self.db:
-            if status == "error_abstain":
-                self.db.execute("INSERT OR REPLACE INTO metadata VALUES('data_error','1')")
-            self.db.execute("INSERT INTO observations(observed_at,status,payload) VALUES(?,?,?)",
-                            (result["observed_at"], status, _json(result)))
+        if status == "error_abstain":
+            self.db.execute("INSERT OR REPLACE INTO metadata VALUES('data_error','1')")
+        self.db.execute("INSERT INTO observations(observed_at,status,payload) VALUES(?,?,?)",
+                        (result["observed_at"], status, _json(result)))
         return result
 
     def _halt(self, now, stamp, reason):
@@ -263,8 +279,8 @@ class ManualSignalStore:
             self.db.execute("INSERT OR IGNORE INTO metadata VALUES('halt',?)",
                             (_json({"bar_timestamp": stamp, "reason": reason,
                                     "detected_at": _timestamp(now, "now")}),))
-        return self._status("data_revision_requires_review", now,
-                            revision=json.loads(self._meta("halt")))
+            return self._record_status("data_revision_requires_review", now,
+                                       revision=json.loads(self._meta("halt")))
 
     def _check_previous_minutes(self, rows, session, now):
         old = self.db.execute("SELECT timestamp,payload FROM bars WHERE kind='1m' AND session=?",
@@ -396,13 +412,14 @@ class ManualSignalStore:
                                     (signal_id, record["signal_time"], _json(record), record["first_observed_at"]))
                     new_signals.append(signal_id)
                 self.db.execute("DELETE FROM metadata WHERE key='data_error'")
-            status = inspection["status"]
-            if not fresh and status in {"observed", "ready"}:
-                status = "waiting_for_bar"
-            return self._status(status, now, latest_bar_close=inspection.get("latest_bar_close"),
-                                new_bars=sum(row[0] == "5m" for row in fresh),
-                                new_signals=new_signals,
-                                signals=self._list(now, limit=100))
+                status = inspection["status"]
+                if not fresh and status in {"observed", "ready"}:
+                    status = "waiting_for_bar"
+                result = self._record_status(status, now, latest_bar_close=inspection.get("latest_bar_close"),
+                                             new_bars=sum(row[0] == "5m" for row in fresh),
+                                             new_signals=new_signals,
+                                             signals=self._list(now, limit=100))
+            return result
         except (ValueError, RuntimeError, OSError, TypeError, KeyError, OverflowError, sqlite3.DatabaseError) as exc:
             # Never copy exception messages: provider responses may contain private text.
             return self._status("error_abstain", now, error_type=type(exc).__name__,
@@ -419,6 +436,10 @@ class ManualSignalStore:
         now = _clock(now)
         self._advance_clock(now)
         return self._list(now, limit)
+
+    def evidence_snapshot(self, start=None, cutoff=None, now=None):
+        """Detached read-only evidence, without prices, account data or clock writes."""
+        return read_observation_snapshot(self.state_dir, start=start, cutoff=cutoff, now=now)
 
     def _acknowledge(self, signal_id, proposal, now):
         """Separate durable acknowledgement boundary, also useful for crash recovery."""
@@ -561,3 +582,209 @@ class ManualSignalStore:
                 "actionable": bool(current["eligible"] and price_fresh and proposal["status"] == "pending"),
                 "price_reference_fresh": price_fresh, "price_reference_age_seconds": price_age,
                 "expired": current["expired"], "idempotent_retry": outbox is not None, **SAFETY}
+
+
+def read_observation_snapshot(state_dir, *, start=None, cutoff=None, now=None):
+    """Read a coherent, detached, price-free snapshot without opening a writer.
+
+    ``start`` filters observation receipts and first-seen bar/signal receipts;
+    availability is returned separately so a caller can exclude catch-up data.
+    The prefix digest covers *all* completed history through ``cutoff``, even
+    when ``start`` filters the returned summaries. Re-read the same cutoff to
+    verify an earlier anchor. Current flags are separate from cutoff history.
+
+    No market-data/calendar API, writable store initialization, permission
+    changes, clock updates, journal reads, or filesystem creation occurs here.
+    Legacy databases need a normal worker initialization to receive a durable
+    instance UUID. That upgrade identifies the database from upgrade onward;
+    it cannot prove continuity before the UUID was assigned.
+
+    Regular sessions contain 390 open minutes. This observer stops at close,
+    so the final 16:00 bar close cannot be observed after its 60-second settle
+    delay: at most 77 five-minute bars (385 bar minutes) are policy-observable.
+    Bar coverage is not continuous service uptime or account trading activity.
+    """
+    connection = None
+    try:
+        generated = _clock(now)
+        until = generated if cutoff is None else _clock(cutoff)
+        since = None if start is None else _clock(start)
+        if until > generated:
+            raise ManualSignalError("snapshot cutoff cannot be in the future")
+        if since is not None and since > until:
+            raise ManualSignalError("snapshot start cannot follow cutoff")
+        directory = _safe_path(state_dir)
+        path = _safe_path(directory / "manual-signals.sqlite3")
+        if not path.is_file() or path.stat().st_nlink != 1:
+            raise ManualSignalError("existing regular signal database required; snapshot does not create state")
+        for suffix in ("-journal", "-wal", "-shm"):
+            _safe_path(str(path) + suffix)
+        connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=5)
+        connection.execute("PRAGMA query_only=ON")
+        connection.execute("PRAGMA trusted_schema=OFF")
+        connection.execute("BEGIN")
+        metadata = dict(connection.execute("SELECT key,value FROM metadata").fetchall())
+        if "store_instance_id" not in metadata:
+            raise ManualSignalError("legacy signal state has no instance identity; initialize the regular worker before taking evidence snapshots")
+        instance = _store_identity(metadata["store_instance_id"])
+        source = json.loads(metadata["identity"])
+        config = Config(**source["config"])
+        expected_source = {"schema": 1, "feed": source["feed"], "symbol": "QQQ",
+                           "identity": signals.strategy_identity(config), "config": asdict(config)}
+        if (source["schema"] != 1 or source["feed"] not in {"sip", "iex"}
+                or source["symbol"] != "QQQ" or config != Config()
+                or _json(expected_source) != metadata["identity"]):
+            raise ManualSignalError("snapshot strategy, feed, schema, or current source identity is inconsistent")
+        source_keys = {"strategy_identity": source["identity"],
+                       "feed": source["feed"], "symbol": source["symbol"]}
+        cutoff_stamp, start_stamp = _timestamp(until, "cutoff"), None if since is None else _timestamp(since, "start")
+        successful = {"ready", "waiting_for_bar", "observed"}
+        statuses = successful | {"market_closed", "unsupported_early_close", "warming_up",
+                                 "stopped", "data_revision_requires_review", "error_abstain"}
+
+        def canonical(value):
+            if _timestamp(value, "stored timestamp") != value:
+                raise ManualSignalError("stored evidence timestamp is not canonical")
+            return value
+
+        def matches_source(payload):
+            return all(payload.get(key) == value for key, value in source_keys.items())
+
+        def in_window(stamp):
+            return stamp <= cutoff_stamp and (start_stamp is None or stamp >= start_stamp)
+
+        observations, completed, historical, private_digests = [], {}, [], {}
+        previous_stamp = None
+        latest_current = None
+        cutoff_halted = cutoff_data_error = False
+        all_observations = connection.execute(
+            "SELECT sequence,observed_at,status,payload FROM observations ORDER BY sequence").fetchall()
+        for sequence, stamp, status, raw in all_observations:
+            canonical(stamp)
+            payload = json.loads(raw)
+            if (type(sequence) is not int or sequence < 1 or status not in statuses
+                    or (previous_stamp is not None and stamp < previous_stamp)
+                    or payload.get("observed_at") != stamp or payload.get("status") != status
+                    or not matches_source(payload) or _json(payload) != raw):
+                raise ManualSignalError("stored observation evidence is inconsistent")
+            previous_stamp = stamp
+            latest_close = payload.get("latest_bar_close")
+            if latest_close is not None:
+                latest_close = _timestamp(latest_close, "latest_bar_close")
+                if latest_close > stamp:
+                    raise ManualSignalError("observation contains a future bar close")
+            new_bars, new_signals = payload.get("new_bars", 0), payload.get("new_signals", [])
+            if type(new_bars) is not int or new_bars < 0 or not isinstance(new_signals, list):
+                raise ManualSignalError("stored observation counts are invalid")
+            summary = {"sequence": sequence, "observed_at": stamp, "status": status,
+                       "latest_bar_close": latest_close, "new_bars": new_bars,
+                       "new_signal_count": len(new_signals)}
+            latest_current = summary
+            if stamp <= cutoff_stamp:
+                historical.append(summary)
+                private_digests[sequence] = hashlib.sha256(raw.encode()).hexdigest()
+                if status in successful:
+                    if latest_close is None:
+                        raise ManualSignalError("successful observation has no completed bar close")
+                    completed[stamp] = max(latest_close, completed.get(stamp, latest_close))
+                    cutoff_data_error = False
+                elif status == "error_abstain":
+                    cutoff_data_error = True
+                elif status == "data_revision_requires_review":
+                    cutoff_halted = True
+                if in_window(stamp):
+                    observations.append(summary)
+
+        attachments, bars, known_bars = {}, [], {}
+        unlinked_bars = unlinked_signals = 0
+        for stamp, session, raw, first_seen in connection.execute(
+                "SELECT timestamp,session,payload,first_observed_at FROM bars WHERE kind='5m' AND first_observed_at<=? ORDER BY timestamp",
+                (cutoff_stamp,)).fetchall():
+            canonical(stamp)
+            canonical(first_seen)
+            payload = json.loads(raw)
+            timestamp = datetime.fromisoformat(stamp)
+            available = _timestamp(timestamp + timedelta(minutes=5), "bar close")
+            if (payload.get("timestamp") != stamp or _json(payload) != raw
+                    or session != timestamp.astimezone(NY).date().isoformat()
+                    or first_seen < _timestamp(timestamp + timedelta(minutes=5, seconds=SETTLE_SECONDS), "settled bar")):
+                raise ManualSignalError("stored bar evidence is inconsistent")
+            digest = hashlib.sha256(raw.encode()).hexdigest()
+            if first_seen not in completed or available > completed[first_seen]:
+                unlinked_bars += 1
+                continue
+            summary = {"timestamp": stamp, "available_at": available,
+                       "first_seen_at": first_seen, "session": session, "payload_sha256": digest}
+            known_bars[stamp] = summary
+            attachments.setdefault(first_seen, []).append(["5m", stamp, digest])
+            if in_window(first_seen):
+                bars.append(summary)
+
+        signal_summaries = []
+        for signal_id, stamp, raw, first_seen in connection.execute(
+                "SELECT signal_id,signal_time,payload,first_observed_at FROM signals WHERE first_observed_at<=? ORDER BY signal_time,signal_id",
+                (cutoff_stamp,)).fetchall():
+            canonical(stamp)
+            canonical(first_seen)
+            payload = json.loads(raw)
+            available = canonical(payload["available_at"])
+            expected_id = hashlib.sha256(_json([source["identity"], source["feed"], "QQQ", stamp]).encode()).hexdigest()
+            if (signal_id != expected_id or payload.get("signal_id") != signal_id
+                    or payload.get("signal_time") != stamp or payload.get("first_observed_at") != first_seen
+                    or not matches_source(payload) or _json(payload) != raw
+                    or available != _timestamp(datetime.fromisoformat(stamp) + timedelta(minutes=5), "signal close")
+                    or type(payload.get("direction")) is not int or payload["direction"] not in {-1, 1}
+                    or type(payload.get("initially_eligible")) is not bool
+                    or type(payload.get("accepted")) is not bool):
+                raise ManualSignalError("stored signal evidence is inconsistent")
+            if (first_seen not in completed or available > completed[first_seen]
+                    or stamp not in known_bars or known_bars[stamp]["first_seen_at"] != first_seen):
+                unlinked_signals += 1
+                continue
+            digest = hashlib.sha256(raw.encode()).hexdigest()
+            attachments.setdefault(first_seen, []).append(["signal", signal_id, digest])
+            if in_window(first_seen):
+                signal_summaries.append({"signal_id": signal_id, "signal_time": stamp,
+                                         "available_at": available, "first_seen_at": first_seen,
+                                         "initially_eligible": payload["initially_eligible"],
+                                         "accepted": payload["accepted"], "direction": payload["direction"]})
+
+        prefix = hashlib.sha256(_json({"store_instance_id": instance, "source": source}).encode()).hexdigest()
+        for observation in historical:
+            prefix = hashlib.sha256(_json({"previous": prefix, "sequence": observation["sequence"],
+                                          "observation_sha256": private_digests[observation["sequence"]],
+                                          "evidence": sorted(attachments.get(observation["observed_at"], []))}).encode()).hexdigest()
+        latest = historical[-1] if historical else None
+        # Current metadata belongs to this same SQL read snapshot. The STOP
+        # marker is an external current control, never historical evidence.
+        result = {
+            "schema_version": 1, "store_instance_id": instance, **source_keys,
+            "generated_at": _timestamp(generated, "generated_at"),
+            "window_start": start_stamp, "cutoff": cutoff_stamp,
+            "policy": {"source": SOURCE, "model": MODEL, "baseline_only": True,
+                       "settle_seconds": SETTLE_SECONDS, "max_age_seconds": MAX_AGE_SECONDS,
+                       "interval_seconds": 300, "regular_session_minutes": 390,
+                       "maximum_observable_bars_per_regular_session": 77,
+                       "closing_bar_observable": False,
+                       "closing_bar_exclusion": "observer_stops_at_session_close_before_final_bar_settles",
+                       "bar_coverage_is_uptime": False},
+            "latest_observation": latest,
+            "cutoff_status": {"latest_observation": latest, "halted": cutoff_halted,
+                              "data_error": cutoff_data_error,
+                              "stopped": bool(latest and latest["status"] == "stopped")},
+            "current_status": {"latest_observation": latest_current,
+                               "halted": "halt" in metadata, "data_error": "data_error" in metadata,
+                               "stopped": (directory / "STOP").exists()},
+            "observations": observations, "bars": bars, "signals": signal_summaries,
+            "sequence_watermark": latest["sequence"] if latest else 0, "prefix_sha256": prefix,
+            "integrity": {"unlinked_bar_count": unlinked_bars, "unlinked_signal_count": unlinked_signals},
+            **SAFETY,
+        }
+        return result
+    except ManualSignalError:
+        raise
+    except (OSError, sqlite3.DatabaseError, ValueError, TypeError, KeyError, OverflowError):
+        raise ManualSignalError("private observation evidence could not be validated or read") from None
+    finally:
+        if connection is not None:
+            connection.close()

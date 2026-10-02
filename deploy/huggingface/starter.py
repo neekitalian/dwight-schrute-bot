@@ -1,6 +1,6 @@
 """Public onboarding directions only. No workspace, account or credential access."""
 REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
-RELEASE = REPOSITORY + '/releases/tag/v0.4.0'
+RELEASE = REPOSITORY + '/releases/tag/v0.5.0'
 CHOICES = (
     'Explore the research demo',
     'Research my own QQQ history',
@@ -10,7 +10,7 @@ CHOICES = (
 INTRO = '''### A small toolkit for learning before trading
 
 Start with a repeatable VWAP strategy, measure what changes, and keep a record of every decision.
-Dwight 0.4.0 packages historical research, model experiments, baseline QQQ observations, a private TradingView inbox and local paper-journal reports.
+Dwight 0.5.0 packages historical research, model experiments, baseline QQQ observations, a private TradingView inbox and fixed paper-experiment milestone reports.
 This public app demonstrates the research using invented prices. It does not host your trading account.
 '''
 FLOW = '''<div class="dw-flow">
@@ -96,7 +96,14 @@ dwight manual-report --state ./my-dwight/runs/manual-paper/account.sqlite3 \\
 Choose a new report directory. The self-contained HTML shows realized P&L, costs, inventory and proposal differences.
 It includes a frozen JSON snapshot. Keep these account reports private; this public Space never reads them.
 
-[Manual paper workflow]({REPOSITORY}/blob/main/docs/manual-paper.md)''',
+[Manual paper workflow]({REPOSITORY}/blob/main/docs/manual-paper.md)
+
+For a forward experiment, prepare a separate campaign and record the reviewed account evidence before starting
+the clock. Its 12, 24, 48 and 168 hour reports preserve fixed cutoffs, count missing observations, compare
+proposal evidence and retain later corrections. Reports include private charts, a ZIP and an email draft.
+A separate connected sender delivers email; the public Space does not run your campaign.
+
+[Milestone setup and delivery guide]({REPOSITORY}/blob/main/docs/manual-milestones.md)''',
 }
 BOUNDARY = '''**Model status.** The original classifier and the additional session features are research components.
 A short real QQQ sample has been replayed privately, but it did not meet the training gates. Transformer and FinRL

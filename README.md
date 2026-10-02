@@ -2,7 +2,7 @@
 
 A small toolkit for reproducible QQQ research and reviewed paper trading. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
 
-**0.4.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.4.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
+**0.5.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.5.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 
@@ -11,6 +11,8 @@ A small toolkit for reproducible QQQ research and reviewed paper trading. The fi
 The manual paper journal can export a private, self-contained HTML report of imported fills, costs, realized P&L and proposal discrepancies. Account equity and drawdown remain unknown without account snapshots. See the [manual paper report workflow](docs/manual-paper.md).
 
 The [baseline observation workflow](docs/manual-observer.md) reads completed QQQ bars from Alpaca, records causal VWAP setups, and prepares a fresh manual proposal only with an explicit human entry reference and quantity. It does not simulate an account or enforce account risk limits. Price history, proposals and reports remain private. No trained model is used in this baseline path.
+
+The [native paper milestone workflow](docs/manual-milestones.md) freezes 12, 24, 48 and 168 hour cutoffs after reviewed preparation. Its private reports show observation coverage, imported fill accounting, strategy evidence checks and later corrections. Delivery claims and receipts are tracked separately; a connected sender is still required.
 
 **Selected account:** Paper Trading by TradingView. Use [manual proposals and fill imports](docs/manual-paper.md); no automated orders are sent to that account. Alpaca is the planned market-data provider.
 
@@ -102,7 +104,8 @@ dwight/
   walkforward.py           successive unseen tests and reserved final holdout
   manual.py                human paper proposals and FIFO fill journal
   signals.py               causal baseline setups without simulated fills
-  manual_signals.py         private observations and durable proposal preparation
+  manual_signals.py        private observations and durable proposal preparation
+  manual_campaign.py       fixed native paper milestones and delivery ledger
   toolkit.py               private workspace setup and preparation checks
   tradingview.py           authenticated observation inbox without execution
   context.py               timestamped QQQ research context, expiry and provenance

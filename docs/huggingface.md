@@ -2,7 +2,7 @@
 
 The public app is [neekthekid/dwight-schrute-bot](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 This is the research interface, not the always-on paper trading worker.
-The **Start here** tab links the versioned 0.4.0 toolkit and offers four fixed
+The **Start here** tab links the versioned 0.5.0 toolkit and offers four fixed
 paths: explore the demo, research private QQQ history, connect an observation
 inbox, or record manual TradingView paper trades. This tab provides directions
 only; it cannot create workspaces or connect accounts on the public server.
