@@ -10,6 +10,11 @@ A paper-first framework for reproducible trading research. The first integrated 
 
 Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
 
+A [Hugging Face research app](docs/huggingface.md) adds a Gradio interface to the
+synthetic experiment. Its deployment bundle contains allowlisted committed source
+and attribution; it contains no credentials or private datasets. This research
+interface is separate from the continuous shadow/paper worker.
+
 ## Quick start
 
 Python 3.11+; basic replay has no third-party runtime dependencies. For data, training and tracking:

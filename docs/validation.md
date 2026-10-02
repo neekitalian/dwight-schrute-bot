@@ -5,7 +5,7 @@ These checks establish implementation behavior, not investment performance or br
 | Check | Result |
 |---|---|
 | Package build/install | Editable Dwight 0.2.0 installed successfully on Python 3.11 |
-| Full local unit suite | 85 tests passed |
+| Full local unit suite | 94 tests passed, including the synthetic Space callback and deployment bundle checks |
 | Synthetic experiment CLI | Completed for QQQ: baseline, volume filter, logistic model, chronological evaluation |
 | Training/validation/test labels | 66 / 29 / 33, fabricated prices only |
 | MLflow | Local SQLite run completed with artifacts and metrics |
@@ -16,6 +16,8 @@ These checks establish implementation behavior, not investment performance or br
 | Credential preflight | Both Alpaca credential entries absent; read-only paper check stops before network |
 | Docker/server | Not run: Docker and a target server are not configured |
 | GitHub CI | Template prepared; workflow is not active |
+| Hugging Face app | Gradio 6.29 built locally; browser ran the synthetic callback, verified result table/status and mobile layout with no script errors |
+| Space upload bundle | Committed source allowlist; excludes private data/credentials; immutable target; rejects symlinks |
 
 Private local evidence (excluded from Git):
 
