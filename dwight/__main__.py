@@ -149,7 +149,9 @@ def main():
     mode.add_argument('--paper-export', action='store_true', help='Require data_kind=paper_export; authenticity is user supplied')
     p = commands.add_parser('manual-report', help='Report private imported-fill accounting, not account equity')
     p.add_argument('--state', type=Path, default=Path('runs/manual-paper/account.sqlite3'))
-    p.add_argument('--output', type=Path, help='New private JSON file; existing paths are never overwritten')
+    output = p.add_mutually_exclusive_group()
+    output.add_argument('--output', type=Path, help='New private JSON file; existing paths are never overwritten')
+    output.add_argument('--html-output', type=Path, help='New private directory containing a self-contained visual report and frozen JSON')
     p = commands.add_parser('freeze-release', help='Freeze evaluated artifact for shadow only')
     p.add_argument('experiment', type=Path)
     p.add_argument('--output', type=Path, required=True)
@@ -272,7 +274,10 @@ def main():
                 result = _import_manual_snapshot(journal, args.fills, kind)
             else:
                 result = journal.report()
-                if args.output:
+                if args.html_output:
+                    from .manual_reporting import render_manual_report
+                    result = render_manual_report(result, args.html_output)
+                elif args.output:
                     output = _write_private_report(args.output, result)
                     result = {'output': output, 'account': result['account'],
                               'data_kind': result['data_kind'], 'broker_verified': False,

@@ -105,6 +105,27 @@ class ResearchCliTests(unittest.TestCase):
         self.assertEqual(len(ManualPaperJournal(self.state).report()['fills']), 3)
         self.assertEqual(list(self.root.rglob('.dwight-report-*')), [])
 
+    def test_visual_report_freezes_evidence_without_printing_fills(self):
+        self.invoke('manual-import', self.fixture, '--state', self.state, '--synthetic')
+        output = self.root.resolve() / 'visual-report'
+        result = self.invoke('manual-report', '--state', self.state, '--html-output', output)
+        self.assertEqual(result['data_kind'], 'synthetic')
+        self.assertFalse(result['broker_verified'])
+        self.assertFalse(result['submits_orders'])
+        self.assertNotIn('fills', result)
+        self.assertEqual(output.stat().st_mode & 0o777, 0o700)
+        frozen = json.loads((output / 'report.json').read_text())
+        self.assertEqual(frozen['net_realized_pnl'], '49.4')
+        self.assertIsNone(frozen['account_equity'])
+        self.assertEqual((output / 'report.json').stat().st_mode & 0o777, 0o600)
+        self.assertTrue((output / 'report.html').is_file())
+
+    def test_visual_and_json_output_are_mutually_exclusive(self):
+        self.invoke('manual-report', '--state', self.state,
+                    '--output', self.root / 'report.json',
+                    '--html-output', self.root / 'visual', error='not allowed')
+        self.assertFalse(self.state.exists())
+
     def test_strict_proposal_json_rejects_duplicates_nan_and_wrong_shape(self):
         path, _ = self.write_proposal()
         for content, expected in [('[]', 'must contain an object'),

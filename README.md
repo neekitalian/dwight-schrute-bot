@@ -2,11 +2,13 @@
 
 A small toolkit for reproducible QQQ research and reviewed paper trading. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
 
-**0.3.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.3.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
+**0.3.1 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.3.1), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 
 **Working now:** private FirstRate QQQ sample ingestion, Alpaca historical ingestion, calendar validation, baseline and model-filtered replay, chronological and walk-forward classifier experiments, a manual TradingView paper journal, local MLflow tracking, frozen releases, a live-data shadow monitor, paper-order/recovery library, and public Polymarket book snapshots.
+
+The manual paper journal can export a private, self-contained HTML report of imported fills, costs, realized P&L and proposal discrepancies. Account equity and drawdown remain unknown without account snapshots. See the [manual paper report workflow](docs/manual-paper.md).
 
 **Selected account:** Paper Trading by TradingView. Use [manual proposals and fill imports](docs/manual-paper.md); no automated orders are sent to that account. Alpaca is the planned market-data provider.
 

@@ -45,6 +45,28 @@ With `--output`, it creates a new mode-0600 JSON file and prints only its locati
 and evidence labels. Existing paths are never overwritten. Select a new filename
 for each snapshot. Do not redirect private stdout into a public log.
 
+For a private visual report, use a new output directory:
+
+```bash
+python -m dwight manual-report --state runs/manual-paper/account.sqlite3 \
+  --html-output runs/manual-paper/visual-report-001
+```
+
+Open the returned HTML locally. It contains an inline realized-PnL chart, costs,
+remaining inventory, imported fills and proposal discrepancies. It loads no
+external scripts or fonts. Its frozen JSON snapshot and checksum let you identify
+the exact evidence used. Both reports contain private execution data; share only
+with authorized recipients. The chart is cumulative realized PnL after sell
+executions, not account equity or drawdown. Account return and unrealized PnL
+remain unknown. An empty journal means no imported evidence, not verified zero
+account activity. Paper-export labels do not establish authenticity or a complete
+account history, and these checks do not prove full strategy adherence.
+
+`--html-output` and `--output` are mutually exclusive. The HTML directory must
+have an existing parent, must not already exist and must not traverse a symlink. New report directories use
+mode 0700 and files mode 0600. This command snapshots current journal evidence;
+it does not schedule milestones, place an order or send email.
+
 Run the invented accounting fixture in a separate journal:
 
 ```bash

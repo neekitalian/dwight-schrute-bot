@@ -1,6 +1,6 @@
 """Public onboarding directions only. No workspace, account or credential access."""
 REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
-RELEASE = REPOSITORY + '/releases/tag/v0.3.0'
+RELEASE = REPOSITORY + '/releases/tag/v0.3.1'
 CHOICES = (
     'Explore the research demo',
     'Research my own QQQ history',
@@ -10,7 +10,7 @@ CHOICES = (
 INTRO = '''### A small toolkit for learning before trading
 
 Start with a repeatable VWAP strategy, measure what changes, and keep a record of every decision.
-Dwight 0.3.0 packages historical research, model experiments and a private TradingView observation inbox.
+Dwight 0.3.1 packages historical research, model experiments, a private TradingView observation inbox and local paper-journal reports.
 This public app demonstrates the research using invented prices. It does not host your trading account.
 '''
 FLOW = '''<div class="dw-flow">
@@ -77,6 +77,16 @@ from an Alpaca paper account. The toolkit does not silently switch accounts or a
 
 The private journal tracks imported executions; it does not claim to know total account equity. A native TradingView
 CSV export adapter has not yet been verified, so follow the explicit normalization schema.
+
+After importing evidence into your local journal, create a private visual snapshot:
+
+```sh
+dwight manual-report --state ./my-dwight/runs/manual-paper/account.sqlite3 \\
+  --html-output ./my-dwight/runs/manual-paper/report-001
+```
+
+Choose a new report directory. The self-contained HTML shows realized P&L, costs, inventory and proposal differences.
+It includes a frozen JSON snapshot. Keep these account reports private; this public Space never reads them.
 
 [Manual paper workflow]({REPOSITORY}/blob/main/docs/manual-paper.md)''',
 }

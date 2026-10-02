@@ -21,7 +21,7 @@ FILES = (
     "dwight/store.py", "dwight/research.py", "dwight/data.py",
     "dwight/experiments.py", "dwight/ops.py", "dwight/shadow.py",
     "dwight/firstrate.py", "dwight/enrichment.py", "dwight/toolkit.py", "dwight/tradingview.py",
-    "dwight/walkforward.py", "dwight/manual.py", "dwight/context.py", "dwight/finrl.py",
+    "dwight/walkforward.py", "dwight/manual.py", "dwight/manual_reporting.py", "dwight/context.py", "dwight/finrl.py",
     "dwight/paper.py", "dwight/recorder.py", "dwight/connectors/__init__.py",
     "dwight/audit.py", "dwight/reporting.py", "dwight/campaign.py",
     "dwight/connectors/csv.py", "dwight/connectors/polymarket.py",
