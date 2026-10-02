@@ -23,6 +23,14 @@ interface is separate from the continuous shadow/paper worker.
 
 Open the public [Dwight QQQ Research Lab](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 
+An optional [FinRL research adapter](docs/finrl-research.md) lets an offline policy
+accept or skip existing long QQQ VWAP candidates while preserving the replay's
+stops, sizing and loss rules. Point-in-time context snapshots can add separately
+prepared fundamental, macro or news features. The adapter and synthetic contract
+checks are implemented; no FinRL model has been trained or promoted, and no
+fundamental data feed is connected. The public Space still runs its existing
+classifier demonstration.
+
 ## Quick start
 
 Python 3.11+; basic replay has no third-party runtime dependencies. For data, training and tracking:
@@ -79,6 +87,8 @@ dwight/
   research.py              model assessment/escalation contracts
   data.py                  Alpaca raw data, calendar validation, CSV/Parquet
   experiments.py           causal features, evaluation, JSON model, MLflow
+  context.py               timestamped QQQ research context, expiry and provenance
+  finrl.py                 optional offline skip/take RL environment and trainer seam
   ops.py                   preparation checks and release integrity
   shadow.py                read-only current-data monitor and decision journal
   paper.py                 paper-only transport, limits, durable intents/recovery

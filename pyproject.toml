@@ -16,6 +16,7 @@ research = ["numpy>=1.26,<3", "scikit-learn>=1.5,<2"]
 tracking = ["mlflow-skinny>=3,<4", "sqlalchemy>=2,<3", "alembic>=1.13,<2"]
 reporting = ["matplotlib>=3.8,<4"]
 dashboard = ["plotly==6.3.1"]
+rl-env = ["gymnasium==1.2.1", "numpy>=1.26,<3"]
 
 [project.scripts]
 dwight = "dwight.__main__:main"
