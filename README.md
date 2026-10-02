@@ -15,6 +15,8 @@ synthetic experiment. Its deployment bundle contains allowlisted committed sourc
 and attribution; it contains no credentials or private datasets. This research
 interface is separate from the continuous shadow/paper worker.
 
+Open the public [Dwight QQQ Research Lab](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
+
 ## Quick start
 
 Python 3.11+; basic replay has no third-party runtime dependencies. For data, training and tracking:

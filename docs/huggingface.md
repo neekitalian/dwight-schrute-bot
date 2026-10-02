@@ -1,6 +1,6 @@
 # Hugging Face research Space
 
-The intended public destination is `neekthekid/dwight-schrute-bot`.
+The public app is [neekthekid/dwight-schrute-bot](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 This is the research interface, not the always-on paper trading worker.
 The app runs the existing experiment on a fixed synthetic fixture. It compares
 the baseline, volume filter and classifier on a later chronological partition.
@@ -11,6 +11,22 @@ upload, broker operation, or custom-code input. The first request computes a
 result; the process holds a single cached result in memory. Temporary data is
 cleaned up. MLflow logging is disabled in this ephemeral demo; use the documented
 local workflow for private datasets, persistent artifacts and MLflow tracking.
+
+## Verified deployment
+
+The first deployment reached RUNNING on CPU Basic. The public browser and API
+both completed the actual synthetic experiment. Its trade counts and strategy
+metrics matched the local run. Mobile layout and both interface tabs were checked.
+
+- Application source: `4adcb8ba78bdcee52d7fcfe2c9c79da8218ce3e3`
+- Space commit: `23c907debc0f5356106705a8dd2b153711b269db`
+- Hosted model fingerprint: `d7e728a13c7bfcdd851779971f059db3104707682eb4dde5c0babc80ed7b6c3e`
+
+Independent synthetic generation and training on different platforms can produce
+different floating-point bytes and fingerprints. Each report retains its own
+input/model identity; cross-platform checks compare behavior numerically, not
+binary model equality. Existing frozen-release checksum enforcement is unchanged.
+These hosted results remain synthetic and do not establish a trading edge.
 
 ## Local development
 

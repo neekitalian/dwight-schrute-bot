@@ -18,6 +18,7 @@ These checks establish implementation behavior, not investment performance or br
 | GitHub CI | Template prepared; workflow is not active |
 | Hugging Face app | Gradio 6.29 built locally; browser ran the synthetic callback, verified result table/status and mobile layout with no script errors |
 | Space upload bundle | Committed source allowlist; excludes private data/credentials; immutable target; rejects symlinks |
+| Hosted Hugging Face | Public Space RUNNING on CPU Basic; remote API and browser completed synthetic experiment; source manifest verified; local/remote strategy metrics matched |
 
 Private local evidence (excluded from Git):
 
