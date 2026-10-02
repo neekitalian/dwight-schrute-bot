@@ -1,0 +1,11 @@
+{
+  "min_train_samples": 10,
+  "min_validation_samples": 4,
+  "min_test_samples": 4,
+  "min_class_samples": 1,
+  "min_validation_trades": 1,
+  "train_fraction": 0.6,
+  "validation_fraction": 0.2,
+  "thresholds": [0.35, 0.5, 0.65],
+  "tracking_uri": "sqlite:///runs/experiment-smoke/mlflow.db"
+}

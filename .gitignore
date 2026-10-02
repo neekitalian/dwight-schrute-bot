@@ -10,3 +10,7 @@ dist/
 runs/
 *.sqlite*
 examples/synthetic.csv
+private-data/
+mlruns/
+models/
+releases/

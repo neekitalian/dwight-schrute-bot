@@ -1,6 +1,12 @@
 .git
 .venv
 runs
+private-data
+models
+releases
+mlruns
+work
+examples/synthetic*.csv
 .env
 .env.*
 __pycache__

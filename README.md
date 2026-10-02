@@ -2,18 +2,22 @@
 
 A paper-first framework for reproducible trading research. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
 
-**Working now:** historical CSV replay, the VWAP engine, SQLite run journal, input/config/code fingerprints, optional public Polymarket market discovery, and a provider-independent research escalation interface.
+**Working now:** Alpaca historical ingestion, calendar validation, baseline and model-filtered replay, chronological classifier experiments, local MLflow tracking, frozen releases, a live-data shadow monitor, paper-order/recovery library, and public Polymarket book snapshots.
 
-**Not connected:** broker paper accounts, live order execution, trained ML models, or a Polymarket fill simulator. Synthetic demo results are software checks, not strategy performance evidence.
+**Deployment boundary:** the running service is shadow only and cannot submit orders. The paper library is mock-tested; the CLI permits read-only account checks. An unattended paper execution loop and a Polymarket fill simulator remain unfinished. Synthetic models cannot run in live shadow. No account is connected and no order has been submitted.
+
+Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
 
 ## Quick start
 
-Python 3.11+; the core has no third-party runtime dependencies.
+Python 3.11+; basic replay has no third-party runtime dependencies. For data, training and tracking:
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
+python -m pip install -r requirements.lock
+python -m pip install --no-deps -e .
+dwight doctor
 python examples/make_demo.py
 dwight strategies
 dwight replay examples/synthetic.csv --symbol SYNTHETIC
@@ -22,10 +26,21 @@ python -m unittest discover -s tests -v
 
 Without installing, use `python3 -m dwight` in place of `dwight`.
 
+Run the full offline synthetic experiment, including a real local classifier and MLflow logging:
+
+```sh
+python examples/make_experiment_demo.py
+dwight experiment private-data/synthetic-vwap-5Min.csv --symbol SPY --synthetic \
+  --config configs/synthetic-experiment.json --output runs/experiment-smoke
+```
+
+This verifies software behavior, not trading performance. Reduced sample requirements are accepted only for synthetic runs. Real-data experiments validate the sibling dataset manifest and compare VWAP, a fixed volume filter, and the learned filter on chronological partitions. Models use JSON coefficients and preprocessing rather than pickle. Basic replay alone needs only `pip install .`; optional extras are `.[data,research,tracking]`.
+
 ```sh
 dwight replay /path/to/qqq.csv --symbol QQQ --config examples/config.json
 # Optional network read; no wallet or API key required:
 dwight polymarket-discover --limit 5
+dwight record-polymarket --limit 3 --output runs/polymarket
 ```
 
 CSV schema: `timestamp,open,high,low,close,volume`. Supply one instrument, timezone-aware, start-labelled, completed 5-minute US regular-session bars. Intraday gaps and duplicate timestamps fail validation. The caller must provide valid exchange sessions, including holidays and early closes. Full rules and simulator limitations: [VWAP guide](docs/vwap.md).
@@ -47,6 +62,12 @@ dwight/
   runner.py                strategy registry and replay lifecycle
   store.py                 SQLite transactional run journal
   research.py              model assessment/escalation contracts
+  data.py                  Alpaca raw data, calendar validation, CSV/Parquet
+  experiments.py           causal features, evaluation, JSON model, MLflow
+  ops.py                   preparation checks and release integrity
+  shadow.py                read-only current-data monitor and decision journal
+  paper.py                 paper-only transport, limits, durable intents/recovery
+  recorder.py              bounded public Polymarket book snapshots
 vwap_bot/                  unchanged upstream replay engine
 examples/                  config and synthetic-data generator
 tests/                     strategy and framework regression tests
@@ -59,9 +80,9 @@ The research cascade labels evidence as relevant/irrelevant or abstains. It cann
 
 ## Development and deployment
 
-A ready-to-enable GitHub Actions workflow is provided at `examples/github-actions-tests.yml`; move it to `.github/workflows/tests.yml` using a credential with workflow permission. It installs the package and runs tests plus synthetic replay on Python 3.11–3.13. It is not active yet. Docker packaging is provided for local use; `docker build -t dwight .` then `docker run --rm dwight` lists strategies. A persistent service and scheduler are not included.
+A GitHub Actions template is provided at `examples/github-actions-tests.yml`; move it to `.github/workflows/tests.yml` using a credential with workflow permission. It runs tests and a synthetic experiment on Python 3.11–3.13. It is not active yet. `deploy/compose.yaml` prepares a persistent shadow service with a private state volume, read-only release and health check. Docker was unavailable locally, so the Linux build and deployment need verification on the chosen host. `requirements.lock` records the dependency versions used in local validation.
 
-See [architecture and next milestones](docs/architecture.md). No credentials are required for the default workflow. Secrets, private datasets, run records and wallet keys must never be committed. No live-mode switch exists.
+See [architecture and next milestones](docs/architecture.md). The synthetic workflow and public Polymarket snapshots need no credentials. Alpaca history/shadow need paper keys and the selected data entitlement. Secrets, private datasets, models and account journals must never be committed. Hugging Face Jobs is optional; this classifier runs locally on CPU. No live-money switch exists.
 
 ## Provenance and license
 

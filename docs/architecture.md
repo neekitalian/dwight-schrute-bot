@@ -2,9 +2,9 @@
 
 ## Current boundary
 
-One deterministic strategy is operational in historical replay. CSV input flows through the unchanged VWAP engine into private reports and an atomic SQLite journal. Public Polymarket discovery is independently callable. Research providers expose assessments only and have no execution credentials or broker capability.
+Alpaca data flows through calendar validation into VWAP baseline/filtered experiments and local MLflow. Models are frozen with data, feature/code and policy identities. The current deployable service polls live data and journals shadow decisions; it does not import the broker adapter. Polymarket public snapshots are separate. Research models never control execution policy.
 
-This is a framework foundation, not an operational trading service. The SQLite database stores completed research runs, not durable open-order/account recovery state. Export files and the database do not form one filesystem/database transaction; after an export failure, inspect the journal before retrying.
+This is a research and shadow service, not unattended paper execution. Separate SQLite stores hold completed research runs, shadow bars/decisions, and paper order intents/recovery state. Export files and the research database do not form one filesystem/database transaction; after an export failure, inspect the journal before retrying. Early closes are recognized at ingestion but explicitly excluded in experiments and skipped by the pinned 16:00 strategy's shadow monitor.
 
 ## Target architecture
 
@@ -36,11 +36,13 @@ Use transactional idempotency keys for order intents, broker acknowledgments, pa
 
 ## Ordered milestones
 
-1. **Data and replay:** add exchange-calendar-aware equity ingestion, real historical datasets and train/test partitions. Keep the current synthetic fixture solely for regression checks.
-2. **Paper execution:** select Alpaca's direct paper API or Interactive Brokers with Nautilus; do not assume Nautilus includes an Alpaca adapter. Implement read-only account/quote checks before paper orders. Extract VWAP proposals and preserve historical parity.
-3. **Polymarket research:** discovery, order-book recording, event lifecycle and a depth/latency/fee-aware simulator. No wallet needed for this stage. Confirm venue/account eligibility separately before any live deployment.
-4. **ML evaluation:** compare a fixed deterministic baseline, local classifier, and optional Jev/LLM evidence cascade. Use chronological train/calibration/test periods with overlapping-label purging and train-only preprocessing. Track all experiments, including failed ones.
-5. **Engine migration:** evaluate a pinned Nautilus release and its LGPL obligations before adopting it. Test market data, fills, reconciliation and binary settlement; do not treat documentation as an integration test.
+1. **Real evidence:** configure Alpaca credentials, download history and run the implemented experiments on real data. Synthetic smoke tests only validate the software.
+2. **Live shadow:** validate the frozen model on the matching feed, deployment/restart behavior, monitoring and newly observed prices. Source/model/feed changes fail verification; vendor bar corrections latch a review halt.
+3. **Paper execution:** the paper-only library implements durable intents and recovery, but needs a proposal/account-state separation, quote connector, entry expiry, partial-fill supervision and session-close exits before an unattended loop. Mock tests do not establish broker integration readiness. The library's GTC brackets can outlive a session, and a partial parent fill can lack active exits.
+4. **Polymarket research:** snapshots are implemented; continuous tick updates, fee metadata, resolution tracking and depth/latency-aware fill simulation remain. Equity labels cannot be reused for event contracts.
+5. **Expanded research:** improve execution-cost estimates, reserve fresh holdouts, validate model drift and evaluate additional strategies. Engine migration or GPU training is optional after a measured need.
+
+The shadow portfolio is simulated; its fills are never broker account truth. Paper reconciliation compares actual broker fills/positions and requires one dedicated account ledger. Its file lock protects one database path, not every possible database for an account. Partial fills and missing protective stops block entries; blocking does not close exposure. Daily-loss limits and stops cannot guarantee a maximum loss. See the [workflow runbook](workflow.md) for operational preparation.
 
 Promotion requires reproducible evaluation after realistic costs and operational failure testing. Trade count or a week of good results alone is insufficient. Track returns/drawdown/turnover, calibration, abstention, inference cost and order errors. Wallet-copy experiments require forward selection and realistic observation delay; social-media profit screenshots are not validation.
 

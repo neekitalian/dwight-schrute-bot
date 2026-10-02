@@ -1,0 +1,10 @@
+{
+  "version": "shadow-v1",
+  "mode": "shadow",
+  "allowed_symbols": ["SPY", "QQQ"],
+  "feed": "sip",
+  "bar_settle_seconds": 60,
+  "max_bar_delay_seconds": 120,
+  "poll_seconds": 30,
+  "stop_file": "runs/STOP"
+}
