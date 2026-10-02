@@ -41,7 +41,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install --disable-pip-version-check --no-deps .
 export MPLCONFIGDIR=/var/lib/dwight/matplotlib XDG_CACHE_HOME=/var/lib/dwight/cache
 install -d -m 700 -o dwight -g dwight "$MPLCONFIGDIR" "$XDG_CACHE_HOME"
-runuser -u dwight -- .venv/bin/python -m unittest discover -s tests -q
+runuser -u dwight -- env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0=/opt/dwight .venv/bin/python -m unittest discover -s tests -q
 install -m 644 deploy/linux/dwight-shadow.service /etc/systemd/system/dwight-shadow.service
 install -m 644 deploy/linux/dwight-reports.service /etc/systemd/system/dwight-reports.service
 install -m 644 deploy/linux/dwight-reports.timer /etc/systemd/system/dwight-reports.timer
