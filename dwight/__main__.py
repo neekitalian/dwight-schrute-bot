@@ -13,7 +13,7 @@ def main():
     commands.add_parser("doctor", help="Check preparation; never prints credential values")
     p = commands.add_parser("replay", help="Historical CSV replay with simulated fills")
     p.add_argument("data", type=Path)
-    p.add_argument("--symbol", required=True)
+    p.add_argument("--symbol", choices=['QQQ','SYNTHETIC'], default='QQQ')
     p.add_argument("--strategy", choices=STRATEGIES, default="vwap_pullback")
     p.add_argument("--config", type=Path)
     p.add_argument("--output", type=Path, default=Path("runs"))
@@ -22,12 +22,12 @@ def main():
     p = commands.add_parser('download-data', help='Download and fingerprint Alpaca one-minute data')
     p.add_argument('--start', required=True, help='YYYY-MM-DD inclusive session date')
     p.add_argument('--end', required=True, help='YYYY-MM-DD inclusive session date')
-    p.add_argument('--symbols', nargs='+', default=['SPY','QQQ'])
+    p.add_argument('--symbols', nargs='+', choices=['QQQ'], default=['QQQ'])
     p.add_argument('--feed', choices=['sip','iex'], required=True)
     p.add_argument('--output', type=Path, default=Path('private-data'))
     p = commands.add_parser('experiment', help='Chronological VWAP classifier experiment')
     p.add_argument('data', type=Path)
-    p.add_argument('--symbol', required=True)
+    p.add_argument('--symbol', choices=['QQQ'], default='QQQ')
     p.add_argument('--config', type=Path)
     p.add_argument('--synthetic', action='store_true', help='Smoke test only; cannot deploy to live shadow')
     p.add_argument('--tracking-uri', help='Local SQLite MLflow URI')
@@ -35,7 +35,7 @@ def main():
     p = commands.add_parser('freeze-release', help='Freeze evaluated artifact for shadow only')
     p.add_argument('experiment', type=Path)
     p.add_argument('--output', type=Path, required=True)
-    p.add_argument('--symbol', choices=['SPY','QQQ'], required=True)
+    p.add_argument('--symbol', choices=['QQQ'], default='QQQ')
     p.add_argument('--feed', choices=['sip','iex','synthetic'], required=True)
     p.add_argument('--policy', type=Path, default=Path('configs/shadow-policy.json'))
     p = commands.add_parser('shadow', help='Poll live bars and journal decisions; cannot submit orders')
@@ -54,7 +54,7 @@ def main():
     try:
         load_env()
         if args.command == "strategies":
-            result = {key: {"mode": "historical_replay", "asset_class": "equities"} for key in STRATEGIES}
+            result = {key: {"mode": "historical_replay", "asset_class": "equities", "allowed_symbols": ['QQQ']} for key in STRATEGIES}
         elif args.command == "replay":
             config = json.loads(args.config.read_text()) if args.config else {}
             result = replay(args.data, args.symbol, config, args.output, args.strategy)

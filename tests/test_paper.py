@@ -16,8 +16,8 @@ from dwight.paper import (
 
 
 NOW = datetime(2026, 10, 2, 15, 0, tzinfo=timezone.utc)
-PROPOSAL = OrderProposal("vwap-SPY-20261002T150000-model1", "SPY", 2, 500.01, 499.00, 503.00)
-QUOTE = Quote("SPY", 500.00, 500.01, NOW, "sip")
+PROPOSAL = OrderProposal("vwap-QQQ-20261002T150000-model1", "QQQ", 2, 500.01, 499.00, 503.00)
+QUOTE = Quote("QQQ", 500.00, 500.01, NOW, "sip")
 
 
 class FakeBroker:
@@ -67,12 +67,12 @@ class FakeBroker:
         order = self.orders[cid]
         order.update(status="filled", filled_qty=order["qty"])
         order["legs"] = [
-            {"id": "stop-1", "symbol": "SPY", "side": "sell", "type": "stop",
+            {"id": "stop-1", "symbol": "QQQ", "side": "sell", "type": "stop",
              "qty": order["qty"], "filled_qty": "0", "status": "new"},
-            {"id": "target-1", "symbol": "SPY", "side": "sell", "type": "limit",
+            {"id": "target-1", "symbol": "QQQ", "side": "sell", "type": "limit",
              "qty": order["qty"], "filled_qty": "0", "status": "new"},
         ] if protected else []
-        self.positions = [{"symbol": "SPY", "qty": order["qty"], "market_value": "1000.02"}]
+        self.positions = [{"symbol": "QQQ", "qty": order["qty"], "market_value": "1000.02"}]
 
 
 class TransportTests(unittest.TestCase):
@@ -133,6 +133,14 @@ class TransportTests(unittest.TestCase):
         with self.assertRaises(PaperError):
             _NoRedirect().redirect_request(None, None, 302, "", {}, "https://api.alpaca.markets")
 
+    def test_non_qqq_submission_is_rejected_before_network_request(self):
+        client = AlpacaPaperClient("key", "secret")
+        client._opener = Mock()
+        for symbol in ("SPY", "AAPL", "qqq", None):
+            with self.subTest(symbol=symbol), self.assertRaisesRegex(RiskRejected, "Only QQQ"):
+                client.submit_order({"symbol": symbol})
+        client._opener.open.assert_not_called()
+
     def test_bracket_lookup_fetches_nested_order_by_id(self):
         client = AlpacaPaperClient("key", "secret")
         client._request = Mock(side_effect=[{"id": "abc", "order_class": "bracket"}, {"legs": []}])
@@ -155,6 +163,14 @@ class ExecutionTests(unittest.TestCase):
 
     def submit(self, proposal=PROPOSAL, quote=QUOTE):
         return self.executor.submit(proposal, quote, now=NOW)
+
+    def test_spy_proposal_is_rejected_before_broker_access_or_intent(self):
+        self.broker.get_account = Mock(side_effect=AssertionError("No broker access expected"))
+        with self.assertRaisesRegex(RiskRejected, "Only QQQ"):
+            self.submit(replace(PROPOSAL, symbol="SPY"), replace(QUOTE, symbol="SPY"))
+        self.broker.get_account.assert_not_called()
+        self.assertEqual(self.broker.submits, 0)
+        self.assertEqual(self.executor.db.execute("SELECT count(*) FROM paper_intents").fetchone()[0], 0)
 
     def test_intent_is_durable_before_submit_and_idempotent_across_restart(self):
         def check(payload):
@@ -190,7 +206,7 @@ class ExecutionTests(unittest.TestCase):
         self.broker.positions = [{"symbol": "QQQ", "qty": "1", "market_value": "450"}]
         with self.assertRaises(ReconciliationRequired): self.submit()
         self.broker.positions = []
-        self.broker.orders["other"] = {"id": "foreign", "status": "new", "symbol": "SPY"}
+        self.broker.orders["other"] = {"id": "foreign", "status": "new", "symbol": "QQQ"}
         with self.assertRaises(ReconciliationRequired): self.submit()
         self.assertEqual(self.broker.submits, 0)
 
@@ -222,7 +238,7 @@ class ExecutionTests(unittest.TestCase):
     def test_partial_fill_blocks_until_protection_can_be_confirmed(self):
         order = self.submit()
         self.broker.orders[order["client_order_id"]].update(status="partially_filled", filled_qty="1")
-        self.broker.positions = [{"symbol": "SPY", "qty": "1", "market_value": "500"}]
+        self.broker.positions = [{"symbol": "QQQ", "qty": "1", "market_value": "500"}]
         with self.assertRaisesRegex(ReconciliationRequired, "Partially filled"):
             self.executor.reconcile()
 
@@ -291,7 +307,10 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaisesRegex(RiskRejected, "gross exposure"): self.submit()
 
     def test_policy_rejects_nan_or_expanded_symbols(self):
-        with self.assertRaises(ValueError): RiskPolicy(allowed_symbols=("AAPL",))
+        self.assertEqual(RiskPolicy().allowed_symbols, ("QQQ",))
+        for symbols in (("SPY",), ("QQQ", "SPY"), ("AAPL",), ()):
+            with self.subTest(symbols=symbols), self.assertRaisesRegex(ValueError, "only QQQ"):
+                RiskPolicy(allowed_symbols=symbols)
         with self.assertRaises(RiskRejected): RiskPolicy(max_order_notional=float("nan"))
 
 

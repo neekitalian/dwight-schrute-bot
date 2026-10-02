@@ -1,5 +1,7 @@
 # VWAP + market-structure pullback bot
 
+Dwight's equity scope is QQQ only. The user's [PineGen QQQ case study](https://www.pinegen.ai/resources/pine-script-user-case-studies/vwap-pullback-strategy-qqq-backtest) is a research reference, not the implementation specification for this pinned engine. Its RSI(2) confirmation, ATR stop and prior-session target differ from the structure/impulse/rejection rules below. Its proposed 09:45–11:30 New York entry window is a separate hypothesis to test on fresh data. The publisher's reported results have not been reproduced here; this symbol-scope change does not alter strategy rules.
+
 A Python 3.11+ **historical replay / paper-fill bot**, implementing the supplied strategy for one instrument on 5-minute candles. No dependencies, API keys, broker connection, or real-money orders. This version is a runnable research baseline, not a continuously connected broker paper-trading service.
 
 ## Run
@@ -26,7 +28,7 @@ timestamp,open,high,low,close,volume
 2026-09-28T09:35:00-04:00,100.10,100.30,99.90,100.20,13500
 ```
 
-Timestamps label candle **start**, include an explicit timezone, and must increase strictly. Feed only completed bars. Input is restricted to weekday US regular-session 09:30–15:55 starts, converted to America/New_York with daylight-saving handling. Missing intraday bars cause an error. Partial first/last sessions are accepted. The caller must supply valid exchange sessions: holiday and early-close calendars are not bundled. ETFs such as QQQ/SPY fit the default share units; raw cash index values have no directly tradable share volume. Futures require appropriate point value, tick, cost, leverage configuration, and separate margin/session modeling before use.
+Timestamps label candle **start**, include an explicit timezone, and must increase strictly. Feed only completed bars. Input is restricted to weekday US regular-session 09:30–15:55 starts, converted to America/New_York with daylight-saving handling. Missing intraday bars cause an error. Partial first/last sessions are accepted. The caller must supply valid exchange sessions: holiday and early-close calendars are not bundled. Dwight uses QQQ exclusively for equities, with the default share units; raw cash index values have no directly tradable share volume. Futures require appropriate point value, tick, cost, leverage configuration, and separate margin/session modeling before use.
 
 ## Exact mechanical interpretation
 

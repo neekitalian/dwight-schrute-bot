@@ -192,7 +192,7 @@ def _credentials(environ: Mapping[str, str] | None) -> tuple[str, str]:
     return key, secret
 
 
-def fetch_alpaca_bars(start: datetime, end: datetime, symbols: Iterable[str] = ("SPY", "QQQ"),
+def fetch_alpaca_bars(start: datetime, end: datetime, symbols: Iterable[str] = ("QQQ",),
                       feed: str = "sip", environ: Mapping[str, str] | None = None,
                       *, max_pages: int = 1000) -> dict[str, list[dict]]:
     """Read current or historical 1m bars. Bounds are inclusive; no order API.
@@ -208,6 +208,8 @@ def fetch_alpaca_bars(start: datetime, end: datetime, symbols: Iterable[str] = (
     if isinstance(symbols, str):
         symbols = symbols.split(",")
     symbols = tuple(symbols)
+    if symbols != ("QQQ",):
+        raise ValueError("Dwight equity data is restricted to QQQ")
     if not symbols or len(set(symbols)) != len(symbols) or any(
             not isinstance(symbol, str) or not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,14}", symbol)
             for symbol in symbols):
@@ -280,7 +282,7 @@ def _records(pages: list[Path], symbol: str):
 
 
 def download_alpaca_dataset(output_dir: str | Path, start: str | date, end: str | date,
-                            symbols: Iterable[str] = ("SPY", "QQQ"), feed: str = "sip",
+                            symbols: Iterable[str] = ("QQQ",), feed: str = "sip",
                             adjustment: str = "raw", environ: Mapping[str, str] | None = None,
                             *, now: datetime | None = None, max_pages: int = 10000) -> dict:
     """Download authenticated history into a new immutable-by-convention dataset.
@@ -302,6 +304,8 @@ def download_alpaca_dataset(output_dir: str | Path, start: str | date, end: str 
     if isinstance(symbols, str):
         symbols = symbols.split(",")
     symbols = tuple(symbols)
+    if symbols != ("QQQ",):
+        raise ValueError("Dwight equity data is restricted to QQQ")
     if not symbols or len(set(symbols)) != len(symbols) or any(
             not isinstance(symbol, str) or not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,14}", symbol)
             for symbol in symbols):

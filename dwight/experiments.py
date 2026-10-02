@@ -380,8 +380,8 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
     synthetic=True. Every completed experiment remains research-only: promotion
     requires a separate release review and successful live shadow validation.
     """
-    if not symbol.strip():
-        raise ValueError("symbol must not be empty")
+    if symbol != "QQQ":
+        raise ValueError("Dwight equity experiments are restricted to QQQ")
     cfg = dict(config or {})
     strategy = dict(cfg.pop("strategy", {}))
     for key in set(cfg) & set(Config.__dataclass_fields__):

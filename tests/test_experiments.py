@@ -169,34 +169,34 @@ class ExperimentTests(unittest.TestCase):
                 for i in range(78):
                     b = bar(i)
                     writer.writerow([b.timestamp.isoformat(), b.open, b.high, b.low, b.close, b.volume])
-            report = experiment(path, "TEST", root/"runs", synthetic=True)
+            report = experiment(path, "QQQ", root/"runs", synthetic=True)
             self.assertEqual(report["status"], "insufficient_data")
             self.assertFalse(report["promotion_eligible"])
             self.assertFalse((Path(report["directory"])/"model.json").exists())
             with self.assertRaises(ValueError):
-                experiment(path, "TEST", root/"real", config={"min_train_samples": 2})
+                experiment(path, "QQQ", root/"real", config={"min_train_samples": 2})
 
     def test_manifest_provenance_and_csv_tampering(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            data = root/"SPY-5Min.csv"
+            data = root/"QQQ-5Min.csv"
             data.write_text("timestamp,open,high,low,close,volume\n")
             manifest = {"schema_version": 1, "source": "alpaca", "start": "2026-01-01", "end": "2026-02-01",
-                        "symbols": ["SPY"], "feed": "sip", "adjustment": "raw",
-                        "bars": {"SPY": {"5Min": data.name}},
+                        "symbols": ["QQQ"], "feed": "sip", "adjustment": "raw",
+                        "bars": {"QQQ": {"5Min": data.name}},
                         "files": [{"path": data.name, "sha256": hashlib.sha256(data.read_bytes()).hexdigest()}]}
             fingerprint = {key: manifest[key] for key in ("schema_version", "start", "end", "symbols", "feed", "adjustment", "files")}
             manifest["dataset_sha256"] = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode()).hexdigest()
             (root/"manifest.json").write_text(json.dumps(manifest))
-            report = experiment(data, "SPY", root/"runs")
+            report = experiment(data, "QQQ", root/"runs")
             self.assertEqual(report["source"], "alpaca")
             self.assertEqual(report["feed"], "sip")
             self.assertEqual(report["dataset_sha256"], manifest["dataset_sha256"])
             data.write_text(data.read_text()+"2026-09-28T09:30:00-04:00,100,101,99,100,1000\n")
             with self.assertRaisesRegex(ValueError, "checksum"):
-                experiment(data, "SPY", root/"tampered")
+                experiment(data, "QQQ", root/"tampered")
             with self.assertRaises(ValueError):
-                experiment(data, "QQQ", root/"wrong-symbol")
+                experiment(data, "SPY", root/"wrong-symbol")
 
 
 if __name__ == "__main__":

@@ -69,11 +69,11 @@ class DataTests(unittest.TestCase):
 
     def test_current_reader_supports_partial_session_without_orders(self):
         s = session()
-        payload = json.dumps({"bars": {"SPY": records(s)[:6]}}).encode()
+        payload = json.dumps({"bars": {"QQQ": records(s)[:6]}}).encode()
         with patch("dwight.data._request_page", return_value=payload) as request:
-            result = fetch_alpaca_bars(s.open, s.open + timedelta(minutes=6), ["SPY"], "iex",
+            result = fetch_alpaca_bars(s.open, s.open + timedelta(minutes=6), ["QQQ"], "iex",
                                       {"APCA_API_KEY_ID": "fake", "APCA_API_SECRET_KEY": "secret"})
-            self.assertEqual(len(result["SPY"]), 6)
+            self.assertEqual(len(result["QQQ"]), 6)
             self.assertTrue(request.call_args.args[0].startswith("https://data.alpaca.markets/v2/stocks/bars?"))
 
     def test_extended_hours_do_not_enter_vwap_dataset(self):
@@ -95,8 +95,8 @@ class DataTests(unittest.TestCase):
     def test_download_paginates_preserves_raw_and_records_hashes(self):
         s = session()
         rows = records(s)
-        payloads = [json.dumps({"bars": {"SPY": rows[:50]}, "next_page_token": "next"}).encode(),
-                    json.dumps({"bars": {"SPY": rows[50:], "QQQ": rows}, "next_page_token": None}).encode()]
+        payloads = [json.dumps({"bars": {"QQQ": rows[:50]}, "next_page_token": "next"}).encode(),
+                    json.dumps({"bars": {"QQQ": rows[50:]}, "next_page_token": None}).encode()]
         with tempfile.TemporaryDirectory() as temp, patch("dwight.data.exchange_sessions", return_value=[s]), \
                 patch("dwight.data._request_page", side_effect=payloads) as request:
             result = download_alpaca_dataset(temp, s.date, s.date, environ={
@@ -104,27 +104,29 @@ class DataTests(unittest.TestCase):
                 now=s.close + timedelta(hours=1))
             directory = Path(result["directory"])
             self.assertEqual((directory / "raw/page-000001.json").read_bytes(), payloads[0])
-            self.assertEqual(result["counts"]["SPY"]["5Min"], 42)
+            self.assertEqual(result["counts"]["QQQ"]["5Min"], 42)
+            self.assertEqual(result['symbols'], ['QQQ'])
             query = parse_qs(urlparse(request.call_args_list[1].args[0]).query)
             self.assertEqual(query["page_token"], ["next"])
             self.assertEqual(query["feed"], ["sip"])
             self.assertEqual(query["timeframe"], ["1Min"])
+            self.assertEqual(query['symbols'], ['QQQ'])
             for item in result["files"] + result["raw_pages"]:
                 self.assertEqual(sha256_file(directory / item["path"]), item["sha256"])
             manifest = (directory / "manifest.json").read_text()
             self.assertNotIn("fake-key", manifest)
             self.assertNotIn("fake-secret", manifest)
-            with (directory / result["bars"]["SPY"]["5Min"]).open() as stream:
+            with (directory / result["bars"]["QQQ"]["5Min"]).open() as stream:
                 last = list(csv.DictReader(stream))[-1]
             self.assertEqual(last["session_close"], s.close.isoformat())
 
     def test_incomplete_response_has_no_success_manifest(self):
         s = session()
-        payload = json.dumps({"bars": {"SPY": records(s)[:-1]}}).encode()
+        payload = json.dumps({"bars": {"QQQ": records(s)[:-1]}}).encode()
         with tempfile.TemporaryDirectory() as temp, patch("dwight.data.exchange_sessions", return_value=[s]), \
                 patch("dwight.data._request_page", return_value=payload):
             with self.assertRaisesRegex(ValueError, "Missing regular-session"):
-                download_alpaca_dataset(temp, s.date, s.date, symbols=["SPY"], environ={
+                download_alpaca_dataset(temp, s.date, s.date, symbols=["QQQ"], environ={
                     "APCA_API_KEY_ID": "fake-key", "APCA_API_SECRET_KEY": "fake-secret"},
                     now=s.close + timedelta(hours=1))
             self.assertFalse(list(Path(temp).glob("*/manifest.json")))
@@ -133,10 +135,10 @@ class DataTests(unittest.TestCase):
 
     def test_repeat_token_and_incomplete_session_fail_closed(self):
         s = session()
-        payload = json.dumps({"bars": {"SPY": []}, "next_page_token": "same"}).encode()
+        payload = json.dumps({"bars": {"QQQ": []}, "next_page_token": "same"}).encode()
         with tempfile.TemporaryDirectory() as temp, patch("dwight.data.exchange_sessions", return_value=[s]), \
                 patch("dwight.data._request_page", return_value=payload) as request:
-            kwargs = {"symbols": ["SPY"], "environ": {"APCA_API_KEY_ID": "fake", "APCA_API_SECRET_KEY": "secret"}}
+            kwargs = {"symbols": ["QQQ"], "environ": {"APCA_API_KEY_ID": "fake", "APCA_API_SECRET_KEY": "secret"}}
             with self.assertRaisesRegex(ValueError, "not fully completed"):
                 download_alpaca_dataset(temp, s.date, s.date, now=s.open, **kwargs)
             request.assert_not_called()
@@ -144,14 +146,24 @@ class DataTests(unittest.TestCase):
                 download_alpaca_dataset(temp, s.date, s.date, now=s.close + timedelta(hours=1), **kwargs)
             self.assertEqual(request.call_count, 2)
 
+    def test_non_qqq_data_is_rejected_before_requests(self):
+        s = session()
+        with tempfile.TemporaryDirectory() as temp, patch("dwight.data._request_page") as request:
+            for symbols in [("SPY",), ("QQQ", "SPY")]:
+                with self.assertRaisesRegex(ValueError, "QQQ"):
+                    fetch_alpaca_bars(s.open, s.close, symbols)
+                with self.assertRaisesRegex(ValueError, "QQQ"):
+                    download_alpaca_dataset(temp, s.date, s.date, symbols=symbols)
+            request.assert_not_called()
+
     def test_credentials_aliases_work_and_canonical_values_take_precedence(self):
         s = session()
-        payload = json.dumps({"bars": {"SPY": []}}).encode()
+        payload = json.dumps({"bars": {"QQQ": []}}).encode()
         with patch("dwight.data._request_page", return_value=payload) as request:
-            fetch_alpaca_bars(s.open, s.close, ["SPY"], environ={
+            fetch_alpaca_bars(s.open, s.close, ["QQQ"], environ={
                 "ALPACA_API_KEY": "alias-key", "ALPACA_SECRET_KEY": "alias-secret"})
             self.assertEqual(request.call_args.args[1]["APCA-API-KEY-ID"], "alias-key")
-            fetch_alpaca_bars(s.open, s.close, ["SPY"], environ={
+            fetch_alpaca_bars(s.open, s.close, ["QQQ"], environ={
                 "APCA_API_KEY_ID": "canonical-key", "APCA_API_SECRET_KEY": "canonical-secret",
                 "ALPACA_API_KEY": "alias-key", "ALPACA_SECRET_KEY": "alias-secret"})
             self.assertEqual(request.call_args.args[1]["APCA-API-KEY-ID"], "canonical-key")

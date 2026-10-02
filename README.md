@@ -2,6 +2,8 @@
 
 A paper-first framework for reproducible trading research. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
 
+**Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
+
 **Working now:** Alpaca historical ingestion, calendar validation, baseline and model-filtered replay, chronological classifier experiments, local MLflow tracking, frozen releases, a live-data shadow monitor, paper-order/recovery library, and public Polymarket book snapshots.
 
 **Deployment boundary:** the running service is shadow only and cannot submit orders. The paper library is mock-tested; the CLI permits read-only account checks. An unattended paper execution loop and a Polymarket fill simulator remain unfinished. Synthetic models cannot run in live shadow. No account is connected and no order has been submitted.
@@ -30,7 +32,7 @@ Run the full offline synthetic experiment, including a real local classifier and
 
 ```sh
 python examples/make_experiment_demo.py
-dwight experiment private-data/synthetic-vwap-5Min.csv --symbol SPY --synthetic \
+dwight experiment private-data/synthetic-vwap-5Min.csv --symbol QQQ --synthetic \
   --config configs/synthetic-experiment.json --output runs/experiment-smoke
 ```
 

@@ -1,7 +1,7 @@
 """Paper-only Alpaca transport and conservative, durable execution.
 
 No imports perform network I/O. This initial execution policy permits whole-share,
-long-only SPY/QQQ limit brackets during regular hours. It deliberately stops new
+long-only QQQ limit brackets during regular hours. It deliberately stops new
 entries on unknown orders, ambiguous submissions, partial parent fills, or an
 unexplained position. A dedicated paper account and one persistent database are
 required. Never delete the database to work around a reconciliation failure.
@@ -104,6 +104,8 @@ class AlpacaPaperClient:
                 (method == "POST" and path == "/v2/orders") or
                 (method == "DELETE" and order_path)):
             raise ValueError("Unsupported paper API operation")
+        if method == "POST" and (not isinstance(payload, dict) or payload.get("symbol") != "QQQ"):
+            raise RiskRejected("Only QQQ paper orders are supported")
         url = PAPER_URL + path + (("?" + urlencode(params)) if params else "")
         body = None if payload is None else json.dumps(payload, allow_nan=False).encode()
         request = Request(url, data=body, method=method, headers={
@@ -182,7 +184,7 @@ def _json(value):
 
 @dataclass(frozen=True)
 class RiskPolicy:
-    allowed_symbols: tuple[str, ...] = ("SPY", "QQQ")
+    allowed_symbols: tuple[str, ...] = ("QQQ",)
     max_order_notional: float = 1000
     max_position_notional: float = 2000
     max_gross_notional: float = 3000
@@ -193,8 +195,8 @@ class RiskPolicy:
     expected_feed: str = "sip"
 
     def __post_init__(self):
-        if not self.allowed_symbols or not set(self.allowed_symbols) <= {"SPY", "QQQ"}:
-            raise ValueError("Initial paper policy permits only SPY and QQQ")
+        if not self.allowed_symbols or not set(self.allowed_symbols) <= {"QQQ"}:
+            raise ValueError("Initial paper policy permits only QQQ")
         if self.expected_feed not in {"sip", "iex"}:
             raise ValueError("Expected feed must be sip or iex")
         for key, value in asdict(self).items():
@@ -439,6 +441,9 @@ class PaperExecutor:
             raise RiskRejected("Account gross exposure exceeds the approved limit")
 
     def submit(self, proposal: OrderProposal, quote: Quote, *, now=None):
+        if (proposal.symbol != "QQQ" or proposal.symbol not in self.policy.allowed_symbols or
+                quote.symbol != proposal.symbol):
+            raise RiskRejected("Only QQQ paper proposals with a matching quote are supported")
         cid = "dw-" + hashlib.sha256(proposal.signal_id.encode()).hexdigest()[:40]
         payload = {"symbol": proposal.symbol, "qty": str(proposal.qty), "side": "buy",
                    "type": "limit", "limit_price": str(proposal.limit_price),

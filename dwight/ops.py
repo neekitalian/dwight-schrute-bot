@@ -55,6 +55,8 @@ def source_sha256():
 
 def _validate_candidate(model, report, policy, feed, symbol):
     from .experiments import JSONModel
+    if symbol != 'QQQ' or policy.get('allowed_symbols') != ['QQQ']:
+        raise ValueError('Dwight equity releases and policies must permit QQQ only')
     JSONModel(model)
     if model.get('symbol') != symbol or report.get('symbol') != symbol:
         raise ValueError('release symbol differs from the experiment')
@@ -95,7 +97,7 @@ def _validate_candidate(model, report, policy, feed, symbol):
 def release(experiment_dir, output, *, feed, symbol, policy_path):
     """Freeze a candidate for shadow evaluation. Never grants paper approval."""
     experiment_dir, output = Path(experiment_dir), Path(output)
-    if feed not in ('sip', 'iex', 'synthetic') or symbol not in ('SPY','QQQ'):
+    if feed not in ('sip', 'iex', 'synthetic') or symbol != 'QQQ':
         raise ValueError('unsupported feed or symbol')
     model = experiment_dir/'model.json'
     report = experiment_dir/'report.json'

@@ -45,17 +45,17 @@ def fixture(*, synthetic=False, rows=None):
                     "mean": [0.] * len(FEATURE_NAMES), "scale": [1.] * len(FEATURE_NAMES),
                     "coefficients": [0.] * len(FEATURE_NAMES), "intercept": 0.,
                     "synthetic": synthetic, "threshold": .5, "strategy": asdict(Config()),
-                    "symbol": "SPY", "source": "synthetic" if synthetic else "alpaca",
+                    "symbol": "QQQ", "source": "synthetic" if synthetic else "alpaca",
                     "feed": "synthetic" if synthetic else "iex", "adjustment": "raw"}
         policy = {"mode": "shadow", "bar_settle_seconds": 60, "max_bar_delay_seconds": 120,
                   "poll_seconds": 30, "stop_file": str(root / "STOP")}
-        manifest = {"synthetic": synthetic, "symbol": "SPY", "feed": "iex", "mode": "shadow"}
+        manifest = {"synthetic": synthetic, "symbol": "QQQ", "feed": "iex", "mode": "shadow"}
         for name, content in (("model.json", artifact), ("policy.json", policy), ("release.json", manifest)):
             (release / name).write_text(json.dumps(content))
         stack.enter_context(patch("dwight.shadow.verify_release", return_value=manifest))
         calendar = stack.enter_context(patch("dwight.shadow.exchange_sessions", return_value=[SESSION]))
         reader = stack.enter_context(patch("dwight.shadow.fetch_alpaca_bars",
-                                           return_value={"SPY": rows or minute_rows(12)}))
+                                           return_value={"QQQ": rows or minute_rows(12)}))
         stack.enter_context(patch("dwight.shadow.CandidateBot", _CandidateEveryBar))
         yield release, root / "state", reader, calendar
 
@@ -83,7 +83,7 @@ class ShadowTests(unittest.TestCase):
             self.assertEqual(result["status"], "observed")
             self.assertTrue(result["decisions"][0]["shadow_take"])
             self.assertFalse(result["submits_orders"])
-            reader.assert_called_with(SESSION.open, OPEN + timedelta(minutes=11), ("SPY",), "iex")
+            reader.assert_called_with(SESSION.open, OPEN + timedelta(minutes=11), ("QQQ",), "iex")
 
     def test_restart_does_not_duplicate_bars_or_decisions(self):
         with fixture(rows=minute_rows(6)) as (release, state, reader, calendar):
@@ -102,7 +102,7 @@ class ShadowTests(unittest.TestCase):
             monitor.step(OPEN + timedelta(minutes=6))
             changed = minute_rows(12)
             changed[0]["v"] = 123456
-            reader.return_value = {"SPY": changed}
+            reader.return_value = {"QQQ": changed}
             result = monitor.step(OPEN + timedelta(minutes=11))
             self.assertEqual(result["status"], "data_revision_requires_review")
             self.assertFalse(result["submits_orders"])
@@ -131,10 +131,10 @@ class ShadowTests(unittest.TestCase):
                 monitor.step(OPEN + timedelta(minutes=6))
                 corrected = minute_rows(12)
                 corrected[0]["v"] = 55555
-                reader.return_value = {"SPY": corrected}
+                reader.return_value = {"QQQ": corrected}
                 first = monitor.step(OPEN + timedelta(minutes=11))
                 self.assertEqual(first["status"], "data_revision_requires_review")
-                reader.return_value = {"SPY": minute_rows(12)}
+                reader.return_value = {"QQQ": minute_rows(12)}
                 reader.reset_mock()
                 halted = monitor.step(OPEN + timedelta(minutes=11, seconds=30))
                 self.assertEqual(halted["status"], "data_revision_requires_review")

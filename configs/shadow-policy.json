@@ -1,7 +1,7 @@
 {
   "version": "shadow-v1",
   "mode": "shadow",
-  "allowed_symbols": ["SPY", "QQQ"],
+  "allowed_symbols": ["QQQ"],
   "feed": "sip",
   "bar_settle_seconds": 60,
   "max_bar_delay_seconds": 120,

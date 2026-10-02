@@ -19,4 +19,4 @@ jobs:
       - run: python examples/make_demo.py
       - run: dwight replay examples/synthetic.csv --symbol SYNTHETIC
       - run: python examples/make_experiment_demo.py
-      - run: dwight experiment private-data/synthetic-vwap-5Min.csv --symbol SPY --synthetic --config configs/synthetic-experiment.json --output runs/experiment-smoke
+      - run: dwight experiment private-data/synthetic-vwap-5Min.csv --symbol QQQ --synthetic --config configs/synthetic-experiment.json --output runs/experiment-smoke

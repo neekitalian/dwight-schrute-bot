@@ -1,5 +1,7 @@
 # Dwight workflow and preparation
 
+The equities workflow is restricted to **QQQ**. Collect, train and freeze new QQQ artifacts; existing artifacts retain their original identity and are never relabelled. Wider symbol policies are rejected.
+
 ## What has actually run
 
 The local environment, synthetic baseline/model experiments, local MLflow logging, release integrity checks, mocked shadow/paper recovery tests and real public Polymarket snapshots have been exercised. Authenticated Alpaca history, real model selection, live shadow and remote deployment require preparation below. No order was submitted to any account. The Docker configuration has not been built locally because Docker is unavailable. See [validation evidence](validation.md).
@@ -21,7 +23,7 @@ Required entries are `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`. Never paste va
 
 ```sh
 dwight download-data --start 2024-10-01 --end 2026-10-01 \
-  --symbols SPY QQQ --feed sip --output private-data
+  --symbols QQQ --feed sip --output private-data
 ```
 
 Dates are inclusive session dates. Choose completed sessions and keep the returned directory intact. It contains raw pages, calendar, one/five-minute CSV/Parquet and hashes. Missing minutes fail validation, including no-trade minutes; no OHLCV is fabricated. Ingestion recognizes holidays, daylight saving and early closes.
@@ -33,11 +35,11 @@ Historical SIP access does not imply live SIP entitlement. Confirm the same real
 Substitute the directory printed by the downloader:
 
 ```sh
-dwight experiment private-data/DATASET/SPY-5Min.csv --symbol SPY \
+dwight experiment private-data/DATASET/QQQ-5Min.csv --symbol QQQ \
   --tracking-uri sqlite:///runs/experiments/mlflow.db --output runs/experiments
 ```
 
-Repeat separately for QQQ. This runs the four research stages together. Read `report.json`, `candidates.json`, split trade records and `model.json` when produced. Baseline, a fixed relative-volume filter and the model filter are replayed independently. Features use observed signal-time information; labels use later closed trades. Scaling is fitted on training only; validation chooses the threshold; final evaluation uses later sessions.
+This runs the four research stages together. Read `report.json`, `candidates.json`, split trade records and `model.json` when produced. Baseline, a fixed relative-volume filter and the model filter are replayed independently. Features use observed signal-time information; labels use later closed trades. Scaling is fitted on training only; validation chooses the threshold; final evaluation uses later sessions.
 
 Default minimums are 100 training labels and 30 each in validation/test, with ten of each outcome per partition. These are engineering minimums, not statistical proof. Insufficient data produces a blocking report and no model. Collect more history or reconsider the strategy rather than relaxing real-data checks. Repeated examination of the holdout requires a fresh final period before promotion.
 
@@ -48,7 +50,7 @@ MLflow uses a local SQLite store and private artifacts. Model identity is its ru
 ## 7. Freeze a reviewed shadow candidate
 
 ```sh
-dwight freeze-release runs/experiments/RUN --symbol SPY --feed sip \
+dwight freeze-release runs/experiments/RUN --symbol QQQ --feed sip \
   --policy configs/shadow-policy.json --output releases/candidate
 ```
 
@@ -85,7 +87,7 @@ Vendor corrections latch `data_revision_requires_review` across restarts. Preser
 
 The paper adapter/recovery tests are implemented; `dwight paper-check` can validate the account after keys are configured. **An automated paper execution loop is not implemented yet.** It needs separate proposal/account state, fresh quotes, actual fill accounting, stale-entry expiry, partial-fill protection and session-close handling, then real broker integration tests. Shadow's simulated portfolio cannot be used as broker truth.
 
-The current library supports long whole-share SPY/QQQ GTC brackets. A partially filled parent may lack active exits and needs intervention. Unknown positions/orders or absent protection block entries. Timeout recovery looks up the existing client ID; it never blindly resubmits. GTC orders can persist into later sessions, so do not wire this library directly into an unattended loop. Entry limits are not guaranteed loss caps. Use one persistent ledger/account; resets and transfers invalidate its assumptions.
+The current library supports long whole-share QQQ GTC brackets. A partially filled parent may lack active exits and needs intervention. Unknown positions/orders or absent protection block entries. Timeout recovery looks up the existing client ID; it never blindly resubmits. GTC orders can persist into later sessions, so do not wire this library directly into an unattended loop. Entry limits are not guaranteed loss caps. Use one persistent ledger/account; resets and transfers invalidate its assumptions.
 
 ## 10. Monitor and iterate
 

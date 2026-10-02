@@ -19,7 +19,7 @@ class OpsTests(unittest.TestCase):
         model={'schema_version':1,'kind':'logistic_regression','feature_version':FEATURE_VERSION,
                'feature_names':list(FEATURE_NAMES),'mean':[0]*len(FEATURE_NAMES),
                'scale':[1]*len(FEATURE_NAMES),'coefficients':[0]*len(FEATURE_NAMES),
-               'intercept':0,'threshold':.5,'symbol':'SPY','synthetic':True,
+               'intercept':0,'threshold':.5,'symbol':'QQQ','synthetic':True,
                'source':'synthetic','feed':'synthetic','input_sha256':'fixture',
                'strategy':asdict(Config()),'code_sha256':code_hash}
         (exp/'model.json').write_text(json.dumps(model))
@@ -27,7 +27,7 @@ class OpsTests(unittest.TestCase):
                 'model_sha256':sha256(exp/'model.json')}
         (exp/'report.json').write_text(json.dumps(report))
         policy=root/'policy.json'
-        policy.write_text(json.dumps({'mode':'shadow','feed':'synthetic','allowed_symbols':['SPY'],
+        policy.write_text(json.dumps({'mode':'shadow','feed':'synthetic','allowed_symbols':['QQQ'],
                                      'poll_seconds':30,'bar_settle_seconds':60,'max_bar_delay_seconds':120}))
         return exp,policy
 
@@ -42,7 +42,7 @@ class OpsTests(unittest.TestCase):
     def test_freeze_and_tamper_detection(self):
         with tempfile.TemporaryDirectory() as root:
             root=Path(root);exp,policy=self.make_candidate(root)
-            release(exp,root/'release',feed='synthetic',symbol='SPY',policy_path=policy)
+            release(exp,root/'release',feed='synthetic',symbol='QQQ',policy_path=policy)
             self.assertFalse(verify_release(root/'release','synthetic')['paper_approved'])
             with self.assertRaises(ValueError): verify_release(root/'release','iex')
             with patch('dwight.ops.source_sha256',return_value='changed-code'):
@@ -54,11 +54,22 @@ class OpsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             root=Path(root);exp,policy=self.make_candidate(root)
             with self.assertRaises(ValueError):
-                release(exp,root/'release',feed='sip',symbol='SPY',policy_path=policy)
+                release(exp,root/'release',feed='sip',symbol='QQQ',policy_path=policy)
             report=json.loads((exp/'report.json').read_text());report['selected_threshold']=.9
             (exp/'report.json').write_text(json.dumps(report))
             with self.assertRaises(ValueError):
+                release(exp,root/'release',feed='synthetic',symbol='QQQ',policy_path=policy)
+
+    def test_release_rejects_other_symbols_and_widened_policy(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);exp,policy=self.make_candidate(root)
+            with self.assertRaises(ValueError):
                 release(exp,root/'release',feed='synthetic',symbol='SPY',policy_path=policy)
+            settings=json.loads(policy.read_text());settings['allowed_symbols']=['QQQ','SPY']
+            policy.write_text(json.dumps(settings))
+            with self.assertRaisesRegex(ValueError, 'QQQ only'):
+                release(exp,root/'release',feed='synthetic',symbol='QQQ',policy_path=policy)
+            self.assertFalse((root/'release').exists())
 
     def test_records_each_outcome_and_errors(self):
         data=[{'id':'m','clobTokenIds':'["123", "456"]','closed':False}]
