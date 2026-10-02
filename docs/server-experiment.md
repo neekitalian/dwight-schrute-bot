@@ -1,27 +1,17 @@
 # Linux experiment host
 
-Recommended starting size: Ubuntu 24.04, two CPUs, four GB RAM, private persistent disk and SSH key access. No GPU or public web endpoint is needed. DigitalOcean lists its Basic regular CPU four GB plan at $24 per month as checked on October 2, 2026: [provider pricing](https://www.digitalocean.com/pricing/droplets). An equivalent existing Linux host is also suitable. No server has been purchased or provisioned by this repository.
+The existing Ubuntu host with two CPUs and four GB RAM is suitable for the current CPU research and shadow worker. No GPU, second server, Docker installation or public application endpoint is required. Keep credentials and state on private persistent disk. Provider charges continue while the existing Droplet is allocated.
 
 ## Install the pinned release
 
-The following is a runbook for the chosen host, not evidence of a completed deployment. Use exactly one of systemd or the existing Docker Compose service. Do not run both workers against the same campaign.
+Use the reviewed installer from the repository with a full commit SHA. It installs Python dependencies, creates a non-login service user, runs tests as that user, verifies the systemd units and leaves them disabled. It does not create credentials, enable orders or substitute synthetic data for a real release.
 
 ```sh
-sudo apt-get update
-sudo apt-get install -y python3-venv git
-sudo useradd --system --home-dir /var/lib/dwight --create-home --shell /usr/sbin/nologin dwight
-sudo install -d -m 700 -o dwight -g dwight /var/lib/dwight
-sudo install -d -m 750 -o root -g dwight /etc/dwight
-sudo git clone https://github.com/neekitalian/dwight-schrute-bot.git /opt/dwight
-cd /opt/dwight
-sudo git checkout REVIEWED_COMMIT
-sudo python3 -m venv .venv
-sudo .venv/bin/python -m pip install -r requirements.lock
-sudo .venv/bin/python -m pip install --no-deps .
-sudo .venv/bin/python -m unittest discover -s tests -q
+sudo bash scripts/install-shadow-server.sh --commit FULL_REVIEWED_COMMIT_SHA
+sudo /opt/dwight/.venv/bin/python /opt/dwight/scripts/server-preflight.py
 ```
 
-Substitute the reviewed commit. Never let an unattended worker pull latest code or latest models. The installed source must match the release hashes.
+An active worker or dirty/unexpected checkout blocks replacement. Run exactly one worker per campaign. Never let an unattended worker pull the latest code or model. The installed source must match the release hashes. Root owns the application; the service user can write only private state. The installer scopes Git trust to its own verified checkout when running tests.
 
 ## Private preparation
 
@@ -51,4 +41,4 @@ To stop safely, create `/var/lib/dwight/STOP` as the dwight user and stop the sh
 
 ## Paper execution boundary
 
-Alpaca paper is the intended next stage. Before automated paper orders, implement and validate fresh executable quotes, account reconciliation, partial fill protection, entry expiry, session close exits and actual fill accounting. The existing long only bracket library is insufficient for an unattended strategy that also produces short signals. No live account capability is authorized by these deployment steps.
+The selected account is native TradingView paper, with human order entry and private fill imports. See [the manual journal](manual-paper.md). An Alpaca paper executor is a separate optional route. Before automated paper orders, implement and validate fresh executable quotes, account reconciliation, partial fill protection, entry expiry, session close exits and actual fill accounting. The existing long only bracket library is insufficient for an unattended strategy that also produces short signals. No live account capability is authorized by these deployment steps.

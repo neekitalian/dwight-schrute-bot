@@ -7,6 +7,7 @@ import gradio as gr
 from .analytics import CASE_IDS, CASE_LABELS, VARIANT_LABELS, run_dashboard_experiment, run_robustness_summary
 from .charts import default_session, diagnostics_figure, equity_figure, outcomes_figure, session_figure, sessions
 from . import presentation as ui
+from . import walkforward_view as walkforward
 from .research import COMPARISON_HEADERS, present_experiment, run_synthetic_experiment
 
 
@@ -49,6 +50,16 @@ def inspect_connections(choice):
         raise gr.Error("Choose price sequences, news context or both.") from None
 
 
+def evaluate_walkforward():
+    try:
+        report = walkforward.run_public_walkforward()
+        return (walkforward.summary_html(report), walkforward.timeline_figure(report),
+                walkforward.pnl_figure(report), walkforward.window_table(report),
+                walkforward.evidence_note(report), report)
+    except Exception:
+        raise gr.Error("The fixed synthetic walk-forward experiment could not complete. No account or trading action was involved.") from None
+
+
 def html(value="", **kwargs):
     return gr.HTML(value, apply_default_css=False, **kwargs)
 
@@ -71,6 +82,24 @@ def build_app():
             robustness = html()
             html(ui.section("What produced the return?", "Trade outcomes in planned risk units and session P&L. All values are simulated."))
             outcomes = gr.Plot(show_label=False)
+        with gr.Tab("Walk-forward"):
+            html(ui.section("Test the process across later windows", "One fixed synthetic path. Long-only policies. A final period left untouched."))
+            gr.Markdown(walkforward.INTRO)
+            walkforward_run = gr.Button("Evaluate walk-forward", variant="primary")
+            walkforward_cards = html('<div class="dw-callout">Not evaluated yet. Select Evaluate walk-forward to run the fixed experiment on CPU.</div>')
+            walkforward_timeline = gr.Plot(show_label=False)
+            walkforward_pnl = gr.Plot(show_label=False)
+            html(ui.section("Every declared window", "Dates, sample counts, selected thresholds and incomplete windows remain visible. Amounts include modeled costs."))
+            walkforward_table = html()
+            walkforward_note = gr.Markdown()
+            with gr.Accordion("Inspect synthetic walk-forward evidence", open=False):
+                walkforward_evidence = gr.JSON(label="Synthetic evidence · holdout not evaluated")
+            gr.Markdown(walkforward.WORKFLOW_NOTE)
+            walkforward_run.click(evaluate_walkforward, None,
+                                  [walkforward_cards, walkforward_timeline, walkforward_pnl,
+                                   walkforward_table, walkforward_note, walkforward_evidence],
+                                  api_name="walkforward", concurrency_id="synthetic-research",
+                                  concurrency_limit=1, trigger_mode="always_last")
         with gr.Tab("Trade explorer"):
             html(ui.section("Read the trade in context", "Select a fabricated session and inspect its bars, indicators and simulated fills."))
             with gr.Row():

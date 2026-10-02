@@ -1,0 +1,13 @@
+{
+  "train_sessions": 80,
+  "validation_sessions": 40,
+  "test_sessions": 40,
+  "holdout_sessions": 40,
+  "max_windows": 3,
+  "long_only": true,
+  "min_train_samples": 4,
+  "min_validation_samples": 2,
+  "min_test_samples": 2,
+  "min_class_samples": 1,
+  "min_validation_trades": 1
+}

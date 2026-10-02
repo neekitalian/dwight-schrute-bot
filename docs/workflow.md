@@ -4,13 +4,13 @@ The equities workflow is restricted to **QQQ**. Collect, train and freeze new QQ
 
 ## What has actually run
 
-The local environment, synthetic baseline/model experiments, local MLflow logging, release integrity checks, mocked shadow/paper recovery tests and real public Polymarket snapshots have been exercised. Authenticated Alpaca history, real model selection, live shadow and remote deployment require preparation below. No order was submitted to any account. The Docker configuration has not been built locally because Docker is unavailable. See [validation evidence](validation.md).
+The local environment, synthetic baseline/model experiments, local MLflow logging, release integrity checks, mocked shadow/paper recovery tests and real public Polymarket snapshots have been exercised. Authenticated Alpaca history, real model selection and live shadow require the preparation below. The Linux installer verifies a pinned checkout before installing disabled services. No order was submitted to any account. The Docker configuration has not been built locally because Docker is unavailable. See [validation evidence](validation.md).
 
 The model runs inside Dwight. GitHub stores code/config; private disk holds data/models; MLflow tracks experiments. The model is not uploaded to the broker. CPU training is enough for the first classifier; Hugging Face Jobs can be added if measured compute demand justifies it.
 
-## 1. Prepare the account
+## 1. Prepare market data and keep account roles separate
 
-Use a dedicated Alpaca paper account, initially flat with no unrelated orders. Copy `.env.example` to `.env`, restrict access, and edit locally:
+The selected execution account is **Paper Trading by TradingView**. Dwight proposes and the user enters orders manually; imported fills supply account evidence. See [manual paper workflow](manual-paper.md). Alpaca credentials below provide market data and do not connect or change the TradingView account. A separate Alpaca paper account is optional future work. Copy `.env.example` to `.env`, restrict access, and edit locally:
 
 ```sh
 cp .env.example .env
@@ -41,7 +41,7 @@ dwight experiment private-data/DATASET/QQQ-5Min.csv --symbol QQQ \
 
 This runs the four research stages together. Read `report.json`, `candidates.json`, split trade records and `model.json` when produced. Baseline, a fixed relative-volume filter and the model filter are replayed independently. Features use observed signal-time information; labels use later closed trades. Scaling is fitted on training only; validation chooses the threshold; final evaluation uses later sessions.
 
-Default minimums are 100 training labels and 30 each in validation/test, with ten of each outcome per partition. These are engineering minimums, not statistical proof. Insufficient data produces a blocking report and no model. Collect more history or reconsider the strategy rather than relaxing real-data checks. Repeated examination of the holdout requires a fresh final period before promotion.
+Default minimums are 100 training labels and 30 each in validation/test, with ten of each outcome per partition. These are engineering minimums, not statistical proof. Insufficient data produces a blocking report and no model. Collect more history or reconsider the strategy rather than relaxing real-data checks. Repeated examination of the holdout requires a fresh final period before promotion. The [walk-forward command](walkforward.md) compares successive unseen windows with a separately reserved final period, matching long-only direction across baseline and filters. Its models are research-only and cannot be used as a deployment release.
 
 The pinned strategy currently requires full 78-bar sessions. Early/partial sessions are explicitly excluded. Costs are fixed simulator assumptions; quotes and spread features are not yet collected. Historical next-bar-open fills are not executable broker fills.
 
@@ -67,25 +67,17 @@ dwight shadow --release releases/candidate --state runs/shadow
 
 The monitor polls every 30 seconds with a 60-second candle settlement delay. Warmup reconstructs simulated intraday state; stale catch-up candidates are logged as ineligible. It flushes the final completed bar after close and skips early closes. Data/model errors abstain. The service has no order capability.
 
-For continuous operation, prepare one Linux server with Docker/Compose and private persistent disk. No server has been provisioned. Clone the exact release commit, install `.env` privately, and copy its matching release directory. Prepare storage for container UID 10001:
+For continuous operation, use one Ubuntu server with private persistent disk and the [systemd installation runbook](server-experiment.md). The reviewed installer installs the fixed commit and runs its tests before registering disabled services. A valid real-data release and private credentials are required before activation. No public inbound application port is needed. Do not run a systemd worker and a Compose worker against the same state.
 
-```sh
-mkdir -p runs
-sudo chown 10001:10001 runs
-docker compose -f deploy/compose.yaml build
-docker compose -f deploy/compose.yaml up -d
-docker compose -f deploy/compose.yaml logs --tail 50
-```
-
-The container build and startup need verification on that host. No public inbound port is needed. Do not scale replicas. Model mounts are read-only and the state persists. Build the image from the same source used to freeze the release.
-
-`dwight health --state runs/shadow` checks the heartbeat. Docker marks unhealthy operation but does not itself send an alert or restart solely due to an unhealthy state; connect host monitoring before unattended use. Stop with `docker compose -f deploy/compose.yaml stop` or create `runs/STOP`. The stop file keeps restarts stopped.
+`dwight health --state /var/lib/dwight/shadow` checks the heartbeat. Restart recovery and external failure notification still need a real-data deployment test. Stop with `sudo systemctl stop dwight-shadow.service` and create the stop file declared in the frozen policy. Preserve all journals across restarts.
 
 Vendor corrections latch `data_revision_requires_review` across restarts. Preserve state/raw observations, investigate feature impact, and issue a reviewed new release before resuming. Do not delete the ledger as a shortcut.
 
-## 9. Broker paper execution: next gate
+## 9. Manual TradingView paper workflow and optional broker route
 
-The paper adapter/recovery tests are implemented; `dwight paper-check` can validate the account after keys are configured. **An automated paper execution loop is not implemented yet.** It needs separate proposal/account state, fresh quotes, actual fill accounting, stale-entry expiry, partial-fill protection and session-close handling, then real broker integration tests. Shadow's simulated portfolio cannot be used as broker truth.
+Use the [private proposal and fill journal](manual-paper.md) for the selected TradingView native paper account. The journal records human decisions and imported fills; it does not submit orders. Automatic conversion of shadow signals into actionable proposals still requires current prices, account-aware sizing and parity tests.
+
+For a separately chosen Alpaca paper account, the paper adapter/recovery tests are implemented; `dwight paper-check` can validate the account after keys are configured. **An automated paper execution loop is not implemented yet.** It needs separate proposal/account state, fresh quotes, actual fill accounting, stale-entry expiry, partial-fill protection and session-close handling, then real broker integration tests. Shadow's simulated portfolio cannot be used as broker truth.
 
 The current library supports long whole-share QQQ GTC brackets. A partially filled parent may lack active exits and needs intervention. Unknown positions/orders or absent protection block entries. Timeout recovery looks up the existing client ID; it never blindly resubmits. GTC orders can persist into later sessions, so do not wire this library directly into an unattended loop. Entry limits are not guaranteed loss caps. Use one persistent ledger/account; resets and transfers invalidate its assumptions.
 
@@ -97,7 +89,9 @@ Retain private heartbeats, journals, raw observed slices and release identity. R
 
 User-designated chart: [TradingView layout d5qUHtf0](https://www.tradingview.com/chart/d5qUHtf0/). Connect this after real-data evaluation, shadow validation and the paper execution lifecycle are ready. The saved layout's symbol, interval, script and broker connection have not been verified; the intended Dwight equity scope remains QQQ on completed five-minute bars.
 
-The initial connection should be **Dwight → Alpaca paper API**, with the **same Alpaca paper account connected through TradingView's Trading Panel** for monitoring. Alpaca documents paper-account support in its TradingView integration. Verify account identity and that the bot's orders/positions appear during the final integration test. A chart URL is a workspace reference, not an order endpoint. [Alpaca TradingView connection](https://alpaca.markets/learn/how-to-trade-options-on-tradingview-with-alpaca-trading-api-account)
+The confirmed account is **Paper Trading by TradingView**, which is separate from an Alpaca paper account. The supported path is Dwight research → reviewed proposal → human paper order → normalized fill import → private results. Pine strategies cannot place orders into the built-in paper account. [TradingView strategy FAQ](https://www.tradingview.com/pine-script-docs/faq/strategies/#can-i-connect-my-strategies-to-my-paper-trading-account)
+
+A chart URL is a workspace reference, not an execution endpoint. A future switch to an Alpaca paper account would be a separate account and integration decision; this workflow does not silently make that switch.
 
 TradingView is a human monitoring target only. Its current [terms, section 3](https://www.tradingview.com/policies/) restrict non display uses of its content, including automated trading and algorithmic decisions. Sending an alert through a Python script does not remove that restriction. Obtain explicit permission or applicable licensed rights before considering any TradingView data driven automation. Dwight currently uses Alpaca data for decisions and has no TradingView alert receiver or UI automation.
 

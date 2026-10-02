@@ -4,11 +4,14 @@ The public app is [neekthekid/dwight-schrute-bot](https://huggingface.co/spaces/
 This is the research interface, not the always-on paper trading worker.
 The app runs the existing experiment on four fixed synthetic cases. It compares
 the baseline, volume filter and classifier on a later chronological partition.
-All results are labelled synthetic and ineligible for deployment.
+All results are labelled synthetic and ineligible for deployment. A separate
+Walk-forward tab evaluates one fixed synthetic path across three chronological
+windows, on demand, while leaving a final 40-session holdout unscored.
 
 No credential is needed by the running app. It has no credential entry, file
 upload, broker operation, or custom-code input. The first request computes a
-result; the process holds up to four dashboard cases and the compact legacy report in memory. Temporary data is
+result; the process holds up to four dashboard cases, the compact legacy report,
+and one on-demand walk-forward report in memory. Temporary data is
 cleaned up. MLflow logging is disabled in this ephemeral demo; use the documented
 local workflow for private datasets, persistent artifacts and MLflow tracking.
 
@@ -68,8 +71,59 @@ Adding these features requires a versioned schema, new preprocessing and retrain
 The dashboard has no upload, private run reader or account connection. Bounded JSON
 caches retain public synthetic bars, ledgers and model coefficients; temporary files
 are deleted. The legacy inputless API remains available. The current native
-TradingView paper account requires a future manual proposal and result import flow;
-this dashboard does not connect to that account or start milestone observation.
+TradingView paper account has a private local [manual proposal and normalized fill
+import workflow](manual-paper.md). The user still places orders manually; the CSV
+format is not a tested adapter for native TradingView exports. This dashboard does
+not read the private journal, connect to that account, or start milestone observation.
+
+## Walk-forward view
+
+The **Evaluate walk-forward** button runs a separate, fixed public experiment.
+Opening the page or changing an ordinary dashboard case does not run it. The
+inputless `walkforward` API uses the same callback. It accepts no data, paths,
+configuration, credentials or uploaded files.
+
+The generator uses 500 calendar days and seed 42. The expanding window plan uses
+80 initial training sessions, 40 validation sessions, 40 test sessions, a final
+40-session reservation and at most three windows. All variants are long only.
+Synthetic-only sample gates are 4 training labels, 2 validation labels, 2 test
+labels, 1 example of each outcome per partition and 1 validation trade. The
+threshold candidates are 0.35, 0.5 and 0.65. These reduced counts check software,
+not statistical power. They cannot support a trading or deployment claim.
+
+The tab shows:
+
+- A timeline with training, validation and test dates for each window, plus
+  separate unused development dates and reserved final-holdout dates.
+- Grouped P&L bars for VWAP, the simple volume filter and Dwight's classifier on
+  each development test. Every window starts flat at the same capital. These
+  independent results are not joined into a fabricated account equity curve.
+- All declared window statuses, exact dates, inspected-test flags, labeled sample
+  counts, selected thresholds and blockers. Insufficient metrics remain missing,
+  never silently replaced with zero or dropped.
+- Public synthetic evidence with input and code fingerprints. Internal artifact
+  directories and dataset paths are excluded.
+
+One JSON result is cached per process; a lock prevents simultaneous first requests
+from duplicating the calculation. Each visitor receives a detached copy. Data and
+model artifacts are created in a temporary directory and removed before results
+are returned. The shared bounded research queue controls CPU concurrency.
+
+The final period is parsed only to check input integrity and reserve exact dates.
+It is not replayed, fitted, tuned or scored. Earlier development tests may become
+training or validation history for a later chronological window. Once inspected,
+those development outcomes are not fresh holdout evidence. The underlying runner
+and its remaining limitations are described in [walk-forward research](walkforward.md).
+
+The manual-account note explains that actual TradingView paper orders remain
+human-operated. The FinRL note describes an offline research adapter, not an
+active or evaluated agent in the public app. Fundamental and news data need
+separate point-in-time preparation. No FinRL or transformer model is trained by
+this tab; the displayed learned policy remains logistic regression.
+
+This long-only walk-forward configuration differs from the older Performance
+tab's long-and-short single-split configuration. Their scores are not directly
+interchangeable. All displayed runs remain synthetic.
 
 ## Local development
 

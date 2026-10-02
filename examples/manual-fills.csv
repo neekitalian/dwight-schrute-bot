@@ -1,0 +1,4 @@
+fill_id,filled_at,sequence,symbol,side,quantity,price,fee,data_kind,proposal_id
+SYNTHETIC-ENTRY-1,2020-01-02T15:05:00+00:00,0,QQQ,buy,2,100,0.20,synthetic,
+SYNTHETIC-ENTRY-2,2020-01-02T15:06:00+00:00,0,QQQ,buy,3,110,0.30,synthetic,
+SYNTHETIC-EXIT-1,2020-01-02T15:10:00+00:00,0,QQQ,sell,3,120,0.30,synthetic,

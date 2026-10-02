@@ -5,11 +5,11 @@ These checks establish implementation behavior, not investment performance or br
 | Check | Result |
 |---|---|
 | Package build/install | Editable Dwight 0.2.0 installed successfully on Python 3.11 |
-| Full local unit suite | 120 tests passed, including audit tampering, report charts, campaign cutoff/recovery/delivery claims, synthetic Space callback and deployment bundle checks |
+| Full local unit suite | 239 tests ran: 233 passed and six optional-dependency checks skipped (four Gym, two Gradio). Includes manual FIFO/import audit, CLI evidence modes, walk-forward leakage/holdout checks and the public view. All 12 public walk-forward tests separately passed in the Hugging Face environment. |
 | Robustness batch | Three fixed synthetic seeds plus a doubled cost case completed with MLflow records; all four audits passed; the model beat the baseline in only one of the three ordinary cases |
 | Visual report | Four private HTML reports and PNG chart pairs generated; browser loaded the comparison page and both example charts without horizontal overflow |
 | Milestone delivery | Private ledger initialized for 12, 24, 48 and 168 hours; observation clock not started; no emails sent; no mail provider connected |
-| Linux report services | systemd worker and report timer templates prepared; target host still needs provisioning and on-host validation |
+| Linux report services | Reviewed pinned installer launched on the existing Ubuntu host; dependency installation observed. Final install/test result and disabled unit state are not yet verified because remote console access became unavailable. |
 | Synthetic experiment CLI | Completed for QQQ: baseline, volume filter, logistic model, chronological evaluation |
 | Training/validation/test labels | 66 / 29 / 33, fabricated prices only |
 | MLflow | Local SQLite run completed with artifacts and metrics |
@@ -18,11 +18,15 @@ These checks establish implementation behavior, not investment performance or br
 | Shadow lifecycle | Mocked current data: settlement delay, restart deduplication, persistent revision halt, final post-close candle |
 | Public Polymarket API | Real GETs: 3 markets, 6 books, 0 errors; TLS verification enabled |
 | Credential preflight | Both Alpaca credential entries absent; read-only paper check stops before network |
-| Docker/server | Not run: Docker and a target server are not configured |
-| GitHub CI | Template prepared; workflow is not active |
-| Hugging Face app | Gradio 6.29 built locally; browser ran the synthetic callback, verified result table/status and mobile layout with no script errors |
+| Docker/server | Docker remains unverified. Ubuntu installation was started using the systemd route; no live shadow start or real-data release exists. |
+| GitHub CI | Template prepared; workflow is not active. Connector creation returned HTTP 403; existing CLI token lacks workflow scope. |
+| Hugging Face app | Gradio 6.29 built locally; browser completed the new walk-forward callback and verified three windows, 40 reserved sessions, the timeline and result table. No browser script errors were observed. Earlier dashboard checks also covered mobile layout. |
 | Space upload bundle | Committed source allowlist; excludes private data/credentials; immutable target; rejects symlinks |
-| Hosted Hugging Face | Public Space RUNNING on CPU Basic; remote API and browser completed synthetic experiment; source manifest verified; local/remote strategy metrics matched |
+| Previously hosted Hugging Face | The preceding public release was RUNNING on CPU Basic; remote API and browser completed its synthetic experiment, source manifest was verified, and local/remote strategy metrics matched. The new walk-forward release requires its own hosted verification. |
+
+The new fixed walk-forward smoke completed all three planned windows. Its 40-session final holdout was not scored. The logistic filter underperformed the baseline in aggregate in this fabricated fixture; no settings were changed to improve that result. This tests the evaluation pipeline, not market profitability.
+
+The manual CSV fixture is invented and labelled `synthetic`. It is isolated from user-supplied paper exports; repeated imports are idempotent. Realized P&L is calculated from imported executions, while account equity and unrealized P&L remain unknown.
 
 Private local evidence (excluded from Git):
 
