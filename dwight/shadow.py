@@ -144,7 +144,12 @@ class ShadowMonitor:
             age = (now-available).total_seconds()
             actionable = 0 <= age <= self.policy['max_bar_delay_seconds']
             signal_id = hashlib.sha256((self.identity+'|'+self.symbol+'|'+candidate['signal_time']).encode()).hexdigest()
-            decisions.append({**candidate, 'signal_id':signal_id, 'symbol':self.symbol,
+            # CandidateBot adds outcome labels while replaying later bars. A
+            # decision journal must retain only information at signal time.
+            signal_fields = {key: candidate[key] for key in
+                             ('signal_time', 'available_at', 'session', 'feature_version',
+                              'features', 'taken', 'probability') if key in candidate}
+            decisions.append({**signal_fields, 'signal_id':signal_id, 'symbol':self.symbol,
                               'observed_at':now.isoformat(), 'signal_age_seconds':age,
                               'shadow_take':bool(candidate['taken'] and actionable),
                               'stale_or_catchup':not actionable, 'submits_orders':False})

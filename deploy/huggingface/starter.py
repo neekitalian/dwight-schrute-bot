@@ -1,6 +1,6 @@
 """Public onboarding directions only. No workspace, account or credential access."""
 REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
-RELEASE = REPOSITORY + '/releases/tag/v0.3.1'
+RELEASE = REPOSITORY + '/releases/tag/v0.4.0'
 CHOICES = (
     'Explore the research demo',
     'Research my own QQQ history',
@@ -10,7 +10,7 @@ CHOICES = (
 INTRO = '''### A small toolkit for learning before trading
 
 Start with a repeatable VWAP strategy, measure what changes, and keep a record of every decision.
-Dwight 0.3.1 packages historical research, model experiments, a private TradingView observation inbox and local paper-journal reports.
+Dwight 0.4.0 packages historical research, model experiments, baseline QQQ observations, a private TradingView inbox and local paper-journal reports.
 This public app demonstrates the research using invented prices. It does not host your trading account.
 '''
 FLOW = '''<div class="dw-flow">
@@ -69,7 +69,8 @@ or proof that the VWAP strategy should enter a position.
 [Connection guide]({REPOSITORY}/blob/main/docs/tradingview-alerts.md)''',
     CHOICES[3]: f'''### Use your native TradingView paper account
 
-Dwight records a proposal → you review it → you enter an order in **Paper Trading by TradingView** →
+Alpaca completed bars → Dwight baseline setup → your proposed price and quantity → review →
+you enter an order in **Paper Trading by TradingView** →
 you normalize and import execution evidence → Dwight reports the imported fills.
 
 Pine alerts cannot automatically place orders in TradingView's built-in paper account. That simulator is separate
@@ -77,6 +78,13 @@ from an Alpaca paper account. The toolkit does not silently switch accounts or a
 
 The private journal tracks imported executions; it does not claim to know total account equity. A native TradingView
 CSV export adapter has not yet been verified, so follow the explicit normalization schema.
+
+With your own data credentials, the local baseline observer records completed QQQ setups without simulated
+positions or a trained model. Inspect a signal privately, then supply a current proposed entry and whole-share
+quantity. Stale or revised observations cannot become a new proposal. Account holdings, cash and risk require
+human review. This public Space does not run that worker.
+
+[Baseline observation and preparation guide]({REPOSITORY}/blob/main/docs/manual-observer.md)
 
 After importing evidence into your local journal, create a private visual snapshot:
 

@@ -61,6 +61,26 @@ def fixture(*, synthetic=False, rows=None):
 
 
 class ShadowTests(unittest.TestCase):
+    def test_catchup_decisions_never_include_later_replay_outcomes(self):
+        class Outcomes(_CandidateEveryBar):
+            def feed(self, bar):
+                super().feed(bar)
+                self.candidates[0].update(label=1, net_pnl=999, net_r=100,
+                                          label_exit_time='future', label_available_at='future',
+                                          simulated_entry=101, equity=99999)
+
+        with fixture() as (release, state, reader, calendar), ShadowMonitor(release, state) as monitor:
+            with patch('dwight.shadow.CandidateBot', Outcomes):
+                result = monitor.step(OPEN + timedelta(minutes=11))
+            outcomes = {'label', 'net_pnl', 'net_r', 'label_exit_time',
+                        'label_available_at', 'simulated_entry', 'equity'}
+            self.assertTrue(result['decisions'][0]['stale_or_catchup'])
+            for decision in result['decisions']:
+                self.assertFalse(outcomes.intersection(decision))
+                self.assertEqual(decision['probability'], .75)
+            stored = [json.loads(row[0]) for row in monitor.db.execute('SELECT payload FROM decisions')]
+            self.assertEqual(stored, result['decisions'])
+
     def test_closed_and_warmup_do_not_fetch_authenticated_data(self):
         with fixture() as (release, state, reader, calendar), ShadowMonitor(release, state) as monitor:
             self.assertEqual(monitor.step(OPEN - timedelta(minutes=1))["status"], "market_closed")

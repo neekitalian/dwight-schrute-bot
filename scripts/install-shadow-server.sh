@@ -8,7 +8,7 @@ fi
 revision=$2
 if [[ $(id -u) != 0 ]]; then echo 'Run as root on the selected Ubuntu host.' >&2; exit 2; fi
 if ! grep -q '^ID=ubuntu$' /etc/os-release; then echo 'Ubuntu is required.' >&2; exit 2; fi
-for service in dwight-shadow.service dwight-alert-inbox.service; do
+for service in dwight-shadow.service dwight-alert-inbox.service dwight-manual-observer.service; do
   if systemctl is-active --quiet "$service"; then
     echo "Active $service must be reviewed and stopped before replacing its release." >&2
     exit 2
@@ -48,7 +48,8 @@ install -m 644 deploy/linux/dwight-shadow.service /etc/systemd/system/dwight-sha
 install -m 644 deploy/linux/dwight-reports.service /etc/systemd/system/dwight-reports.service
 install -m 644 deploy/linux/dwight-reports.timer /etc/systemd/system/dwight-reports.timer
 install -m 644 deploy/linux/dwight-alert-inbox.service /etc/systemd/system/dwight-alert-inbox.service
-systemd-analyze verify /etc/systemd/system/dwight-shadow.service /etc/systemd/system/dwight-reports.service /etc/systemd/system/dwight-reports.timer /etc/systemd/system/dwight-alert-inbox.service
+install -m 644 deploy/linux/dwight-manual-observer.service /etc/systemd/system/dwight-manual-observer.service
+systemd-analyze verify /etc/systemd/system/dwight-shadow.service /etc/systemd/system/dwight-reports.service /etc/systemd/system/dwight-reports.timer /etc/systemd/system/dwight-alert-inbox.service /etc/systemd/system/dwight-manual-observer.service
 systemctl daemon-reload
 # No environment file, credentials or release is fabricated or overwritten.
 # Activation is a separate step after real-data evaluation and release checks.

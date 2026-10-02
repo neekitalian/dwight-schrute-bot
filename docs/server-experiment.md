@@ -41,4 +41,11 @@ To stop safely, create `/var/lib/dwight/STOP` as the dwight user and stop the sh
 
 ## Paper execution boundary
 
+For the unfiltered manual baseline, the installer also provides
+`dwight-manual-observer.service`. Follow the separate [manual observer
+guide](manual-observer.md). It does not require a qualified model, but still
+requires working market-data access. A revision halt exits with status 3 and
+the unit deliberately does not restart it automatically. The manual observer
+does not start the model-shadow campaign or its milestone clock.
+
 The selected account is native TradingView paper, with human order entry and private fill imports. See [the manual journal](manual-paper.md). An Alpaca paper executor is a separate optional route. Before automated paper orders, implement and validate fresh executable quotes, account reconciliation, partial fill protection, entry expiry, session close exits and actual fill accounting. The existing long only bracket library is insufficient for an unattended strategy that also produces short signals. No live account capability is authorized by these deployment steps.

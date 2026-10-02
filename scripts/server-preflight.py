@@ -31,6 +31,9 @@ def status():
         revision = 'unavailable'
     facts = doctor()
     ready = env_readable and facts['alpaca_key_present'] and facts['alpaca_secret_present'] and valid_release
+    observer_prepared = (env_readable and facts['alpaca_key_present']
+                         and facts['alpaca_secret_present']
+                         and facts['dependencies']['exchange_calendars'])
     return {
         'hostname': platform.node(), 'platform': platform.system(), 'python': platform.python_version(),
         'source_revision': revision, 'private_env_readable': env_readable,
@@ -38,6 +41,9 @@ def status():
         'research_dependencies': facts['dependencies'],
         'validated_real_release_present': valid_release, 'release_error_type': release_error,
         'shadow_prepared': bool(ready), 'connectivity_verified': False,
+        'manual_observer_locally_prepared': bool(observer_prepared),
+        'manual_observer_requires_qualified_model': False,
+        'manual_observer_account_risk_verified': False,
         'active_execution_mode': 'none_checked', 'broker_orders_enabled': False,
         'next_step': 'verify feed access then start shadow' if ready else 'prepare private data access and evaluated real release',
     }

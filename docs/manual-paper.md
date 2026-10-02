@@ -6,7 +6,7 @@ This module never sends an order, controls a browser, logs into TradingView, or 
 
 ## User flow
 
-1. A reviewed strategy produces a QQQ long-entry proposal with prices, quantity, model version, and an expiry time. The current journal accepts an explicit proposal JSON file; it is not yet wired to the shadow worker to generate proposals automatically.
+1. The [baseline observer](manual-observer.md) can retain fresh QQQ strategy setups from Alpaca data. Supply an explicit human entry reference and quantity to prepare a proposal, or use a reviewed proposal JSON. The model shadow worker and TradingView alert inbox remain separate from this proposal path.
 2. Review the proposal in the private local queue. Compare current prices, account holdings, costs and risk before acting. A historical replay candidate must not be presented as a fresh opportunity.
 3. Place the paper order yourself in TradingView. Configure any protective exits there. Dwight's journal cannot enforce a stop or guarantee its execution price.
 4. Mark the proposal `confirmed` to record your decision, or `skipped`. Confirmation is **not** evidence of a submitted or filled order. Pending proposals expire at `expires_at`; late confirmation is rejected and expiration remains recorded.

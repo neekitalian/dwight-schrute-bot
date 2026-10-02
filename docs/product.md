@@ -1,6 +1,6 @@
 # Dwight toolkit product boundary
 
-Dwight 0.3.1 is a small research preview for one QQQ strategy and one private workspace. Its useful product is the repeatable process: prepare data, replay a baseline, test added features, inspect evidence, connect observations and keep a manual paper journal.
+Dwight 0.4.0 is a small research preview for one QQQ strategy and one private workspace. Its useful product is the repeatable process: prepare data, replay a baseline, test added features, inspect evidence, connect observations and keep a manual paper journal.
 
 The downloadable toolkit contains source, configuration templates, a workspace initializer, data validation, research commands, private reports, a TradingView observation inbox and deployment runbooks. The Hugging Face app is a public demonstration using synthetic data. Neither package includes a proven profitable model or a managed brokerage account.
 

@@ -1,0 +1,25 @@
+[Unit]
+Description=Dwight QQQ observations for manual paper review
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=dwight
+Group=dwight
+WorkingDirectory=/opt/dwight
+EnvironmentFile=/etc/dwight/paper.env
+Environment=PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ExecStart=/opt/dwight/.venv/bin/dwight manual-observe --feed sip --signals /var/lib/dwight/manual-signals
+Restart=on-failure
+RestartSec=30
+RestartPreventExitStatus=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/dwight
+
+[Install]
+WantedBy=multi-user.target

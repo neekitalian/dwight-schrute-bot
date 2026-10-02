@@ -3,6 +3,7 @@ import csv
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 from .runner import replay, STRATEGIES
 from .connectors.polymarket import discover
@@ -77,6 +78,26 @@ def _import_manual_snapshot(journal, path, kind):
         return journal.import_fills(snapshot)
 
 
+def _observe_manual(store, once):
+    """Keep service logs free of prices, features and private proposal terms."""
+    while True:
+        if (store.state_dir / 'STOP').exists():
+            return {'status': 'stopped', 'submits_orders': False}
+        try:
+            observation = store.observe()
+            result = {key: observation[key] for key in
+                      ('status', 'observed_at', 'latest_bar_close', 'error_type') if key in observation}
+            result.update(submits_orders=False,
+                          signal_count=len(observation.get('signals', [])))
+        except (ValueError, TypeError, KeyError, OSError, RuntimeError) as exc:
+            result = {'status': 'error_abstain', 'error_type': type(exc).__name__,
+                      'submits_orders': False}
+        if once or result['status'] == 'data_revision_requires_review':
+            return result
+        print(json.dumps(result, allow_nan=False), flush=True)
+        time.sleep(30)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Dwight: QQQ research and TradingView alert toolkit")
     from . import __version__
@@ -132,6 +153,22 @@ def main():
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument('--synthetic', action='store_true', help='Invented fixtures for software validation only')
     mode.add_argument('--real-data', action='store_true', help='Observed QQQ CSV; source verification still requires provenance')
+    p = commands.add_parser('manual-observe', help='Read Alpaca QQQ data and retain baseline observations; no simulated or broker orders')
+    p.add_argument('--signals', type=Path, default=Path('runs/manual-signals'))
+    p.add_argument('--feed', choices=['sip', 'iex'], required=True)
+    p.add_argument('--once', action='store_true', help='Run one bounded read; otherwise poll every 30 seconds')
+    p = commands.add_parser('manual-signals', help='Inspect private signal observations; no account risk checks or orders')
+    p.add_argument('--signals', type=Path, default=Path('runs/manual-signals'))
+    p.add_argument('--feed', choices=['sip', 'iex'], required=True)
+    p.add_argument('--limit', type=int, default=100)
+    p = commands.add_parser('manual-prepare', help='Build a review proposal from an observed signal and explicit human price/size')
+    p.add_argument('signal_id')
+    p.add_argument('--signals', type=Path, default=Path('runs/manual-signals'))
+    p.add_argument('--feed', choices=['sip', 'iex'], required=True)
+    p.add_argument('--entry', required=True, help='Human-supplied proposed entry price, never a verified fill')
+    p.add_argument('--quantity', required=True, help='Explicit planned whole shares; account sizing is not automated')
+    p.add_argument('--price-observed-at', required=True, help='Timezone-aware timestamp of the human price reference')
+    p.add_argument('--state', type=Path, default=Path('runs/manual-paper/account.sqlite3'))
     p = commands.add_parser('manual-propose', help='Journal a QQQ proposal for human review; does not submit an order')
     p.add_argument('proposal', type=Path, help='Strict JSON proposal file')
     p.add_argument('--state', type=Path, default=Path('runs/manual-paper/account.sqlite3'))
@@ -259,6 +296,20 @@ def main():
             from .enrichment import run_enrichment
             config = _read_object(args.config) if args.config else {}
             result = run_enrichment(args.data, args.out, synthetic=args.synthetic, config=config)
+        elif args.command in {'manual-observe', 'manual-signals', 'manual-prepare'}:
+            from .manual_signals import ManualSignalStore
+            with ManualSignalStore(args.signals, feed=args.feed) as store:
+                if args.command == 'manual-observe':
+                    result = _observe_manual(store, args.once)
+                elif args.command == 'manual-signals':
+                    result = {'signals': store.list_signals(limit=args.limit),
+                              'submits_orders': False, 'account_verified': False,
+                              'portfolio_gates_applied': False}
+                else:
+                    result = store.prepare(args.signal_id, entry=args.entry,
+                                           quantity=args.quantity,
+                                           price_observed_at=args.price_observed_at,
+                                           journal_path=args.state)
         elif args.command.startswith('manual-'):
             from .manual import ManualPaperJournal
             journal = ManualPaperJournal(args.state)
@@ -327,8 +378,11 @@ def main():
             from .recorder import record_books
             result = record_books(args.output,args.limit)
         print(json.dumps(result, indent=2, allow_nan=False))
+        if args.command == 'manual-observe' and result['status'] == 'data_revision_requires_review':
+            raise SystemExit(3)
         if (args.command == 'health' and not result['healthy'] or
-                args.command == 'shadow' and result['status'] == 'error_abstain'):
+                args.command in {'shadow', 'manual-observe'} and
+                result['status'] in {'error_abstain', 'data_revision_requires_review'}):
             raise SystemExit(1)
     except (ValueError, TypeError, KeyError, OSError, RuntimeError) as exc:
         parser.error(str(exc))

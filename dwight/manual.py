@@ -320,9 +320,13 @@ class ManualPaperJournal:
                 connection.execute("INSERT INTO events(proposal_id,status,changed_at) VALUES (?, 'expired', ?)",
                                    (proposal["proposal_id"], now))
 
-    def add_proposal(self, payload, now=None):
-        proposal, now = _proposal(payload), _clock(now)
+    def add_proposal(self, payload, now=None, *, create_before=None):
+        proposal = _proposal(payload)
+        deadline = _stamp(create_before, 'create_before') if create_before is not None else None
         with self._db() as connection:
+            # A journal import can hold the SQLite writer lock. Live creation
+            # must use the time AFTER that wait, never backdate availability.
+            now = _clock(now)
             existing = connection.execute("SELECT payload FROM proposals WHERE proposal_id=?", (proposal["proposal_id"],)).fetchone()
             if existing:
                 if existing[0] != _json(proposal):
@@ -331,6 +335,8 @@ class ManualPaperJournal:
             else:
                 if not proposal["available_at"] <= now < proposal["expires_at"]:
                     raise ManualPaperError("new proposal must be available and unexpired")
+                if deadline is not None and now >= deadline:
+                    raise ManualPaperError("new proposal reference deadline passed while awaiting journal delivery")
                 connection.execute("INSERT INTO proposals VALUES (?, ?, 'pending', ?, ?)",
                                    (proposal["proposal_id"], _json(proposal), now, now))
                 connection.execute("INSERT INTO events(proposal_id,status,changed_at) VALUES (?, 'pending', ?)",
