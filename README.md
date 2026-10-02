@@ -13,7 +13,11 @@ Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
 [Experiment reports](docs/experiments-and-reports.md) add strategy audits, candlestick and portfolio charts, and private 12 hour, 24 hour, 48 hour and one week milestone ledgers. The observation clock requires verified real data. [Linux service templates](docs/server-experiment.md) support a persistent shadow worker and report generation. Email delivery needs a connected sender and is tracked separately from report creation.
 
 A [Hugging Face research app](docs/huggingface.md) adds a Gradio interface to the
-synthetic experiment. Its deployment bundle contains allowlisted committed source
+synthetic experiment, with interactive equity, drawdown, candle and trade charts,
+classifier diagnostics and four fixed robustness cases. The
+[transformer research plan](docs/transformer-research.md) shows how price sequence
+and news models could add features, with their value explicitly unmeasured.
+Its deployment bundle contains allowlisted committed source
 and attribution; it contains no credentials or private datasets. This research
 interface is separate from the continuous shadow/paper worker.
 

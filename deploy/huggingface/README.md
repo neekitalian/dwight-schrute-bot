@@ -8,42 +8,69 @@ sdk_version: 6.29.0
 python_version: "3.11"
 app_file: app.py
 license: apache-2.0
-short_description: QQQ strategy research with a synthetic ML experiment
+short_description: QQQ research with interactive performance and model analysis
 tags:
   - finance
   - research
   - synthetic-data
   - scikit-learn
+  - plotly
 ---
 
-# Dwight Schrute Bot — research lab
+# Dwight research
 
-Run a reproducible **synthetic** demonstration of the QQQ VWAP research pipeline:
-generate examples, fit a small classifier, select a threshold on validation sessions,
-and compare the model against VWAP and a fixed volume filter on later sessions.
+Explore a reproducible **synthetic** QQQ VWAP experiment through interactive performance charts,
+a trade explorer, classifier diagnostics, replay evidence and proposed transformer connections.
 
-Prices are fabricated. The results test software behavior, not trading performance.
-The demo cannot approve models for trading, connect accounts, or submit orders.
-It accepts no API credentials, file uploads, or custom code.
+**Prices are invented. No account is connected. No orders are submitted.**
+The current research classifier is logistic regression. Price sequence and news transformer paths
+are documented research proposals; no transformer is loaded, evaluated or credited with improvement.
 
-The fixed example uses 500 calendar days and seed 42. The first request runs the
-actual Python experiment; subsequent requests reuse its in-memory result until the
-Space restarts. Temporary files are deleted. Hosted MLflow tracking and persistent
-experiment storage are not configured here; the full local workflow supports MLflow.
+## Explore the app
 
-Source and full workflow: [GitHub](https://github.com/neekitalian/dwight-schrute-bot).
-The exact source revision and file hashes are in `source-manifest.json`.
-The repository's original overview is retained as `PROJECT-README.md`.
+- **Performance:** simulated equity, drawdown, returns, session P&L and trade risk multiples.
+  Compare VWAP, a simple volume filter and Dwight on the same later test sessions.
+- **Trade explorer:** select a session and policy to inspect candles, session VWAP, EMA20,
+  long and short simulated entries, exits and the trade ledger. Times use New York.
+- **Model analysis:** held out calibration and fitted logistic score contributions.
+  These explain the classifier's behavior; they do not show causal feature importance.
+- **Transformer connections:** both price forecasts and news sentiment as possible new features.
+  Includes candidate model sources, limitations, licenses and a four arm evaluation plan.
+- **Method and evidence:** chronological splits, replay checks, costs, model identity and boundaries.
+
+The app evaluates all four declared fixtures: seeds 42, 43 and 44, plus seed 42 under doubled
+commission and slippage. Each has 500 calendar days of invented bars. The cost case retrains
+under changed costs, so it is neither an independent path nor pure cost attribution. Results
+across these fixtures are software checks, not evidence of a QQQ trading edge.
+
+The first request trains and independently replays the policies on CPU, then checks them against
+the saved evidence. Later requests reuse a bounded process memory cache. Temporary input files,
+trade files and artifact files are removed; JSON results and model coefficients remain in memory
+until restart. No model release is published. MLflow and persistent experiment storage are not
+configured in the public Space; the private local workflow supports them.
 
 ## Deployment boundary
 
-This Space is an interactive research app. Actual QQQ history, live shadow operation,
-and the complete paper execution lifecycle still require validation. The continuous
-broker-connected worker belongs on a separately supervised host with durable state.
-Spaces may sleep and restart; local state is ephemeral.
+This app has no credential entry, user uploads, custom code, broker operation or model promotion
+action. It does not ingest private journals or expose the milestone email campaign. The original
+inputless `/synthetic_experiment` endpoint is retained; `/dashboard` accepts only the fixed cases
+and evaluated strategy names. Public charts use generated data only.
+
+Actual QQQ history, transformer experiments, forward shadow observation and the complete paper
+execution lifecycle still need validation. Paper Trading by TradingView is a separate simulator;
+the planned manual proposal and result import workflow is not implemented here. Continuous
+broker workers and milestone reporting belong on a separately supervised host with durable state.
+The 12 hour, 24 hour, 48 hour and one week observation clocks have not started.
+
+Spaces may sleep and restart. No GPU or hardware upgrade is needed for this demo.
+
+Source and full workflow: [GitHub](https://github.com/neekitalian/dwight-schrute-bot).
+The exact source revision and file hashes are in `source-manifest.json`.
+The original project overview is retained as `PROJECT-README.md`.
 
 ## License
 
-Apache-2.0. The unchanged VWAP engine retains its upstream attribution in `NOTICE`
-and `docs/VWAP-LICENSE`. Market-data rights are separate; no licensed market dataset
-or private experiment journal is included in this Space.
+The application is Apache-2.0. The unchanged VWAP engine retains its upstream attribution
+in `NOTICE` and `docs/VWAP-LICENSE`. Candidate transformer artifact licenses and market/news data
+rights are separate. No third party model weights, licensed market data, private credentials
+or experiment journals are bundled in this Space.

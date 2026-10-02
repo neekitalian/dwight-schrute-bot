@@ -1,100 +1,134 @@
-"""Hugging Face Space: synthetic QQQ research, with no trading capability."""
+"""Public synthetic research dashboard. No data uploads or execution endpoints."""
 import os
-
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
 import gradio as gr
 
-from deploy.huggingface.research import (
-    COMPARISON_HEADERS, present_experiment, run_synthetic_experiment,
-)
-
-
-WORKFLOW_HTML = """
-<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;margin:16px 0">
-  <div style="flex:1;min-width:150px;border:1px solid #94a3b8;border-radius:12px;padding:18px">
-    <strong>1 · Generate</strong><br>Invented QQQ-labelled five-minute bars<br><small>Fixed seed 42</small>
-  </div>
-  <div style="flex:1;min-width:150px;border:1px solid #94a3b8;border-radius:12px;padding:18px">
-    <strong>2 · Split</strong><br>Earlier → later sessions<br><small>60% train / 20% validate / 20% test</small>
-  </div>
-  <div style="flex:1;min-width:150px;border:1px solid #94a3b8;border-radius:12px;padding:18px">
-    <strong>3 · Learn</strong><br>VWAP candidate → take / skip<br><small>Train model; select threshold on validation</small>
-  </div>
-  <div style="flex:1;min-width:150px;border:1px solid #94a3b8;border-radius:12px;padding:18px">
-    <strong>4 · Compare</strong><br>Baseline vs volume filter vs model<br><small>Final test-period simulated results</small>
-  </div>
-</div>
-"""
+from .analytics import CASE_IDS, CASE_LABELS, VARIANT_LABELS, run_dashboard_experiment, run_robustness_summary
+from .charts import default_session, diagnostics_figure, equity_figure, outcomes_figure, session_figure, sessions
+from . import presentation as ui
+from .research import COMPARISON_HEADERS, present_experiment, run_synthetic_experiment
 
 
 def run_demo():
+    """Retain the original four output API for existing research clients."""
     try:
         return present_experiment(run_synthetic_experiment())
     except Exception:
-        # Do not expose server paths or internal exception messages in the UI.
         raise gr.Error("The synthetic experiment could not complete. No trading action was taken.") from None
 
 
+def load_dashboard(case_id="seed42", variant="filtered"):
+    try:
+        if variant not in VARIANT_LABELS:
+            raise ValueError("Unsupported strategy")
+        p = run_dashboard_experiment(case_id)
+        day = default_session(p)
+        evidence = {"report": p["report"], "model": p["model"], "audit": p["audit"], "provenance": p["provenance"]}
+        return (ui.metric_cards(p), ui.performance_note(p), equity_figure(p), ui.comparison_table(p),
+                outcomes_figure(p), gr.Dropdown(choices=sessions(p), value=day), session_figure(p, day, variant),
+                ui.trade_rows(p, day, variant), ui.diagnostics_note(p), diagnostics_figure(p),
+                ui.audit_view(p), ui.method_note(p), evidence, case_id,
+                ui.robustness_view(run_robustness_summary()))
+    except Exception:
+        raise gr.Error("This research view could not complete. Choose a fixed synthetic case and try again.") from None
+
+
+def inspect_session(case_id, day, variant):
+    try:
+        p = run_dashboard_experiment(case_id)
+        return session_figure(p, day, variant), ui.trade_rows(p, day, variant)
+    except Exception:
+        raise gr.Error("Select a session and strategy from the current synthetic experiment.") from None
+
+
+def inspect_connections(choice):
+    try:
+        return ui.transformer_flow(choice), ui.transformer_details(choice)
+    except Exception:
+        raise gr.Error("Choose price sequences, news context or both.") from None
+
+
+def html(value="", **kwargs):
+    return gr.HTML(value, apply_default_css=False, **kwargs)
+
+
 def build_app():
-    with gr.Blocks(title="Dwight · QQQ Research Lab", analytics_enabled=False) as app:
-        gr.Markdown(
-            "# Dwight · QQQ Research Lab\n"
-            "**A small model, a testable decision.** Explore our VWAP take/skip experiment.\n\n"
-            "**SYNTHETIC DATA ONLY · NO BROKER CONNECTION · NO ORDERS**"
-        )
-        with gr.Tab("Experiment"):
-            gr.Markdown(
-                "Run the actual Dwight training and replay pipeline on a fixed, fabricated dataset. "
-                "The first run trains a CPU classifier; later requests reuse the same in-memory result. "
-                "No API key, account or upload is needed.\n\n"
-                "**Fixture:** 500 calendar days · seed 42 · 5-minute bars · QQQ label. "
-                "Invented prices and volume do not represent QQQ history."
-            )
-            run = gr.Button("Run synthetic experiment", variant="primary")
-            summary = gr.Markdown("Run the experiment to see the final test-period comparison.")
-            comparison = gr.Dataframe(
-                headers=COMPARISON_HEADERS,
-                datatype=["str", "number", "number", "number", "number", "number"],
-                type="array", interactive=False, label="Final test period · simulated results",
-            )
-            gr.Markdown(
-                "Net P&L includes the engine's fixed commission and slippage assumptions. "
-                "Drawdown uses five-minute closing marks, so it misses intrabar extremes."
-            )
-            model = gr.Markdown()
-            with gr.Accordion("Inspect the experiment report", open=False):
-                report = gr.JSON(label="Research report · temporary file paths omitted")
-            run.click(
-                fn=run_demo, inputs=None, outputs=[summary, comparison, model, report],
-                api_name="synthetic_experiment", concurrency_limit=1,
-                concurrency_id="synthetic-research", trigger_mode="once",
-            )
-        with gr.Tab("Workflow & status"):
-            gr.HTML(WORKFLOW_HTML)
-            gr.Markdown(
-                "### What this Space does\n"
-                "It generates a reproducible fixture, fits the existing logistic regression model, "
-                "and runs the original baseline, simple volume filter and model filter. "
-                "The model learns from completed baseline trades; its features were frozen when "
-                "each candidate became available. Filtered strategies are replayed independently.\n\n"
-                "### How this becomes paper trading\n"
-                "Real QQQ market data → chronological experiments → reviewed model release → "
-                "live shadow observation → fixed risk checks → broker paper execution.\n\n"
-                "That deployment path belongs to the separate Dwight service. This research Space "
-                "has no broker credentials, market-data connection, order endpoint or promotion action.\n\n"
-                "### Current boundaries\n"
-                "- Synthetic results validate software behavior; real QQQ evaluation is still required.\n"
-                "- Small sample requirements are relaxed only for this synthetic smoke test.\n"
-                "- Fixture weekdays include exchange holidays; this is not a market calendar simulation.\n"
-                "- Input data, trade files and model artifacts are deleted after each uncached run.\n"
-                "- The report cache resets with the process; MLflow logging is disabled here.\n"
-                "- No result can approve itself for paper or live deployment.\n\n"
-                "Training and model selection remain separate from the running trading service. "
-                "TradingView is a later human monitoring surface. Dwight decisions use broker data."
-            )
+    with gr.Blocks(title="Dwight · QQQ Research", analytics_enabled=False) as app:
+        html(ui.HERO)
+        active_case = gr.State("seed42")
+        with gr.Row():
+            case = gr.Dropdown(choices=[(CASE_LABELS[k], k) for k in CASE_IDS], value="seed42", label="Fixed research case", scale=3)
+            gr.Markdown("**Four reproducible tests.** The first visit trains and audits all four cases on CPU. Later visits reuse this process's results.", elem_classes="dw-note")
+            refresh = gr.Button("Evaluate case", variant="primary", scale=1)
+        with gr.Tab("Performance"):
+            cards = html('<div class="dw-callout">Computing the fixed synthetic experiments…</div>')
+            note = gr.Markdown()
+            equity = gr.Plot(show_label=False)
+            html(ui.section("Three policies. The same test period.", "Net P&L includes modeled commissions and slippage. Lower drawdown is better."))
+            comparison = html()
+            html(ui.section("Does it hold across different paths?", "All four declared cases are shown, including cases where the classifier falls behind."))
+            robustness = html()
+            html(ui.section("What produced the return?", "Trade outcomes in planned risk units and session P&L. All values are simulated."))
+            outcomes = gr.Plot(show_label=False)
+        with gr.Tab("Trade explorer"):
+            html(ui.section("Read the trade in context", "Select a fabricated session and inspect its bars, indicators and simulated fills."))
+            with gr.Row():
+                day = gr.Dropdown(choices=[], label="Test session · New York date", interactive=True)
+                variant = gr.Dropdown(choices=[(v, k) for k, v in VARIANT_LABELS.items()], value="filtered", label="Policy", interactive=True)
+            price = gr.Plot(show_label=False)
+            gr.Markdown("**Chart time: New York.** Candles are stamped at their opening time; completed values are known five minutes later. Up triangles mark long entries, down triangles mark short entries, and crosses mark exits. Entry fills are simulated at the next bar. Exit markers identify the bar; exact intrabar fill times are unknown. VWAP is computed from bar typical prices.")
+            trades = gr.Dataframe(headers=["Entry bar / NY", "Side", "Shares", "Entry", "Stop", "Target", "Exit bar / NY", "Exit", "Reason", "Net P&L / USD", "Net R"],
+                                  datatype=["str", "str", "number", "number", "number", "number", "str", "number", "str", "number", "number"],
+                                  type="array", interactive=False, label="Simulated trade ledger · selected session", wrap=True)
+        with gr.Tab("Model analysis"):
+            html(ui.section("Why Dwight takes or skips", "The active research model is logistic regression. It is not a transformer."))
+            diagnostics = gr.Markdown()
+            diagnostic_plot = gr.Plot(show_label=False)
+            gr.Markdown("**What the score means.** The model estimates a positive net outcome under this simulator's rules. It does not predict guaranteed profit. Filtering can change which later candidates are available, so each policy is replayed independently.\n\n**What the explanation means.** Each feature is standardized with training statistics, multiplied by its fitted coefficient, and combined with the intercept. The chart averages absolute contributions across labeled baseline candidates in the test period. This explains the fitted score; it is not causal feature importance.")
+        with gr.Tab("Transformer connections"):
+            gr.Markdown("**Price sequences and news, evaluated separately and together.** These are proposed feature inputs for a future Dwight model. None is connected; there are no measured transformer trading results yet.")
+            connection = gr.Radio(choices=[("Both", "both"), ("Price sequences", "price"), ("News context", "news")], value="both", label="Explore a connection")
+            flow = html(ui.transformer_flow())
+            details = gr.Markdown(ui.transformer_details())
+            html(ui.section("Measure the added value", "Keep the data, costs and strategy rules comparable. Adding a larger model is an experiment, not an automatic improvement."))
+            html(ui.transformer_comparison())
+            gr.Markdown(ui.transformer_protocol())
+        with gr.Tab("Method & evidence"):
+            html(ui.section("Trace the result back to its rules", "Replay checks, data identity and the boundaries of this experiment."))
+            audit = html()
+            method = gr.Markdown()
+            with gr.Accordion("Inspect report, model coefficients and audit evidence", open=False):
+                evidence = gr.JSON(label="Synthetic evidence · no private input paths")
+            with gr.Accordion("Original compact experiment API", open=False):
+                gr.Markdown("The original seed 42 endpoint remains available for existing research clients. It computes the same synthetic pipeline and returns its compact report.")
+                legacy_run = gr.Button("Run compact experiment")
+                legacy_summary = gr.Markdown()
+                legacy_comparison = gr.Dataframe(headers=COMPARISON_HEADERS, datatype=["str"]+["number"]*5, type="array", interactive=False)
+                legacy_model = gr.Markdown()
+                legacy_report = gr.JSON()
+                legacy_run.click(run_demo, None, [legacy_summary, legacy_comparison, legacy_model, legacy_report], api_name="synthetic_experiment", concurrency_id="synthetic-research", concurrency_limit=1)
+        html(ui.FOOTER)
+        outputs = [cards, note, equity, comparison, outcomes, day, price, trades, diagnostics, diagnostic_plot, audit, method, evidence, active_case, robustness]
+        options = dict(concurrency_id="synthetic-research", concurrency_limit=1, trigger_mode="always_last")
+        app.load(load_dashboard, [case, variant], outputs, api_name=False, **options)
+        refresh.click(load_dashboard, [case, variant], outputs, api_name="dashboard", **options)
+        case.input(load_dashboard, [case, variant], outputs, api_name=False, **options)
+        day.input(inspect_session, [active_case, day, variant], [price, trades], api_name="session", **options)
+        variant.input(inspect_session, [active_case, day, variant], [price, trades], api_name=False, **options)
+        connection.input(inspect_connections, connection, [flow, details], api_name="connections", concurrency_limit=4)
     return app.queue(max_size=8, default_concurrency_limit=1)
 
 
+def launch_app(server_name="0.0.0.0", server_port=7860):
+    theme = gr.themes.Base(primary_hue="teal", secondary_hue="blue", neutral_hue="slate", font=["Inter", "system-ui", "sans-serif"])
+    return build_app().launch(server_name=server_name, server_port=server_port, show_error=False,
+                              # Native style rules preserve root media queries;
+                              # Gradio scopes its css argument inside .contain.
+                              theme=theme, head="<style>" + ui.CSS + "</style>",
+                              js="() => document.documentElement.classList.add('dark')",
+                              footer_links=[])
+
+
 if __name__ == "__main__":
-    build_app().launch(server_name="0.0.0.0", server_port=7860, show_error=False)
+    launch_app()

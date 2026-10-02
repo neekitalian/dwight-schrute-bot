@@ -2,13 +2,13 @@
 
 The public app is [neekthekid/dwight-schrute-bot](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 This is the research interface, not the always-on paper trading worker.
-The app runs the existing experiment on a fixed synthetic fixture. It compares
+The app runs the existing experiment on four fixed synthetic cases. It compares
 the baseline, volume filter and classifier on a later chronological partition.
 All results are labelled synthetic and ineligible for deployment.
 
 No credential is needed by the running app. It has no credential entry, file
 upload, broker operation, or custom-code input. The first request computes a
-result; the process holds a single cached result in memory. Temporary data is
+result; the process holds up to four dashboard cases and the compact legacy report in memory. Temporary data is
 cleaned up. MLflow logging is disabled in this ephemeral demo; use the documented
 local workflow for private datasets, persistent artifacts and MLflow tracking.
 
@@ -36,6 +36,32 @@ allowlisted files. Private experiment reports, campaign recipients and credentia
 were not uploaded. The interface remains the fixed synthetic demo; the new
 milestone reports run privately on the experiment host.
 
+## Interactive analysis
+
+The dashboard evaluates seeds 42, 43 and 44, plus path 42 with doubled costs.
+All use the same 500 calendar day fixture generator. Equity, bar close drawdown,
+trade ledgers, calibration and score contributions come from actual independent
+policy replays. Every dashboard ledger and metric must match saved test evidence
+before it can be shown. The cost case retrains and retunes the model; it is not
+pure cost attribution or an independent price path.
+
+The performance page shows all declared cases, including cases where the model
+trails VWAP. Candles and simulated fills use explicit New York timestamps.
+Drawdown is sampled at bar closes and cannot represent intrabar extremes. The
+model analysis explains logistic score contributions, not causal effects.
+
+Price sequence and news connections are both documented in the interface and
+[transformer research plan](transformer-research.md). All are proposed and
+unmeasured. The registry includes official model sources and distinguishes code
+licenses from model artifact licenses. No transformer SDK or weights are loaded.
+Adding these features requires a versioned schema, new preprocessing and retraining.
+
+The dashboard has no upload, private run reader or account connection. Bounded JSON
+caches retain public synthetic bars, ledgers and model coefficients; temporary files
+are deleted. The legacy inputless API remains available. The current native
+TradingView paper account requires a future manual proposal and result import flow;
+this dashboard does not connect to that account or start milestone observation.
+
 ## Local development
 
 Use a separate virtual environment to avoid changing the validated trading CLI
@@ -47,8 +73,7 @@ build/space-venv/bin/python -m pip install -r deploy/huggingface/requirements.tx
 build/space-venv/bin/python -m deploy.huggingface.app
 ```
 
-The app listens on port 7860. For a loopback-only preview, import `build_app()`
-and launch it with `server_name="127.0.0.1"`.
+The app listens on port 7860. For a loopback-only preview, import and call `launch_app(server_name="127.0.0.1", server_port=7861)` to preview with the same theme and styles.
 
 ## Reproducible deployment
 

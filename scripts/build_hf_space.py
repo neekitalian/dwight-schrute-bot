@@ -14,7 +14,7 @@ FILES = (
     "LICENSE", "NOTICE", "pyproject.toml", "docs/VWAP-LICENSE",
     "docs/architecture.md", "docs/workflow.md", "docs/vwap.md",
     "docs/validation.md", "docs/huggingface.md",
-    "docs/experiments-and-reports.md", "docs/server-experiment.md",
+    "docs/experiments-and-reports.md", "docs/server-experiment.md", "docs/transformer-research.md",
     "dwight/__init__.py", "dwight/__main__.py", "dwight/runner.py",
     "dwight/store.py", "dwight/research.py", "dwight/data.py",
     "dwight/experiments.py", "dwight/ops.py", "dwight/shadow.py",
@@ -23,7 +23,9 @@ FILES = (
     "dwight/connectors/csv.py", "dwight/connectors/polymarket.py",
     "vwap_bot/__init__.py", "vwap_bot/__main__.py", "vwap_bot/engine.py",
     "examples/make_experiment_demo.py", "deploy/huggingface/app.py",
-    "deploy/huggingface/research.py",
+    "deploy/huggingface/research.py", "deploy/huggingface/analytics.py",
+    "deploy/huggingface/charts.py", "deploy/huggingface/presentation.py",
+    "deploy/huggingface/transformer_analysis.py",
 )
 MAPPED_FILES = {
     "README.md": "PROJECT-README.md",
