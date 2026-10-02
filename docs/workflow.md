@@ -93,6 +93,20 @@ The current library supports long whole-share QQQ GTC brackets. A partially fill
 
 Retain private heartbeats, journals, raw observed slices and release identity. Review data lag/revisions, duplicate handling, abstentions and later broker order errors. Use actual fills for paper performance after the executor is implemented. New data goes into offline experiments; every replacement repeats evaluation and shadow review. Deploy initially while flat.
 
+## Final integration target: TradingView
+
+User-designated chart: [TradingView layout d5qUHtf0](https://www.tradingview.com/chart/d5qUHtf0/). Connect this after real-data evaluation, shadow validation and the paper execution lifecycle are ready. The saved layout's symbol, interval, script and broker connection have not been verified; the intended Dwight equity scope remains QQQ on completed five-minute bars.
+
+The initial connection should be **Dwight → Alpaca paper API**, with the **same Alpaca paper account connected through TradingView's Trading Panel** for monitoring. Alpaca documents paper-account support in its TradingView integration. Verify account identity and that the bot's orders/positions appear during the final integration test. A chart URL is a workspace reference, not an order endpoint. [Alpaca TradingView connection](https://alpaca.markets/learn/how-to-trade-options-on-tradingview-with-alpaca-trading-api-account)
+
+If chart-generated signals are wanted later, the optional route is **TradingView → authenticated HTTPS webhook receiver → Dwight model and deterministic risk checks → broker paper API**. TradingView's native Paper Trading simulator is separate; Pine strategies cannot submit to it. The same-account Alpaca connection is the planned route, subject to account confirmation. [TradingView strategy FAQ](https://www.tradingview.com/pine-script-docs/faq/strategies/#can-i-connect-my-strategies-to-my-paper-trading-account)
+
+For optional alerts, start with comparison in shadow. Confirm the exact script/version, QQQ symbol, session and volume feed; compare timestamps, bars and features against the Python strategy before routing alerts into decisions. Do not run two independent entry producers for the same account. The trained model stays on Dwight's server and broker fills remain execution truth.
+
+The future receiver must authenticate requests, persist and deduplicate event IDs, reject stale/incorrect-symbol alerts, and queue processing before acknowledging promptly. TradingView documents a three-second webhook timeout, HTTPS support and a two-factor-authentication requirement. Never put broker credentials in alert messages. This requires a separate public HTTPS ingress; the current polling-only Compose service exposes no inbound port. [Official webhook documentation](https://www.tradingview.com/support/solutions/43000529348-how-to-configure-webhook-alerts/)
+
+No TradingView connection, alert, webhook listener or account change has been created. At integration time, prepare access to the saved layout and selected paper account. If adding chart alerts, also confirm the plan's webhook features and two-factor authentication.
+
 ## Parallel Polymarket collection
 
 ```sh
