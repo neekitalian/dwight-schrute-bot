@@ -36,6 +36,15 @@ allowlisted files. Private experiment reports, campaign recipients and credentia
 were not uploaded. The interface remains the fixed synthetic demo; the new
 milestone reports run privately on the experiment host.
 
+The interactive analysis release is verified RUNNING on CPU Basic.
+Application source: `f89d5bd91ed7d2d518a82500a98ce8517c9e4e21`.
+Space commit: `bb9731f5cb8cc6b0ca4b628b75aff9db03bba554`.
+The deployment includes 44 allowlisted files. All 147 local tests passed, and
+hosted dashboard, session, connection and legacy API calls completed. Browser
+checks confirmed chart hover, negative case selection, both transformer branches,
+model diagnostics and a 390 pixel mobile layout without page overflow. No browser
+JavaScript errors were observed. These checks verify the app, not a trading edge.
+
 ## Interactive analysis
 
 The dashboard evaluates seeds 42, 43 and 44, plus path 42 with doubled costs.
