@@ -107,6 +107,6 @@ Each invocation is a bounded public snapshot, not a continuous tick recorder. No
 
 ## GitHub preparation
 
-The CI template is `examples/github-actions-tests.yml`. Activate it as `.github/workflows/tests.yml` using GitHub's editor or a credential with workflow permission; the existing push credential previously lacked that scope. Until then tests are local, not active CI. Tests require no trading keys.
+The initial `.github/workflows/tests.yml` was created through GitHub's editor but failed validation before any job ran. Replace it with the corrected `examples/github-actions-tests.yml` through an authorized workflow editor; the current integration cannot write workflows and the CLI credential lacks that permission. The corrected template uses literal temporary cache paths instead of a runner context unavailable at job environment evaluation. Tests require no trading keys. Do not describe CI as passing before the repaired run completes.
 
 The repository retains Apache-2.0. Dependency and market-data terms remain separate, particularly for a commercial product. Private credentials, datasets, trained artifacts and execution logs are excluded from commits.

@@ -46,7 +46,13 @@ reads your journal, accepts uploads, connects to your account, or sends orders.
 **FinRL and fundamental context.** The repository has an offline research adapter for testing a
 reinforcement-learning take-or-skip policy above VWAP. Fundamental and news inputs require separate
 data sources and point-in-time preparation. FinRL is not trained or evaluated in this tab. Its
-results and transformer results remain unmeasured; the displayed learned policy is logistic regression."""
+results and transformer results remain unmeasured; the displayed learned policy is logistic regression.
+
+**Real data and additional features.** Private research now supports a validated FirstRate QQQ
+sample and a separate comparison of four causal session features against the original classifier.
+The available sample is too short to meet the real training requirements. Price data and private
+charts stay outside this public Space. The additional features have not established an advantage;
+this tab continues to display the original fixed synthetic experiment."""
 
 
 def _public(report):

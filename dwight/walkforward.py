@@ -18,7 +18,7 @@ from vwap_bot.engine import Config
 from .connectors.csv import read_bars
 from .experiments import (
     CandidateBot, DEFAULTS, FEATURE_VERSION, JSONModel, _PriorVolumeFilter,
-    _metrics, _provenance, _write, complete_sessions, fit_model, purge_labels,
+    _metrics, _provenance, _write, _private_directory, complete_sessions, fit_model, purge_labels,
 )
 
 SAMPLE_KEYS = (
@@ -242,12 +242,13 @@ def run_walkforward(data: Path, output: Path, synthetic=False, config: dict | No
     data = Path(data)
     raw = data.read_bytes()
     provenance, manifest = _provenance(data, "QQQ", raw, synthetic, options["dataset_manifest"])
-    directory = Path(output)/uuid.uuid4().hex
-    directory.mkdir(parents=True)
+    _private_directory(output, exist_ok=True)
+    directory = _private_directory(Path(output)/uuid.uuid4().hex)
     # Replay exactly the bytes fingerprinted above, even if a recorder updates
     # the source CSV while this experiment is running.
     snapshot = directory/"input.csv"
     snapshot.write_bytes(raw)
+    snapshot.chmod(0o600)
     try:
         sessions, excluded = complete_sessions(list(read_bars(snapshot)))
     except Exception as exc:
@@ -295,7 +296,7 @@ def run_walkforward(data: Path, output: Path, synthetic=False, config: dict | No
     try:
         for window in plan["windows"]:
             fold_dir = directory/f"window-{window['window']:03d}"
-            fold_dir.mkdir()
+            _private_directory(fold_dir)
             result = _run_window(fold_dir, window, sessions, settings, options, provenance, synthetic)
             _write(fold_dir/"report.json", result)
             report["windows"].append(result)

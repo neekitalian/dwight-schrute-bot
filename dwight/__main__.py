@@ -96,6 +96,8 @@ def main():
     p.add_argument('--symbols', nargs='+', choices=['QQQ'], default=['QQQ'])
     p.add_argument('--feed', choices=['sip','iex'], required=True)
     p.add_argument('--output', type=Path, default=Path('private-data'))
+    p = commands.add_parser('download-qqq-sample', help='Download the official FirstRate QQQ sample for private research; no broker credentials')
+    p.add_argument('--output', type=Path, default=Path('private-data/firstrate'))
     p = commands.add_parser('experiment', help='Chronological VWAP classifier experiment')
     p.add_argument('data', type=Path)
     p.add_argument('--symbol', choices=['QQQ'], default='QQQ')
@@ -109,6 +111,13 @@ def main():
     p.add_argument('--config', type=Path, help='Strict JSON configuration file')
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument('--synthetic', action='store_true', help='Invented fixtures; never deployment evidence')
+    mode.add_argument('--real-data', action='store_true', help='Observed QQQ CSV; source verification still requires provenance')
+    p = commands.add_parser('enrichment', help='Preregistered offline v1 versus enriched-feature comparison; never promotes a model')
+    p.add_argument('--data', type=Path, required=True)
+    p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--config', type=Path, help='Strict JSON configuration file')
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--synthetic', action='store_true', help='Invented fixtures for software validation only')
     mode.add_argument('--real-data', action='store_true', help='Observed QQQ CSV; source verification still requires provenance')
     p = commands.add_parser('manual-propose', help='Journal a QQQ proposal for human review; does not submit an order')
     p.add_argument('proposal', type=Path, help='Strict JSON proposal file')
@@ -192,6 +201,9 @@ def main():
         elif args.command == 'download-data':
             from .data import download_alpaca_dataset
             result = download_alpaca_dataset(args.output,args.start,args.end,args.symbols,args.feed)
+        elif args.command == 'download-qqq-sample':
+            from .firstrate import download_firstrate_sample
+            result = download_firstrate_sample(args.output)
         elif args.command == 'experiment':
             from .experiments import experiment
             config = json.loads(args.config.read_text()) if args.config else {}
@@ -202,6 +214,10 @@ def main():
             from .walkforward import run_walkforward
             config = _read_object(args.config) if args.config else {}
             result = run_walkforward(args.data, args.out, synthetic=args.synthetic, config=config)
+        elif args.command == 'enrichment':
+            from .enrichment import run_enrichment
+            config = _read_object(args.config) if args.config else {}
+            result = run_enrichment(args.data, args.out, synthetic=args.synthetic, config=config)
         elif args.command.startswith('manual-'):
             from .manual import ManualPaperJournal
             journal = ManualPaperJournal(args.state)

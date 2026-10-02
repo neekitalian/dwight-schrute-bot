@@ -294,8 +294,18 @@ def _metrics(bot):
             "turnover_fraction": sum((abs(t["entry"])+abs(t["exit"]))*t["quantity"]*bot.c.point_value for t in bot.trades)/bot.c.capital}
 
 
+def _private_directory(path, *, exist_ok=False):
+    """Keep research inputs and model artifacts private, including on reruns."""
+    path = Path(path)
+    path.mkdir(mode=0o700, parents=True, exist_ok=exist_ok)
+    path.chmod(0o700)
+    return path
+
+
 def _write(path, value):
+    path = Path(path)
     path.write_text(json.dumps(value, indent=2, sort_keys=True, allow_nan=False)+"\n")
+    path.chmod(0o600)
 
 
 def _provenance(data: Path, symbol: str, raw: bytes, synthetic: bool, manifest_path=None):
@@ -321,6 +331,30 @@ def _provenance(data: Path, symbol: str, raw: bytes, synthetic: bool, manifest_p
     digest = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode()).hexdigest()
     if digest != manifest.get("dataset_sha256"):
         raise ValueError("dataset fingerprint mismatch")
+    if manifest.get("source") == "firstrate":
+        from .firstrate import SAMPLE_URL, LICENSE_URL, sample_acquisition
+        if (manifest.get("schema_version") != "firstrate-sample-rth-bars-v1"
+                or manifest.get("feed") != "firstrate_aggregate" or manifest.get("adjustment") != "split"
+                or manifest.get("symbols") != ["QQQ"] or manifest.get("sample_only") is not True
+                or manifest.get("research_only") is not True or manifest.get("live_feed") is not False
+                or manifest.get("synthetic") is not False
+                or manifest.get("source_url") != SAMPLE_URL or manifest.get("license_url") != LICENSE_URL):
+            raise ValueError("invalid FirstRate research sample provenance")
+        # Preserve and verify the actual source ZIP as well as normalized bars.
+        entries = manifest.get("files", [])
+        names = [entry.get("path") for entry in entries]
+        if "raw/sample.zip" not in names or len(names) != len(set(names)):
+            raise ValueError("FirstRate sample requires unique source file hashes")
+        for entry in entries:
+            file = (path.parent/entry["path"]).resolve()
+            if not file.is_relative_to(path.parent.resolve()) or not file.is_file():
+                raise ValueError("invalid FirstRate source file path")
+            if hashlib.sha256(file.read_bytes()).hexdigest() != entry["sha256"]:
+                raise ValueError("FirstRate source file checksum mismatch")
+        provenance = {key: manifest[key] for key in ("source", "feed", "adjustment", "dataset_sha256")}
+        provenance.update(sample_only=True, research_only=True, source_url=SAMPLE_URL, license_url=LICENSE_URL,
+                          source_acquisition=sample_acquisition(manifest))
+        return provenance, manifest
     if manifest.get("source") != "alpaca" or manifest.get("feed") not in ("sip", "iex"):
         raise ValueError("unsupported verified dataset source/feed")
     return {key: manifest[key] for key in ("source", "feed", "adjustment", "dataset_sha256")}, manifest
@@ -401,9 +435,10 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
     settings = Config(**strategy)
     raw = Path(data).read_bytes()
     provenance, dataset_manifest = _provenance(Path(data), symbol, raw, synthetic, options["dataset_manifest"])
-    directory = Path(output)/uuid.uuid4().hex
-    directory.mkdir(parents=True)
+    _private_directory(output, exist_ok=True)
+    directory = _private_directory(Path(output)/uuid.uuid4().hex)
     (directory/"input.csv").write_bytes(raw)
+    (directory/"input.csv").chmod(0o600)
     if dataset_manifest:
         _write(directory/"dataset-manifest.json", dataset_manifest)
     try:

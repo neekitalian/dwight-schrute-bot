@@ -124,6 +124,44 @@ def _verified_replays(directory, report):
     return bars, portfolios
 
 
+def _source_label(directory, report):
+    """A vendor label requires the saved dataset fingerprint and input hash.
+
+    This checks the recorded source chain; it is not independent exchange
+    certification and does not grant redistribution or deployment rights.
+    """
+    if report["synthetic"]:
+        return "SYNTHETIC REPLAY"
+    if report.get("source") == "alpaca":
+        return "HISTORICAL REPLAY"
+    if report.get("source") != "firstrate":
+        return "UNVERIFIED CSV REPLAY"
+    from .firstrate import SAMPLE_URL, LICENSE_URL, sample_acquisition
+    manifest = json.loads((directory / "dataset-manifest.json").read_text())
+    keys = ("schema_version", "start", "end", "symbols", "feed", "adjustment", "files")
+    fingerprint = hashlib.sha256(json.dumps({key: manifest[key] for key in keys}, sort_keys=True).encode()).hexdigest()
+    expected_path = manifest.get("bars", {}).get("QQQ", {}).get("5Min")
+    recorded = [entry["sha256"] for entry in manifest.get("files", []) if entry.get("path") == expected_path]
+    if (manifest.get("schema_version") != "firstrate-sample-rth-bars-v1"
+            or manifest.get("synthetic") is not False
+            or manifest.get("sample_only") is not True or manifest.get("research_only") is not True
+            or manifest.get("live_feed") is not False
+            or manifest.get("source_url") != SAMPLE_URL or manifest.get("license_url") != LICENSE_URL
+            or manifest.get("source") != "firstrate" or manifest.get("feed") != "firstrate_aggregate"
+            or manifest.get("adjustment") != "split" or manifest.get("symbols") != ["QQQ"]
+            or not expected_path or recorded != [report["input_sha256"]]
+            or fingerprint != manifest.get("dataset_sha256")
+            or fingerprint != report.get("dataset_sha256")
+            or any(manifest.get(k) != report.get(k) for k in ("source", "feed", "adjustment"))):
+        raise ValueError("historical sample provenance mismatch")
+    acquisition = sample_acquisition(manifest)
+    if report.get("source_acquisition", acquisition) != acquisition:
+        raise ValueError("historical sample acquisition mismatch")
+    if acquisition == "local_archive":
+        return "UNVERIFIED VENDOR CLAIM REPLAY"
+    return "HISTORICAL SAMPLE REPLAY"
+
+
 def _style_axis(axis):
     axis.set_facecolor("#131722")
     axis.tick_params(colors="#aeb9ca", labelsize=8, length=0, pad=8)
@@ -271,12 +309,21 @@ def generate_report(experiment_dir: Path, output: Path, *, milestone_label: str 
               for key in ("window_start", "window_end")}
     if window["window_start"] and window["window_end"] and window["window_start"] > window["window_end"]:
         raise ValueError("campaign window ends before it starts")
-    source_label = "SYNTHETIC REPLAY" if report["synthetic"] else ("HISTORICAL REPLAY" if report.get("source") == "alpaca" else "UNVERIFIED CSV REPLAY")
+    source_label = _source_label(directory, report)
     intro = ("This is a software experiment using generated QQQ data. The prices and profits are simulated. They do not show how the strategy performed in the market." if report["synthetic"] else "This report replays recorded QQQ prices. All fills and profits shown in the charts are simulated. They are not broker paper fills.")
-    if not report["synthetic"] and report.get("source") != "alpaca":
+    if source_label == "UNVERIFIED CSV REPLAY":
         intro += " The source of the CSV data has not been verified."
+    if source_label == "HISTORICAL SAMPLE REPLAY":
+        intro += " Source: FirstRate Data, firstratedata.com. This is a limited vendor sample with split adjusted prices and its own aggregated volume feed. It is not Alpaca SIP data. Keep this report private because it contains licensed price charts."
+    if source_label == "UNVERIFIED VENDOR CLAIM REPLAY":
+        intro += " This local archive claims to contain a FirstRate Data sample. Its acquisition from the vendor has not been verified. File hashes establish consistency, not vendor authenticity. Keep this report private; the claimed feed uses split adjusted prices and is not Alpaca SIP data."
     period = report.get("partitions", {}).get("test", [])
     narrative = [intro]
+    narrative.append(f"Research status: {_plain(report.get('status', 'unknown'))}. The input contains {report.get('complete_sessions', 0)} complete sessions.")
+    if report.get("blocking_reasons"):
+        narrative.append("Research requirements still unmet: " + "; ".join(_plain(x) for x in report["blocking_reasons"]) + ".")
+    for partition, counts in report.get("sample_counts", {}).items():
+        narrative.append(f"{partition.title()} contains {counts.get('labeled', 0)} labeled closed trades, including {counts.get('positive', 0)} positive and {counts.get('negative', 0)} negative outcomes.")
     if period:
         narrative.append(f"The recorded test period covers {_day(period[0])} through {_day(period[-1])}, with {len(period)} complete sessions. That is a historical dataset period, not elapsed campaign time.")
     evaluation = report.get("evaluation", {}).get("test", {})

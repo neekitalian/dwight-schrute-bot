@@ -2,15 +2,25 @@ name: Framework checks
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         python: ['3.11', '3.12', '3.13']
+    env:
+      MPLCONFIGDIR: /tmp/dwight-matplotlib
+      XDG_CACHE_HOME: /tmp/dwight-cache
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -r requirements.lock

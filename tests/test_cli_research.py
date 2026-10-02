@@ -122,6 +122,24 @@ class ResearchCliTests(unittest.TestCase):
                         '--synthetic', '--real-data', error='not allowed')
             runner.assert_not_called()
 
+    def test_enrichment_requires_evidence_mode_and_rejects_ambiguous_config(self):
+        path = self.root / 'enrichment.json'
+        path.write_text('{"max_windows":1,"max_windows":2}')
+        with patch('dwight.enrichment.run_enrichment') as runner:
+            self.invoke('enrichment', '--data', 'bars.csv', '--out', self.root, error='required')
+            self.invoke('enrichment', '--data', 'bars.csv', '--out', self.root,
+                        '--synthetic', '--real-data', error='not allowed')
+            self.invoke('enrichment', '--data', 'bars.csv', '--out', self.root,
+                        '--real-data', '--config', path, error='duplicate')
+            runner.assert_not_called()
+
+    def test_enrichment_preserves_real_data_flag_without_promotion(self):
+        result = {'status': 'insufficient_data', 'promotion_eligible': False}
+        with patch('dwight.enrichment.run_enrichment', return_value=result) as runner:
+            actual = self.invoke('enrichment', '--data', 'bars.csv', '--out', self.root, '--real-data')
+            runner.assert_called_once_with(Path('bars.csv'), self.root, synthetic=False, config={})
+        self.assertEqual(actual, result)
+
     def test_walkforward_dispatches_strict_config_and_synthetic_flag(self):
         path = self.root / 'walkforward.json'
         config = {'long_only': True, 'max_windows': 2, 'holdout_sessions': 40}

@@ -4,13 +4,15 @@ A paper-first framework for reproducible trading research. The first integrated 
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 
-**Working now:** Alpaca historical ingestion, calendar validation, baseline and model-filtered replay, chronological and walk-forward classifier experiments, a manual TradingView paper journal, local MLflow tracking, frozen releases, a live-data shadow monitor, paper-order/recovery library, and public Polymarket book snapshots.
+**Working now:** private FirstRate QQQ sample ingestion, Alpaca historical ingestion, calendar validation, baseline and model-filtered replay, chronological and walk-forward classifier experiments, a manual TradingView paper journal, local MLflow tracking, frozen releases, a live-data shadow monitor, paper-order/recovery library, and public Polymarket book snapshots.
 
 **Selected account:** Paper Trading by TradingView. Use [manual proposals and fill imports](docs/manual-paper.md); no automated orders are sent to that account. Alpaca is the planned market-data provider.
 
 **Deployment boundary:** the deployable service is shadow only and cannot submit orders. The paper library is mock-tested; the CLI permits read-only account checks. An unattended paper execution loop and a Polymarket fill simulator remain unfinished. Synthetic models cannot run in live shadow. No account is connected and no order has been submitted.
 
 Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
+
+[Real QQQ sample research](docs/real-data.md) now validates an official vendor download and reproduces a private historical replay. The observed 11-session sample is too small to train a deployable model. [Feature enrichment](docs/enrichment.md) compares four additional causal session features with the original classifier using fixed chronological windows. More features have not established better performance.
 
 [Experiment reports](docs/experiments-and-reports.md) add strategy audits, candlestick and portfolio charts, and private 12 hour, 24 hour, 48 hour and one week milestone ledgers. The observation clock requires verified real data. [Linux service templates](docs/server-experiment.md) support a persistent shadow worker and report generation. Email delivery needs a connected sender and is tracked separately from report creation.
 
@@ -109,7 +111,7 @@ The research cascade labels evidence as relevant/irrelevant or abstains. It cann
 
 ## Development and deployment
 
-A GitHub Actions template is provided at `examples/github-actions-tests.yml`; move it to `.github/workflows/tests.yml` using a credential with workflow permission. It runs tests and a synthetic experiment on Python 3.11–3.13. It is not active yet. `deploy/compose.yaml` prepares a persistent shadow service with a private state volume, read-only release and health check. Docker remains unverified. The [Ubuntu installer](docs/server-experiment.md) provides a separate systemd path and runs tests before registering disabled services. `requirements.lock` records the dependency versions used in local validation.
+The GitHub Actions workflow has been created, but its initial run failed validation before executing tests because job-level environment expressions used an unavailable context. The corrected workflow is prepared at `examples/github-actions-tests.yml` and still needs to replace `.github/workflows/tests.yml` through an authorized workflow editor. Local tests remain the verified checks until that repair passes. `deploy/compose.yaml` prepares a persistent shadow service with a private state volume, read-only release and health check. Docker remains unverified. The [Ubuntu installer](docs/server-experiment.md) provides a separate systemd path and runs tests before registering disabled services. `requirements.lock` records the dependency versions used in local validation.
 
 See [architecture and next milestones](docs/architecture.md). The synthetic workflow and public Polymarket snapshots need no credentials. Alpaca history/shadow need paper keys and the selected data entitlement. Secrets, private datasets, models and account journals must never be committed. Hugging Face Jobs is optional; this classifier runs locally on CPU. No live-money switch exists.
 

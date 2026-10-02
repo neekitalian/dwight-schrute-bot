@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -8,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from dwight.experiments import experiment
-from dwight.reporting import generate_report
+from dwight.reporting import generate_report, _source_label
 from examples.make_experiment_demo import generate
 
 
@@ -56,6 +57,9 @@ class ReportingTests(unittest.TestCase):
         summary = json.loads(Path(paths["summary"]).read_text())
         self.assertIn("SYNTHETIC REPLAY", html)
         self.assertIn("generated QQQ data", email)
+        self.assertIn("Research status: completed synthetic smoke", email)
+        self.assertIn("Train contains", email)
+        self.assertIn("Research requirements still unmet", email)
         self.assertIn("Elapsed observation hours: 0.", email)
         self.assertIn("Exchange sessions observed: not measured.", email)
         self.assertIn("Broker paper fills: 0.", email)
@@ -156,6 +160,57 @@ class ReportingTests(unittest.TestCase):
                 "window_start": "2026-10-03T09:30:00+00:00",
                 "window_end": "2026-10-02T09:30:00+00:00",
             })
+
+    def test_vendor_sample_label_requires_matching_saved_provenance(self):
+        from dwight.firstrate import SAMPLE_URL, LICENSE_URL
+        directory = self.root / "vendor-source-check"
+        directory.mkdir()
+        manifest = {"schema_version": "firstrate-sample-rth-bars-v1", "source": "firstrate", "start": "2026-09-17",
+                    "end": "2026-10-01", "symbols": ["QQQ"], "feed": "firstrate_aggregate",
+                    "synthetic": False, "sample_only": True, "research_only": True, "live_feed": False,
+                    "source_url": SAMPLE_URL, "license_url": LICENSE_URL,
+                    "source_acquisition": "https_download", "retrieval_time_status": "provided",
+                    "retrieved_at": "2026-10-02T00:00:00+00:00",
+                    "adjustment": "split", "files": [{"path": "QQQ-5Min.csv", "sha256": "checked-input"}],
+                    "bars": {"QQQ": {"5Min": "QQQ-5Min.csv"}}}
+        keys = ("schema_version", "start", "end", "symbols", "feed", "adjustment", "files")
+        manifest["dataset_sha256"] = hashlib.sha256(json.dumps({k: manifest[k] for k in keys}, sort_keys=True).encode()).hexdigest()
+        report = {k: manifest[k] for k in ("source", "feed", "adjustment", "dataset_sha256")}
+        report.update(synthetic=False, input_sha256="checked-input")
+        path = directory / "dataset-manifest.json"
+        path.write_text(json.dumps(manifest))
+        self.assertEqual(_source_label(directory, report), "HISTORICAL SAMPLE REPLAY")
+        report["input_sha256"] = "different-input"
+        with self.assertRaisesRegex(ValueError, "provenance mismatch"):
+            _source_label(directory, report)
+        report["input_sha256"] = "checked-input"
+        manifest["adjustment"] = "split"
+        for field, value in (("synthetic", True), ("synthetic", 0), ("synthetic", None),
+                             ("sample_only", False), ("sample_only", 1),
+                             ("research_only", False), ("live_feed", True), ("schema_version", 1)):
+            with self.subTest(field=field, value=value):
+                changed = {**manifest, field: value}
+                changed["dataset_sha256"] = hashlib.sha256(json.dumps({k: changed[k] for k in keys}, sort_keys=True).encode()).hexdigest()
+                changed_report = {**report, "dataset_sha256": changed["dataset_sha256"]}
+                path.write_text(json.dumps(changed))
+                with self.assertRaisesRegex(ValueError, "provenance mismatch"):
+                    _source_label(directory, changed_report)
+
+        manifest["source_acquisition"] = "local_archive"
+        path.write_text(json.dumps(manifest))
+        self.assertEqual(_source_label(directory, report), "UNVERIFIED VENDOR CLAIM REPLAY")
+        report["source_acquisition"] = "https_download"
+        with self.assertRaisesRegex(ValueError, "acquisition mismatch"):
+            _source_label(directory, report)
+        report.pop("source_acquisition")
+        manifest.pop("source_acquisition")
+        path.write_text(json.dumps(manifest))
+        self.assertEqual(_source_label(directory, report), "HISTORICAL SAMPLE REPLAY")
+        report["input_sha256"] = "checked-input"
+        manifest["adjustment"] = "raw"
+        path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "provenance mismatch"):
+            _source_label(directory, report)
 
 
 if __name__ == "__main__":
