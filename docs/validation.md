@@ -5,7 +5,11 @@ These checks establish implementation behavior, not investment performance or br
 | Check | Result |
 |---|---|
 | Package build/install | Editable Dwight 0.2.0 installed successfully on Python 3.11 |
-| Full local unit suite | 94 tests passed, including the synthetic Space callback and deployment bundle checks |
+| Full local unit suite | 120 tests passed, including audit tampering, report charts, campaign cutoff/recovery/delivery claims, synthetic Space callback and deployment bundle checks |
+| Robustness batch | Three fixed synthetic seeds plus a doubled cost case completed with MLflow records; all four audits passed; the model beat the baseline in only one of the three ordinary cases |
+| Visual report | Four private HTML reports and PNG chart pairs generated; browser loaded the comparison page and both example charts without horizontal overflow |
+| Milestone delivery | Private ledger initialized for 12, 24, 48 and 168 hours; observation clock not started; no emails sent; no mail provider connected |
+| Linux report services | systemd worker and report timer templates prepared; target host still needs provisioning and on-host validation |
 | Synthetic experiment CLI | Completed for QQQ: baseline, volume filter, logistic model, chronological evaluation |
 | Training/validation/test labels | 66 / 29 / 33, fabricated prices only |
 | MLflow | Local SQLite run completed with artifacts and metrics |

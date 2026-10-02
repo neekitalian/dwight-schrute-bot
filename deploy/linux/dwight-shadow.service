@@ -1,0 +1,25 @@
+[Unit]
+Description=Dwight QQQ shadow observations
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=dwight
+Group=dwight
+WorkingDirectory=/opt/dwight
+EnvironmentFile=/etc/dwight/paper.env
+Environment=PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ExecStart=/opt/dwight/.venv/bin/dwight shadow --release /var/lib/dwight/releases/candidate --state /var/lib/dwight/shadow
+Restart=on-failure
+RestartSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/dwight
+ReadOnlyPaths=/var/lib/dwight/releases
+
+[Install]
+WantedBy=multi-user.target

@@ -50,6 +50,37 @@ def main():
     p = commands.add_parser('record-polymarket', help='One bounded public order-book snapshot; no wallet')
     p.add_argument('--limit', type=int, default=3)
     p.add_argument('--output', type=Path, default=Path('runs/polymarket'))
+    p = commands.add_parser('audit', help='Audit saved strategy and experiment evidence')
+    p.add_argument('experiment', type=Path)
+    p = commands.add_parser('report', help='Create a private visual research report; sends no email')
+    p.add_argument('experiment', type=Path)
+    p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--label', default='Initial review')
+    p = commands.add_parser('campaign-init', help='Prepare private 12h, 24h, 48h and one week milestones')
+    p.add_argument('--directory', type=Path, required=True)
+    p.add_argument('--recipients', nargs='+', required=True)
+    p = commands.add_parser('campaign-start', help='Start milestone clock after real shadow observation')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--release', type=Path, required=True)
+    p.add_argument('--experiment', type=Path, required=True)
+    p.add_argument('--shadow-state', type=Path, required=True)
+    p = commands.add_parser('campaign-status', help='Read private campaign and due milestones')
+    p.add_argument('--campaign', type=Path, required=True)
+    p = commands.add_parser('campaign-report-due', help='Generate due reports on the server; sends no email')
+    p.add_argument('--campaign', type=Path, required=True)
+    p = commands.add_parser('campaign-report', help='Freeze a due milestone report at its deadline')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--hours', type=int, choices=[12,24,48,168], required=True)
+    p = commands.add_parser('campaign-claim-mail', help='Persist a delivery claim before calling a mail provider')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--hours', type=int, choices=[12,24,48,168], required=True)
+    p.add_argument('--recipient', required=True)
+    p = commands.add_parser('campaign-confirm-mail', help='Record a confirmed provider receipt')
+    p.add_argument('--campaign', type=Path, required=True)
+    p.add_argument('--hours', type=int, choices=[12,24,48,168], required=True)
+    p.add_argument('--recipient', required=True)
+    p.add_argument('--claim', required=True)
+    p.add_argument('--receipt', required=True)
     args = parser.parse_args()
     try:
         load_env()
@@ -88,6 +119,30 @@ def main():
             result = {'paper_endpoint':True,'account_status':snapshot['account'].get('status'),
                       'positions':len(snapshot['positions']),'open_orders':len(snapshot['open_orders']),
                       'submits_orders':False}
+        elif args.command == 'audit':
+            from .audit import audit_experiment
+            result = audit_experiment(args.experiment)
+        elif args.command == 'report':
+            from .audit import audit_experiment
+            from .reporting import generate_report
+            result = generate_report(args.experiment,args.output,milestone_label=args.label,
+                                     audit=audit_experiment(args.experiment))
+        elif args.command.startswith('campaign-'):
+            from . import campaign
+            if args.command == 'campaign-init':
+                result = campaign.initialize(args.directory,args.recipients)
+            elif args.command == 'campaign-start':
+                result = campaign.start(args.campaign,args.release,args.experiment,args.shadow_state)
+            elif args.command == 'campaign-status':
+                result = campaign.status(args.campaign)
+            elif args.command == 'campaign-report-due':
+                result = campaign.report_due(args.campaign)
+            elif args.command == 'campaign-report':
+                result = campaign.report(args.campaign,args.hours)
+            elif args.command == 'campaign-claim-mail':
+                result = campaign.claim_delivery(args.campaign,args.hours,args.recipient)
+            else:
+                result = campaign.confirm_delivery(args.campaign,args.hours,args.recipient,args.claim,args.receipt)
         else:
             from .recorder import record_books
             result = record_books(args.output,args.limit)

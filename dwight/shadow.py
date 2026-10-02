@@ -157,7 +157,12 @@ class ShadowMonitor:
                                 (decision['signal_id'], self.identity, encoded(decision)))
         status = 'observed' if 0 <= (now-last_close).total_seconds() <= self.policy['max_bar_delay_seconds'] else 'late_bar'
         return self._status(status, now, last_bar_close=last_close.isoformat(),
-                            new_bars=len(fresh_bars), decisions=decisions)
+                            new_bars=len(fresh_bars), decisions=decisions,
+                            timely_bar_closes=[
+                                (bar.timestamp+timedelta(minutes=5)).isoformat()
+                                for bar, _ in fresh_bars
+                                if 0 <= (now-bar.timestamp-timedelta(minutes=5)).total_seconds()
+                                <= self.policy['max_bar_delay_seconds']])
 
     def run(self, once=False):
         while True:

@@ -1,0 +1,18 @@
+[Unit]
+Description=Generate due Dwight milestone reports
+After=dwight-shadow.service
+
+[Service]
+Type=oneshot
+User=dwight
+Group=dwight
+WorkingDirectory=/opt/dwight
+Environment=PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/var/lib/dwight/matplotlib
+ExecStart=/opt/dwight/.venv/bin/dwight campaign-report-due --campaign /var/lib/dwight/campaign
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/dwight
+ReadOnlyPaths=/var/lib/dwight/releases

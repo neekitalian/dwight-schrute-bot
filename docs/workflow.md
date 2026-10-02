@@ -99,13 +99,9 @@ User-designated chart: [TradingView layout d5qUHtf0](https://www.tradingview.com
 
 The initial connection should be **Dwight → Alpaca paper API**, with the **same Alpaca paper account connected through TradingView's Trading Panel** for monitoring. Alpaca documents paper-account support in its TradingView integration. Verify account identity and that the bot's orders/positions appear during the final integration test. A chart URL is a workspace reference, not an order endpoint. [Alpaca TradingView connection](https://alpaca.markets/learn/how-to-trade-options-on-tradingview-with-alpaca-trading-api-account)
 
-If chart-generated signals are wanted later, the optional route is **TradingView → authenticated HTTPS webhook receiver → Dwight model and deterministic risk checks → broker paper API**. TradingView's native Paper Trading simulator is separate; Pine strategies cannot submit to it. The same-account Alpaca connection is the planned route, subject to account confirmation. [TradingView strategy FAQ](https://www.tradingview.com/pine-script-docs/faq/strategies/#can-i-connect-my-strategies-to-my-paper-trading-account)
+TradingView is a human monitoring target only. Its current [terms, section 3](https://www.tradingview.com/policies/) restrict non display uses of its content, including automated trading and algorithmic decisions. Sending an alert through a Python script does not remove that restriction. Obtain explicit permission or applicable licensed rights before considering any TradingView data driven automation. Dwight currently uses Alpaca data for decisions and has no TradingView alert receiver or UI automation.
 
-For optional alerts, start with comparison in shadow. Confirm the exact script/version, QQQ symbol, session and volume feed; compare timestamps, bars and features against the Python strategy before routing alerts into decisions. Do not run two independent entry producers for the same account. The trained model stays on Dwight's server and broker fills remain execution truth.
-
-The future receiver must authenticate requests, persist and deduplicate event IDs, reject stale/incorrect-symbol alerts, and queue processing before acknowledging promptly. TradingView documents a three-second webhook timeout, HTTPS support and a two-factor-authentication requirement. Never put broker credentials in alert messages. This requires a separate public HTTPS ingress; the current polling-only Compose service exposes no inbound port. [Official webhook documentation](https://www.tradingview.com/support/solutions/43000529348-how-to-configure-webhook-alerts/)
-
-No TradingView connection, alert, webhook listener or account change has been created. At integration time, prepare access to the saved layout and selected paper account. If adding chart alerts, also confirm the plan's webhook features and two-factor authentication.
+The report charts use our own rendering and our own permitted input data. A familiar dark candlestick style does not require TradingView data or APIs.
 
 ## Parallel Polymarket collection
 

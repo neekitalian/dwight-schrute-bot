@@ -76,11 +76,13 @@ class ShadowTests(unittest.TestCase):
             self.assertEqual(result["new_bars"], 1)  # 09:35 candle not settled until 09:41.
             self.assertEqual(result["last_bar_close"], (OPEN + timedelta(minutes=5)).isoformat())
             self.assertEqual(result["status"], "late_bar")
+            self.assertEqual(result["timely_bar_closes"], [])
             self.assertFalse(result["decisions"][0]["shadow_take"])
             self.assertTrue(result["decisions"][0]["stale_or_catchup"])
             result = monitor.step(OPEN + timedelta(minutes=11))
             self.assertEqual(result["new_bars"], 1)
             self.assertEqual(result["status"], "observed")
+            self.assertEqual(result["timely_bar_closes"], [(OPEN+timedelta(minutes=10)).isoformat()])
             self.assertTrue(result["decisions"][0]["shadow_take"])
             self.assertFalse(result["submits_orders"])
             reader.assert_called_with(SESSION.open, OPEN + timedelta(minutes=11), ("QQQ",), "iex")

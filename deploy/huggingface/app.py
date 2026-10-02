@@ -91,7 +91,7 @@ def build_app():
                 "- The report cache resets with the process; MLflow logging is disabled here.\n"
                 "- No result can approve itself for paper or live deployment.\n\n"
                 "Training and model selection remain separate from the running trading service. "
-                "TradingView integration is a later monitoring or optional signal step."
+                "TradingView is a later human monitoring surface. Dwight decisions use broker data."
             )
     return app.queue(max_size=8, default_concurrency_limit=1)
 
