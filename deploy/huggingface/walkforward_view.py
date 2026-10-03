@@ -30,25 +30,25 @@ CONFIG = {
 }
 _LOCK = Lock()
 VARIANTS = ("baseline", "simple_volume", "filtered")
-INTRO = """**One synthetic path, three chronological tests.** The window plan is fixed before evaluation.
+INTRO = """**One synthetic path, three chronological tests** The window plan is fixed before evaluation.
 Each window trains on earlier sessions, chooses its threshold on validation sessions, then evaluates
 on a later development test. The latest 40 sessions remain reserved and unscored.
 
 This tab uses invented prices and reduced sample gates to test the research process. It does not
 establish an advantage on QQQ. The long-only policy differs from the older Performance tab's
 long-and-short experiment, so their results are not interchangeable."""
-WORKFLOW_NOTE = """**Your TradingView paper account.** Dwight can keep a private proposal queue and
+WORKFLOW_NOTE = """**Your TradingView paper account** Dwight can keep a private proposal queue and
 import normalized execution evidence through the local CLI. You review each proposal and place
 orders manually in Paper Trading by TradingView. The journal has no order-submission capability;
 its CSV schema is not yet a tested native TradingView export adapter. This public Space never
 reads your journal, accepts uploads, connects to your account, or sends orders.
 
-**FinRL and fundamental context.** The repository has an offline research adapter for testing a
+**FinRL and fundamental context** The repository has an offline research adapter for testing a
 reinforcement-learning take-or-skip policy above VWAP. Fundamental and news inputs require separate
 data sources and point-in-time preparation. FinRL is not trained or evaluated in this tab. Its
 results and transformer results remain unmeasured; the displayed learned policy is logistic regression.
 
-**Real data and additional features.** Private research now supports a validated FirstRate QQQ
+**Real data and additional features** Private research now supports a validated FirstRate QQQ
 sample and a separate comparison of four causal session features against the original classifier.
 The available sample is too short to meet the real training requirements. Price data and private
 charts stay outside this public Space. The additional features have not established an advantage;
@@ -235,11 +235,11 @@ def evidence_note(report):
         'Reserved only. No model fitting, threshold tuning or performance score uses these dates.\n\n'
         f'**Unused development dates:** {_date_range(report["plan"]["unused_development_sessions"])}. '
         'The public run stops at three windows.\n\n'
-        '**How to read the comparison.** Each window starts flat with the same starting capital and cost rules. '
+        '**How to read the comparison** Each window starts flat with the same starting capital and cost rules. '
         'The bars compare independent test replays; they are not a continuous account equity curve. '
         'Earlier test dates can become observed training or validation history in a later window. '
         'After you inspect these test outcomes, they belong to development history, not a fresh final test.\n\n'
-        '**Limits.** Reduced label counts are a software smoke test, not statistical power. '
+        '**Limits** Reduced label counts are a software smoke test, not statistical power. '
         'All prices and volumes are invented; the generator resets prices each session and includes weekday holidays. '
         'The replay uses next-bar fills and fixed costs, without real quotes, queues or partial fills. '
         'No result is eligible for deployment.\n\n'

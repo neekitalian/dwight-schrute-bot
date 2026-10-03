@@ -23,11 +23,11 @@ FLOW = '''<div class="dw-flow">
 <div class="dw-node"><span>02 / CHECK</span><b>Public data access</b><small>A timestamped read-only result from this server.</small></div>
 <div class="dw-node"><span>03 / PREPARE</span><b>Private workspace</b><small>Download a profile. Supply supported credentials locally.</small></div>
 <div class="dw-node"><span>04 / REVIEW</span><b>Research first</b><small>Validate your feed and strategy before any manual paper order.</small></div></div>'''
-BOUNDARY = '''**Account boundary.** Paper Trading by TradingView and Alpaca paper are separate accounts.
+BOUNDARY = '''**Account boundary** Paper Trading by TradingView and Alpaca paper are separate accounts.
 Pine strategies cannot place orders in TradingView's native paper simulator. Dwight's TradingView route
 receives observations in a private inbox; you review and enter native paper orders yourself.
 
-**Strategy boundary.** The charts in Performance use invented QQQ prices. Public crypto probes do not
+**Strategy boundary** The charts in Performance use invented QQQ prices. Public crypto probes do not
 feed those charts or establish crypto trading results. Regional access, subscriptions and account
 permissions must be checked in your own deployment. No funds or orders move through this page.
 '''

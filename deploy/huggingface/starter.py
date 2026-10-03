@@ -98,7 +98,7 @@ A separate connected sender delivers email; the public Space does not run your c
 
 [Milestone setup and delivery guide]({REPOSITORY}/blob/main/docs/manual-milestones.md)''',
 }
-BOUNDARY = '''**Model status.** The original classifier and the additional session features are research components.
+BOUNDARY = '''**Model status** The original classifier and the additional session features are research components.
 A short real QQQ sample has been replayed privately, but it did not meet the training gates. Transformer and FinRL
 performance remain unmeasured. No profitable model is bundled or promised.
 
