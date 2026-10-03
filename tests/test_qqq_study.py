@@ -3,11 +3,12 @@
 No credentials, downloaded market prices, genuine model outcomes or network
 requests are used here. Lifecycle mocks do not qualify a real research model.
 """
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, redirect_stderr, redirect_stdout
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timedelta
 import json
+import io
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
@@ -318,6 +319,242 @@ class StudyManifestTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     study.collect(root, environ={})
                 request.assert_called_once()
+
+
+class StudyRecoveryTests(unittest.TestCase):
+    """Only lifecycle sentinel files: no historical returns are calculated."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.folder = Path(self.temp.name).resolve()
+        self.original = deepcopy(RECIPE)
+        self.protocol = self.folder/"original-protocol.json"
+        # Different whitespace/key order must not change canonical identity.
+        self.protocol.write_text(json.dumps(dict(reversed(list(self.original.items()))), indent=4)+"\n")
+        self.recipe = {**deepcopy(self.original),
+                       "incomplete_session_policy": "exclude_whole_session",
+                       "max_excluded_session_fraction": .05,
+                       "coverage_amendment": {
+                           "original_protocol_sha256": study._digest(self.original),
+                           "outcomes_inspected": False,
+                           "reason": "Invented unit-test timestamp-coverage amendment"}}
+
+    def test_recovery_requires_explicit_pre_outcome_amendment_and_fixed_cap(self):
+        invalid = [
+            {**self.recipe, "max_excluded_session_fraction": .1},
+            {**self.recipe, "max_excluded_session_fraction": .04},
+            {**self.recipe, "coverage_amendment": {}},
+            {**self.recipe, "coverage_amendment": {
+                **self.recipe["coverage_amendment"], "outcomes_inspected": True}},
+            {**self.recipe, "coverage_amendment": {
+                **self.recipe["coverage_amendment"], "outcomes_inspected": 0}},
+        ]
+        for index, recipe in enumerate(invalid):
+            with self.subTest(index=index), self.assertRaisesRegex(ValueError, "pre-outcome"):
+                study.prepare(self.folder/f"invalid-{index}", recipe)
+        root = self.folder/"original-study"
+        study.prepare(root, self.original)
+        with patch("dwight.history_recovery.recover_history") as recover:
+            with self.assertRaisesRegex(ValueError, "did not predeclare"):
+                study.recover(root, self.folder/"never-read-attempt", self.protocol)
+            recover.assert_not_called()
+
+    def test_canonical_original_protocol_identity_and_frozen_settings_are_preserved(self):
+        root = self.folder/"amended-study"
+        study.prepare(root, self.recipe)
+        self.assertNotEqual(sha256_file(self.protocol), study._digest(self.original))
+
+        def fake_recover(source_attempt, source_protocol, output):
+            self.assertEqual(source_protocol, self.protocol)
+            directory = output/"invented-lifecycle-fixture"
+            directory.mkdir(parents=True, mode=0o700)
+            study._save(directory/"manifest.json", {"fixture": "Not real market evidence"})
+            return {"directory": str(directory)}
+
+        # Only the imported dataset boundary is mocked; protocol checks execute.
+        with patch("dwight.history_recovery.recover_history", side_effect=fake_recover) as recover, \
+                patch.object(study, "_manifest") as manifest, \
+                patch.object(study, "experiment") as experiment:
+            result = study.recover(root, self.folder/"fixture-attempt", self.protocol)
+        recover.assert_called_once()
+        manifest.assert_called_once()
+        experiment.assert_not_called()
+        self.assertEqual(result["status"], "history_ready")
+        self.assertEqual(result["coverage_amendment"], self.recipe["coverage_amendment"])
+        self.assertEqual(result["protocol_sha256"], study._digest(self.recipe))
+        self.assertFalse(result["experiment_started"])
+        self.assertFalse(result["forward_observation_started"])
+        self.assertFalse(result["submits_orders"])
+        saved_recipe = json.loads((root/"protocol.json").read_text())
+        for key, value in self.original.items():
+            self.assertEqual(saved_recipe[key], value)
+
+    def test_raw_file_hash_or_changed_original_protocol_cannot_replace_canonical_digest(self):
+        for name, digest in (("raw-file", sha256_file(self.protocol)), ("wrong", "0"*64)):
+            recipe = deepcopy(self.recipe)
+            recipe["coverage_amendment"]["original_protocol_sha256"] = digest
+            root = self.folder/name
+            study.prepare(root, recipe)
+            with self.subTest(name=name), patch("dwight.history_recovery.recover_history") as recover:
+                with self.assertRaisesRegex(ValueError, "protocol identity mismatch"):
+                    study.recover(root, self.folder/"unread-attempt", self.protocol)
+                recover.assert_not_called()
+        root = self.folder/"changed-original"
+        study.prepare(root, self.recipe)
+        altered = deepcopy(self.original)
+        altered["experiment"]["thresholds"] = [.4, .5, .6]
+        self.protocol.write_text(json.dumps(altered))
+        with patch("dwight.history_recovery.recover_history") as recover:
+            with self.assertRaisesRegex(ValueError, "protocol identity mismatch"):
+                study.recover(root, self.folder/"unread-attempt", self.protocol)
+            recover.assert_not_called()
+
+    def test_recovery_cannot_change_dates_strategy_splits_or_selection_rules(self):
+        changes = {
+            "dates": lambda r: r.update(start="2016-01-05"),
+            "strategy": lambda r: r["experiment"]["strategy"].update(slippage=.02),
+            "splits": lambda r: r["experiment"].update(train_fraction=.65),
+            "thresholds": lambda r: r["experiment"].update(thresholds=[.4, .5, .6]),
+            "sample-minimum": lambda r: r["experiment"].update(min_train_samples=101),
+            "review-minimum": lambda r: r.update(minimum_filtered_test_trades=31),
+        }
+        for name, change in changes.items():
+            recipe = deepcopy(self.recipe)
+            change(recipe)
+            root = self.folder/name
+            study.prepare(root, recipe)  # Each altered recipe is otherwise valid.
+            with self.subTest(name=name), patch("dwight.history_recovery.recover_history") as recover:
+                with self.assertRaisesRegex(ValueError, "cannot alter strategy, splits, dates"):
+                    study.recover(root, self.folder/"unread-attempt", self.protocol)
+                recover.assert_not_called()
+
+    def test_recovery_refuses_an_existing_dataset_or_started_evaluation(self):
+        for name, mutation in (("dataset", {"dataset_manifest": "unread.json"}),
+                               ("started", {"experiment_started": True})):
+            root = self.folder/name
+            state = study.prepare(root, self.recipe)
+            state.update(mutation)
+            study._save(root/"state.json", state)
+            with self.subTest(name=name), patch("dwight.history_recovery.recover_history") as recover:
+                with self.assertRaisesRegex(ValueError, "new, unevaluated"):
+                    study.recover(root, self.folder/"unread-attempt", self.protocol)
+                recover.assert_not_called()
+
+    def test_cli_recover_requires_both_sources_and_never_loads_credentials(self):
+        from scripts import run_qqq_study
+        base = ["run_qqq_study.py", "recover", "--workspace", str(self.folder/"study")]
+        for extra in ([], ["--source-attempt", "fixture"],
+                      ["--source-attempt", "fixture", "--source-protocol", "fixture.json", "--config", "new.json"]):
+            with self.subTest(extra=extra), patch("sys.argv", base+extra), \
+                    patch.object(run_qqq_study.study, "recover") as recover, \
+                    patch.object(run_qqq_study, "load_env") as load, redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as raised:
+                    run_qqq_study.main()
+                self.assertEqual(raised.exception.code, 2)
+                recover.assert_not_called()
+                load.assert_not_called()
+        extra = ["--source-attempt", "fixture", "--source-protocol", "fixture.json"]
+        with patch("sys.argv", base+extra), patch.object(run_qqq_study, "load_env") as load, \
+                patch.object(run_qqq_study.study, "recover", return_value={"fixture": True}) as recover, \
+                redirect_stdout(io.StringIO()):
+            run_qqq_study.main()
+        recover.assert_called_once_with(self.folder/"study", Path("fixture"), Path("fixture.json"))
+        load.assert_not_called()
+
+
+class StudyRecoveryManifestTests(unittest.TestCase):
+    def test_exclusions_research_only_and_retained_counts_are_independently_checked(self):
+        # Invented metadata-only boundary fixture; provenance/price validation is
+        # separately tested through the real recovery importer. No price rows here.
+        from datetime import date
+        from dwight.data import ALPACA_BARS_URL, SCHEMA_VERSION, exchange_sessions
+        sessions = exchange_sessions(date(2025, 1, 2), date(2025, 2, 14))[:20]
+        failures = (None, "too_many", "duplicate", "outside_calendar", "wrong_count",
+                    "not_research", "truthy_research", "missing_exclusions", "gap_policy",
+                    "outcomes_inspected", "changed_cap", "source_byte_hash",
+                    "source_canonical_hash", "unfingerprinted_source")
+        for failure in failures:
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp).resolve()
+                directory = root/"invented-metadata-fixture"
+                directory.mkdir()
+                original = {**deepcopy(RECIPE), "start": sessions[0].date, "end": sessions[-1].date}
+                recipe = {**deepcopy(original), "incomplete_session_policy": "exclude_whole_session",
+                          "max_excluded_session_fraction": .05,
+                          "coverage_amendment": {"original_protocol_sha256": study._digest(original),
+                                                  "outcomes_inspected": False}}
+                days = [sessions[0].date]
+                if failure == "too_many":
+                    days.append(sessions[1].date)
+                elif failure == "duplicate":
+                    days *= 2
+                elif failure == "outside_calendar":
+                    days = ["1900-01-01"]
+                contents = {"sessions.json": [session.as_dict() for session in sessions],
+                            "exclusions.json": [{"session": day, "fixture": True} for day in days],
+                            "source-protocol.json": original,
+                            "raw-page.json": {"fixture": "No price rows"}}
+                for filename, value in contents.items():
+                    study._save(directory/filename, value)
+                (directory/"QQQ-5Min.csv").write_text("Invented fixture: no market data\n")
+                retained = [s for s in sessions if s.date not in days]
+                minutes = sum(int((s.close-s.open).total_seconds()/60) for s in retained)
+                files = [{"path": name, "sha256": sha256_file(directory/name)}
+                         for name in (*contents, "QQQ-5Min.csv") if name != "raw-page.json"]
+                manifest = {"schema_version": SCHEMA_VERSION, "source": "alpaca", "symbols": ["QQQ"],
+                            "fixture": "Invented metadata; must never qualify as real data",
+                            **{key: recipe[key] for key in ("start", "end", "feed", "adjustment")},
+                            "endpoint": ALPACA_BARS_URL, "asof": "-", "timestamp_convention": "interval_start",
+                            "availability": "interval_end", "session_policy": "complete_regular_sessions_only",
+                            "gap_policy": "exclude_incomplete_sessions_no_forward_fill",
+                            "research_only": True, "outcomes_inspected": False,
+                            "max_excluded_session_fraction": .05,
+                            "source_protocol": "source-protocol.json",
+                            "trusted_protocol_sha256": sha256_file(directory/"source-protocol.json"),
+                            "sessions": "sessions.json", "exclusions": "exclusions.json", "files": files,
+                            "raw_pages": [{"path": "raw-page.json", "sha256": sha256_file(directory/"raw-page.json")}],
+                            "bars": {"QQQ": {"5Min": "QQQ-5Min.csv"}},
+                            "counts": {"QQQ": {"1Min": minutes, "5Min": minutes//5}}}
+                if failure == "wrong_count":
+                    manifest["counts"]["QQQ"]["5Min"] += 78
+                elif failure == "not_research":
+                    manifest["research_only"] = False
+                elif failure == "truthy_research":
+                    manifest["research_only"] = 1
+                elif failure == "missing_exclusions":
+                    del manifest["exclusions"]
+                elif failure == "gap_policy":
+                    manifest["gap_policy"] = "reject_no_forward_fill"
+                elif failure == "outcomes_inspected":
+                    manifest["outcomes_inspected"] = True
+                elif failure == "changed_cap":
+                    manifest["max_excluded_session_fraction"] = .1
+                elif failure == "source_byte_hash":
+                    manifest["trusted_protocol_sha256"] = "0"*64
+                elif failure == "source_canonical_hash":
+                    changed_original = deepcopy(original)
+                    changed_original["experiment"]["thresholds"] = [.4, .5, .6]
+                    study._save(directory/"source-protocol.json", changed_original)
+                    digest = sha256_file(directory/"source-protocol.json")
+                    manifest["trusted_protocol_sha256"] = digest
+                    for entry in manifest["files"]:
+                        if entry["path"] == "source-protocol.json":
+                            entry["sha256"] = digest
+                elif failure == "unfingerprinted_source":
+                    manifest["files"] = [entry for entry in manifest["files"]
+                                         if entry["path"] != "source-protocol.json"]
+                path = directory/"manifest.json"
+                study._save(path, manifest)
+                state = {"dataset_manifest": str(path.relative_to(root)), "manifest_sha256": sha256_file(path)}
+                with patch.object(study, "_provenance", return_value={"fixture": True}) as provenance:
+                    if failure is None:
+                        self.assertEqual(study._manifest(root, recipe, state), (directory/"QQQ-5Min.csv", path))
+                        provenance.assert_called_once()
+                    else:
+                        with self.assertRaises(ValueError):
+                            study._manifest(root, recipe, state)
+                        provenance.assert_not_called()
 
 
 if __name__ == "__main__":

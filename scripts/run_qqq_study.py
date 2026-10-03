@@ -11,15 +11,21 @@ from dwight import study
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("prepare", "collect", "evaluate", "status"))
+    parser.add_argument("stage", choices=("prepare", "collect", "recover", "evaluate", "status"))
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--config", type=Path)
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
+    parser.add_argument("--source-attempt", type=Path)
+    parser.add_argument("--source-protocol", type=Path)
     args = parser.parse_args()
     if args.stage == "prepare":
         if not args.config:
             parser.error("prepare requires --config")
         result = study.prepare(args.workspace, json.loads(args.config.read_text()))
+    elif args.stage == "recover":
+        if args.config or not args.source_attempt or not args.source_protocol:
+            parser.error("recover requires --source-attempt and --source-protocol; omit --config")
+        result = study.recover(args.workspace, args.source_attempt, args.source_protocol)
     else:
         if args.config:
             parser.error("The prepared recipe is frozen; omit --config")

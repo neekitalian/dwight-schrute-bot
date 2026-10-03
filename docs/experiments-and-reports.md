@@ -4,7 +4,7 @@ The campaign reports at 12, 24, 48 and 168 elapsed hours after a verified real s
 
 ## Current boundary
 
-The first report is a synthetic software exercise. It is not QQQ market performance. Real historical evaluation requires Alpaca credentials and licensed data. Forward observation additionally requires the same real time feed and an always on server. The running worker observes decisions only. The broker paper execution lifecycle remains unfinished, so broker fills and broker profit remain unmeasured.
+The public demo is a synthetic software exercise. It is not QQQ market performance. Private real historical evaluation uses the [fixed QQQ study](qqq-study.md), authenticated Alpaca credentials and licensed data. Forward observation additionally requires the same real time feed and an always on server. The shadow worker observes decisions only. The broker paper execution lifecycle remains unfinished, so broker fills and broker profit remain unmeasured.
 
 ## Experimental protocol
 
@@ -18,7 +18,7 @@ Each report contains a readable candlestick chart with session VWAP, EMA, volume
 
 The forward section separately shows observed sessions, timely market minutes, expected market minutes, missing coverage, candidate decisions, takes, stale decisions and errors. It never converts shadow decisions or historical trades into broker fills. Reports after a delayed wakeup retain their original deadline cutoff. A report produced after a crash may be late; the report does not extend its observation window to hide this.
 
-Audit checks cover artifact identity, chronological splits, reference engine parity, entry timing, sizing, cost accounting, stop and target exits, and losing trade limits. Missing evidence is unverified. The strategy allows shorts in replay while the current paper library accepts long entries only. EMA20 is one possible pullback touch level, not a mandatory trend filter. Runtime agent skill invocations are currently absent and are reported as such. A passing audit verifies recorded software behavior, not expected profitability or broker readiness.
+Audit checks cover artifact identity, chronological splits, reference engine parity, entry timing, sizing, cost accounting, stop and target exits, and losing trade limits. Missing evidence is unverified. The fixed QQQ study explicitly permits long entries only; its model, replay, audit, report and shadow release preserve that direction policy. Older experiments without an explicit direction policy retain their original long and short behavior. The current paper library accepts long entries only. EMA20 is one possible pullback touch level, not a mandatory trend filter. Runtime agent skill invocations are currently absent and are reported as such. A passing audit verifies recorded software behavior, not expected profitability or broker readiness.
 
 Email prose uses plain paragraphs without dash punctuation or marketing language. Losses are written as amounts followed by the word loss. Scientific charts and metric tables preserve precise numeric meaning.
 

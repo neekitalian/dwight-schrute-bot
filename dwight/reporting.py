@@ -15,7 +15,7 @@ import re
 
 from vwap_bot.engine import Config
 from .connectors.csv import read_bars
-from .experiments import JSONModel, NY, _PriorVolumeFilter, _metrics, _replay, complete_sessions, direction_policy, split_sessions
+from .experiments import JSONModel, NY, RECOVERED_GAP_POLICY, RECOVERED_RISK_LIMITATION, _PriorVolumeFilter, _metrics, _replay, complete_sessions, direction_policy, split_sessions
 
 VARIANTS = {
     "baseline": ("VWAP baseline", "baseline", "#579bff"),
@@ -169,6 +169,23 @@ def _source_label(directory, report):
     return "HISTORICAL SAMPLE REPLAY"
 
 
+def _dataset_quality(directory, report):
+    """Require the coverage disclosure recorded before model fitting."""
+    manifest_path = directory/"dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    recovered = manifest.get("gap_policy") == RECOVERED_GAP_POLICY
+    quality = report.get("dataset_quality")
+    if not recovered and quality is None:
+        return None
+    if (not recovered or report.get("source") != "alpaca" or report.get("synthetic") is not False
+            or report.get("research_only") is not True or manifest.get("research_only") is not True
+            or not isinstance(quality, dict) or quality != manifest.get("dataset_quality")
+            or quality.get("gap_policy") != RECOVERED_GAP_POLICY
+            or report.get("dataset_sha256") != manifest.get("dataset_sha256")):
+        raise ValueError("report dataset quality disagrees with saved provenance")
+    return quality
+
+
 def _style_axis(axis):
     axis.set_facecolor("#131722")
     axis.tick_params(colors="#aeb9ca", labelsize=8, length=0, pad=8)
@@ -317,7 +334,12 @@ def generate_report(experiment_dir: Path, output: Path, *, milestone_label: str 
     if window["window_start"] and window["window_end"] and window["window_start"] > window["window_end"]:
         raise ValueError("campaign window ends before it starts")
     source_label = _source_label(directory, report)
+    quality = _dataset_quality(directory, report)
     intro = ("This is a software experiment using generated QQQ data. The prices and profits are simulated. They do not show how the strategy performed in the market." if report["synthetic"] else "This report replays recorded QQQ prices. All fills and profits shown in the charts are simulated. They are not broker paper fills.")
+    if quality is not None:
+        intro += (f" Data coverage: {quality['excluded_session_count']} whole sessions with missing minutes were excluded from {quality['requested_session_count']} requested sessions; no missing bars were forward filled. "
+                  "This is not a continuous market history. " + RECOVERED_RISK_LIMITATION +
+                  " Early close sessions are still excluded by the strategy, separately from these data exclusions. All fills are simulated.")
     if source_label == "UNVERIFIED CSV REPLAY":
         intro += " The source of the CSV data has not been verified."
     if source_label == "HISTORICAL SAMPLE REPLAY":
@@ -332,7 +354,10 @@ def generate_report(experiment_dir: Path, output: Path, *, milestone_label: str 
     for partition, counts in report.get("sample_counts", {}).items():
         narrative.append(f"{partition.title()} contains {counts.get('labeled', 0)} labeled closed trades, including {counts.get('positive', 0)} positive and {counts.get('negative', 0)} negative outcomes.")
     if period:
-        narrative.append(f"The recorded test period covers {_day(period[0])} through {_day(period[-1])}, with {len(period)} complete sessions. That is a historical dataset period, not elapsed campaign time.")
+        narrative.append((f"The retained test sessions run from {_day(period[0])} through {_day(period[-1])}, with {len(period)} complete sessions; excluded sessions are absent from the replay. That date range does not represent continuous market coverage or elapsed campaign time." if quality is not None else
+                          f"The recorded test period covers {_day(period[0])} through {_day(period[-1])}, with {len(period)} complete sessions. That is a historical dataset period, not elapsed campaign time."))
+    if quality is not None and quality["excluded_session_dates"]:
+        narrative.append("Sessions excluded for missing minutes across the requested dataset: " + "; ".join(_day(day) for day in quality["excluded_session_dates"]) + ".")
     evaluation = report.get("evaluation", {}).get("test", {})
     rows = []
     for variant, (label, _, _) in VARIANTS.items():
@@ -373,6 +398,8 @@ def generate_report(experiment_dir: Path, output: Path, *, milestone_label: str 
     live.append("Shadow decisions are observations without orders. They are counted separately from replay trades. No live profit is inferred from the charts.")
     audit_paragraphs = _audit_paragraphs(audit)
     notes = ["VWAP is calculated from each bar's typical price and volume, and resets each session. EMA also resets each session. The highlighted candle chart shows one illustrative session. Equity and drawdown cover the complete recorded test period.", "Entries in the replay use the next bar open with the configured slippage. Stop orders, targets and session exits are simulated from bars. Actual broker execution can differ.", "These charts use the experiment's saved input data. They do not download or reuse TradingView market data."]
+    if quality is not None:
+        notes[0] = notes[0].replace("Equity and drawdown cover the complete recorded test period.", "Equity and drawdown use only retained test sessions; excluded sessions contribute no bars, trades or risk observations.")
     output.mkdir(parents=True, exist_ok=False)
     chart_paths = _charts(bars, portfolios, report, output, source_label)
     title = f"Dwight QQQ report | {_plain(milestone_label)}"
@@ -391,5 +418,7 @@ body{margin:0;background:#0d111b;color:#dce4f1;font:16px/1.65 Arial,sans-serif}m
 </style><main>"""+f'<div class="badge">{source_label}</div><h1>{escape(title)}</h1>'+paragraphs([intro])+table+chart("performance_chart", f"{source_label} test portfolio equity and drawdown")+paragraphs(narrative[1:])+"<h2>Forward observation</h2>"+paragraphs(live)+chart("price_chart", f"{source_label} QQQ candlestick chart with simulated trade markers")+"<h2>Strategy review</h2>"+paragraphs(audit_paragraphs)+"<h2>How to read this report</h2>"+paragraphs(notes)+f'<p class="meta">Experiment {escape(report["run_id"])}<br>Input SHA256 {escape(report["input_sha256"])}<br>Model SHA256 {escape(report.get("model_sha256", "No fitted model"))}</p></main></html>'
     (output/"report.html").write_text(html)
     summary = {"schema_version": 1, "generated_at": datetime.now(timezone.utc).isoformat(), "run_id": report["run_id"], "symbol": "QQQ", "source_label": source_label, "synthetic": report["synthetic"], "milestone_label": milestone_label, "input_sha256": report["input_sha256"], "model_sha256": report.get("model_sha256"), "replay_verified": True, "test_sessions": len(period), "test_metrics": evaluation, "campaign_measurements": {**{key: campaign.get(key) for key, _ in MEASUREMENTS}, "latest_status": latest, **{key: value.isoformat() if value else None for key, value in window.items()}}, "audit_status": audit.get("status") if audit else "not_supplied", "charts": [Path(path).name for path in chart_paths.values()], "email_sent": False}
+    if quality is not None:
+        summary.update(research_only=True, dataset_quality=quality)
     _write_json(output/"summary.json", summary)
     return {"directory": str(output), "html": str(output/"report.html"), "email": str(output/"email.txt"), "summary": str(output/"summary.json"), **chart_paths}

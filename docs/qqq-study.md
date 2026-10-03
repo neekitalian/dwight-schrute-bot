@@ -37,6 +37,37 @@ Preparation creates a private workspace and fingerprints the recipe. Collection 
 
 Commit the reviewed research code before evaluation. The study fingerprints the source when evaluation begins. Repeating a completed evaluation verifies and returns its saved evidence instead of refitting. An interrupted evaluation stops for review because test outcomes might already have been inspected. Do not delete its state or create another workspace to conceal repeated testing.
 
+## Recover a completed acquisition with gaps
+
+The default collector rejects missing regular-session minutes. If every HTTP page was retained and pagination finished, an operator can inspect timestamp coverage without scoring any returns. `audit_failed_download` in `dwight.history_recovery` verifies the original calendar, page inventory, checksums, timestamps and pagination. It records every missing interval. It does not infer why a minute is missing.
+
+An explicit coverage amendment may exclude every incomplete session in full, with a fixed maximum of five percent of requested sessions. Before evaluating outcomes, prepare a new private recipe that copies the original protocol exactly and adds:
+
+```json
+{
+  "incomplete_session_policy": "exclude_whole_session",
+  "max_excluded_session_fraction": 0.05,
+  "coverage_amendment": {
+    "original_protocol_sha256": "CANONICAL_DIGEST_FROM_ORIGINAL_STATE",
+    "outcomes_inspected": false,
+    "reason": "Exclude all incomplete sessions before scoring outcomes"
+  }
+}
+```
+
+Use `prepare` with that complete amended recipe and a new workspace, then recover offline:
+
+```sh
+python scripts/run_qqq_study.py recover \
+  --workspace runs/studies/qqq-complete-sessions \
+  --source-attempt runs/studies/qqq-study/datasets/FAILED_ATTEMPT \
+  --source-protocol runs/studies/qqq-study/protocol.json
+```
+
+Recovery preserves the failed attempt, exact raw pages, acquisition timestamps and original protocol. The recovered manifest records retained counts and every excluded session; no missing price or volume is invented. Strategy, date range, split fractions, model settings and screening rules cannot change through this amendment. The original collector did not persist HTTP request URLs, so feed/query identity relies on its trusted protocol; response hashes alone do not prove it.
+
+Excluded sessions can coincide with market stress and therefore understate drawdown or losses. The recovered dataset is explicitly research only. Keep that limitation in every result, including a frozen diagnostic candidate. A passing numerical screen is not evidence that excluded periods were safe.
+
 ## Results
 
 `summary.json` records sample counts, partition dates, metrics and limitations. If fitting succeeds, `charts/report.html` contains the private historical report; `cost-stress.json` and the associated equity/trade JSON files retain both cost cases. Account and broker results remain unobserved. Raw data and licensed price charts must remain outside public GitHub and Hugging Face deployments.

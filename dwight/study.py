@@ -49,8 +49,18 @@ def _validate(recipe):
     allowed = {"schema_version", "symbol", "start", "end", "feed", "adjustment",
                "previously_inspected_periods", "experiment", "cost_stress_multiplier",
                "minimum_filtered_test_trades"}
-    if set(recipe) != allowed or recipe["schema_version"] != 1 or recipe["symbol"] != "QQQ":
+    optional = {"incomplete_session_policy", "max_excluded_session_fraction", "coverage_amendment"}
+    if not allowed <= set(recipe) or set(recipe) - allowed - optional or recipe["schema_version"] != 1 or recipe["symbol"] != "QQQ":
         raise ValueError("Use the complete QQQ study recipe")
+    policy = recipe.get("incomplete_session_policy", "reject")
+    if policy not in {"reject", "exclude_whole_session"}:
+        raise ValueError("Invalid incomplete-session policy")
+    if policy == "exclude_whole_session":
+        if (recipe.get("max_excluded_session_fraction") != .05
+                or not isinstance(recipe.get("coverage_amendment"), dict)
+                or not recipe["coverage_amendment"].get("original_protocol_sha256")
+                or recipe["coverage_amendment"].get("outcomes_inspected") is not False):
+            raise ValueError("Recovery needs an explicit pre-outcome coverage amendment and 5% exclusion cap")
     start, end = date.fromisoformat(recipe["start"]), date.fromisoformat(recipe["end"])
     if start > end or recipe["feed"] not in {"sip", "iex"} or recipe["adjustment"] != "raw":
         raise ValueError("Study requires ordered dates and an explicit raw Alpaca feed")
@@ -126,9 +136,11 @@ def _manifest(workspace, recipe, state):
             raise ValueError("Dataset differs from the fixed study recipe: " + key)
     if manifest.get("source") != "alpaca" or manifest.get("symbols") != ["QQQ"]:
         raise ValueError("Study requires an Alpaca QQQ dataset")
+    recovered = recipe.get("incomplete_session_policy") == "exclude_whole_session"
+    gap_policy = "exclude_incomplete_sessions_no_forward_fill" if recovered else "reject_no_forward_fill"
     expected = {"schema_version": SCHEMA_VERSION, "endpoint": ALPACA_BARS_URL, "asof": "-",
                 "timestamp_convention": "interval_start", "availability": "interval_end",
-                "session_policy": "complete_regular_sessions_only", "gap_policy": "reject_no_forward_fill"}
+                "session_policy": "complete_regular_sessions_only", "gap_policy": gap_policy}
     if any(manifest.get(key) != value for key, value in expected.items()):
         raise ValueError("Unsupported dataset construction policy")
     entries = manifest.get("files", []) + manifest.get("raw_pages", [])
@@ -145,6 +157,25 @@ def _manifest(workspace, recipe, state):
     expected_sessions = exchange_sessions(date.fromisoformat(recipe["start"]), date.fromisoformat(recipe["end"]))
     if actual_sessions != [session.as_dict() for session in expected_sessions]:
         raise ValueError("Dataset session calendar differs from the requested range")
+    if recovered:
+        exclusions_path = manifest.get("exclusions")
+        if (exclusions_path not in names or manifest.get("research_only") is not True
+                or manifest.get("outcomes_inspected") is not False
+                or manifest.get("max_excluded_session_fraction") != recipe["max_excluded_session_fraction"]):
+            raise ValueError("Recovered history must retain its research-only exclusion evidence")
+        original_path = manifest.get("source_protocol")
+        if original_path not in names:
+            raise ValueError("Recovered history must retain its original acquisition protocol")
+        original_file = path.parent / original_path
+        if (sha256_file(original_file) != manifest.get("trusted_protocol_sha256")
+                or _digest(json.loads(original_file.read_text())) != recipe["coverage_amendment"]["original_protocol_sha256"]):
+            raise ValueError("Recovered history original protocol identity mismatch")
+        exclusions = json.loads((path.parent / exclusions_path).read_text())
+        days = [entry["session"] for entry in exclusions]
+        if (len(set(days)) != len(days) or not set(days) <= {s.date for s in expected_sessions}
+                or len(days) / len(expected_sessions) > recipe["max_excluded_session_fraction"]):
+            raise ValueError("Session exclusions exceed the predeclared coverage policy")
+        expected_sessions = [session for session in expected_sessions if session.date not in days]
     minutes = sum(int((session.close - session.open).total_seconds() / 60) for session in expected_sessions)
     if manifest.get("counts", {}).get("QQQ") != {"1Min": minutes, "5Min": minutes // 5}:
         raise ValueError("Dataset does not cover all requested regular-session bars")
@@ -153,6 +184,30 @@ def _manifest(workspace, recipe, state):
         raise ValueError("Dataset bar path escapes its private directory")
     _provenance(data, "QQQ", data.read_bytes(), False, path)
     return data, path
+
+
+def recover(workspace, source_attempt, source_protocol):
+    """Explicitly rebuild retained source pages under an amended coverage recipe."""
+    with _locked(workspace) as (workspace, recipe, state):
+        if state.get("experiment_started") or "dataset_manifest" in state:
+            raise ValueError("Recovery requires a new, unevaluated study")
+        if recipe.get("incomplete_session_policy") != "exclude_whole_session":
+            raise ValueError("This study did not predeclare whole-session exclusions")
+        original = json.loads(Path(source_protocol).read_text())
+        if _digest(original) != recipe["coverage_amendment"]["original_protocol_sha256"]:
+            raise ValueError("Original acquisition protocol identity mismatch")
+        unchanged = {k: v for k, v in recipe.items() if k not in {
+            "incomplete_session_policy", "max_excluded_session_fraction", "coverage_amendment"}}
+        if unchanged != original:
+            raise ValueError("A coverage amendment cannot alter strategy, splits, dates or selection rules")
+        from .history_recovery import recover_history
+        manifest = recover_history(source_attempt, source_protocol, workspace / "datasets")
+        path = Path(manifest["directory"]) / "manifest.json"
+        state.update(dataset_manifest=str(path.relative_to(workspace)), manifest_sha256=sha256_file(path),
+                     status="history_ready", coverage_amendment=recipe["coverage_amendment"])
+        _manifest(workspace, recipe, state)
+        _save(workspace / "state.json", state)
+        return state
 
 
 def collect(workspace, environ=None):
@@ -263,6 +318,8 @@ def evaluate(workspace):
                        "source": report["source"], "feed": report["feed"], "synthetic": False,
                        "sample_counts": report["sample_counts"], "partitions": report["partitions"],
                        "evaluation": report["evaluation"], "blocking_reasons": report["blocking_reasons"],
+                       "dataset_quality": report.get("dataset_quality"),
+                       "coverage_amendment": recipe.get("coverage_amendment"),
                        "forward_observation_started": False, "broker_results": "not_observed"}
             if report["status"] == "completed_research":
                 from .audit import audit_experiment

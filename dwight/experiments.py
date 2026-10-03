@@ -324,6 +324,64 @@ def _write(path, value):
     path.chmod(0o600)
 
 
+RECOVERED_GAP_POLICY = "exclude_incomplete_sessions_no_forward_fill"
+RECOVERED_RISK_LIMITATION = "Excluding incomplete sessions can omit stressed markets and understate risk."
+
+
+def _recovered_dataset_quality(manifest, directory):
+    """Bind the recovery summary to timestamp coverage, without using outcomes."""
+    if manifest.get("gap_policy") != RECOVERED_GAP_POLICY:
+        return None
+    if manifest.get("research_only") is not True:
+        raise ValueError("recovered dataset must remain research only")
+    evidence = {}
+    for key in ("coverage", "exclusions"):
+        name = manifest.get(key)
+        if not isinstance(name, str):
+            raise ValueError("recovered dataset lacks coverage evidence")
+        path = (directory/name).resolve()
+        if not path.is_relative_to(directory.resolve()) or not path.is_file():
+            raise ValueError("invalid recovered dataset coverage path")
+        raw = path.read_bytes()
+        hashes = [entry["sha256"] for entry in manifest["files"] if entry.get("path") == name]
+        if hashes != [hashlib.sha256(raw).hexdigest()]:
+            raise ValueError("recovered dataset coverage checksum mismatch")
+        evidence[key] = json.loads(raw)
+    coverage, exclusions = evidence["coverage"], evidence["exclusions"]
+    if (not isinstance(coverage, dict) or not isinstance(exclusions, list)
+            or coverage.get("gap_policy") != RECOVERED_GAP_POLICY
+            or coverage.get("exclusions") != exclusions):
+        raise ValueError("recovered dataset coverage disagrees with exclusions")
+    try:
+        dates = [row["session"] for row in exclusions]
+        expected = {
+            "gap_policy": RECOVERED_GAP_POLICY,
+            "requested_session_count": coverage["requested_sessions"],
+            "retained_session_count": coverage["complete_sessions"],
+            "excluded_session_count": coverage["excluded_sessions"],
+            "excluded_session_dates": dates,
+            "missing_minute_count": coverage["missing_rth_minutes"],
+            "excluded_session_fraction": coverage["excluded_session_fraction"],
+            "max_excluded_session_fraction": coverage["max_excluded_session_fraction"],
+            "exclusion_reason": "incomplete_regular_session",
+            "risk_limitation": RECOVERED_RISK_LIMITATION,
+        }
+        counts = [expected[key] for key in ("requested_session_count", "retained_session_count",
+                                           "excluded_session_count", "missing_minute_count")]
+        valid = (all(type(value) is int and value >= 0 for value in counts)
+                 and counts[0] > 0 and counts[0] == counts[1] + counts[2]
+                 and counts[2] == len(dates) and dates == sorted(set(dates))
+                 and all(datetime.fromisoformat(day).date().isoformat() == day for day in dates)
+                 and expected["excluded_session_fraction"] == counts[2]/counts[0]
+                 and expected["max_excluded_session_fraction"] == .05
+                 and expected["excluded_session_fraction"] <= .05)
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("invalid recovered dataset quality summary") from None
+    if not valid or manifest.get("dataset_quality") != expected:
+        raise ValueError("recovered dataset quality summary disagrees with coverage")
+    return expected
+
+
 def _provenance(data: Path, symbol: str, raw: bytes, synthetic: bool, manifest_path=None):
     if synthetic:
         return {"source": "synthetic", "feed": "synthetic", "adjustment": "synthetic"}, None
@@ -373,7 +431,11 @@ def _provenance(data: Path, symbol: str, raw: bytes, synthetic: bool, manifest_p
         return provenance, manifest
     if manifest.get("source") != "alpaca" or manifest.get("feed") not in ("sip", "iex"):
         raise ValueError("unsupported verified dataset source/feed")
-    return {key: manifest[key] for key in ("source", "feed", "adjustment", "dataset_sha256")}, manifest
+    provenance = {key: manifest[key] for key in ("source", "feed", "adjustment", "dataset_sha256")}
+    quality = _recovered_dataset_quality(manifest, path.parent)
+    if quality is not None:
+        provenance.update(research_only=True, dataset_quality=quality)
+    return provenance, manifest
 
 
 def _log_mlflow(directory: Path, report: dict, tracking_uri: str):
@@ -485,6 +547,8 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
             ],
             "blocking_reasons": [],
         }
+        if "dataset_quality" in provenance:
+            report["limitations"].insert(0, "Whole sessions with missing minutes were excluded without forward filling; this is not continuous history. " + RECOVERED_RISK_LIMITATION)
         bars_by_partition, rows = {}, {}
         candidates = {}
         for name, days in partitions.items():
