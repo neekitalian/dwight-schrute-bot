@@ -7,23 +7,15 @@ CHOICES = (
     'Connect TradingView alerts',
     'Record TradingView paper trades',
 )
-INTRO = '''### A small toolkit for learning before trading
-
-Start with a repeatable VWAP strategy, measure what changes, and keep a record of every decision.
-Dwight 0.6.0 packages historical research, model experiments, baseline QQQ observations, a private TradingView inbox and fixed paper-experiment milestone reports.
-This public app demonstrates the research using invented prices. Its Connections tab adds public crypto data checks and private setup profiles. It does not host your trading account.
-'''
+HOME_TITLE = 'Test your next trading idea.'
+HOME_SUBTITLE = 'Replay QQQ. Compare models. Review every trade.'
+INTRO = 'A public QQQ research demo using synthetic prices.'
 FLOW = '''<div class="dw-flow">
-<div class="dw-node"><span>01 / PREPARE</span><b>Create your workspace</b><small>Private configuration, datasets and journals on your machine or server.</small></div>
-<div class="dw-node"><span>02 / MEASURE</span><b>Replay QQQ history</b><small>Compare a fixed baseline, costs and features on later periods.</small></div>
-<div class="dw-node"><span>03 / OBSERVE</span><b>Connect your tools</b><small>Capture TradingView alerts. Review before any manual paper action.</small></div>
-<div class="dw-node"><span>04 / REVIEW</span><b>Keep the evidence</b><small>Inspect fills, missed data and model results before changing a strategy.</small></div></div>'''
-DOWNLOAD = f'''[Download the versioned toolkit]({RELEASE}) · [Setup guide]({REPOSITORY}/blob/main/docs/quickstart.md) · [Source]({REPOSITORY})
-
-**What the release includes:** a Python CLI, a private workspace initializer, historical-data validation,
-VWAP replay, model comparisons, portable reports, a local alert inbox, and deployment templates.
-Your market data, account credentials and trained private models are supplied separately.
-'''
+<div class="dw-node"><span>01</span><b>Create a workspace</b><small>Private data, settings and journals.</small></div>
+<div class="dw-node"><span>02</span><b>Replay QQQ</b><small>Compare models against a fixed baseline.</small></div>
+<div class="dw-node"><span>03</span><b>Review alerts</b><small>Review observations before any manual paper trade.</small></div>
+<div class="dw-node"><span>04</span><b>Keep evidence</b><small>Record fills, costs and model results.</small></div></div>'''
+DOWNLOAD = f'[Download toolkit]({RELEASE}) · [Setup guide]({REPOSITORY}/blob/main/docs/quickstart.md) · [Source]({REPOSITORY})'
 PLANS = {
     CHOICES[0]: '''### Explore without an account
 

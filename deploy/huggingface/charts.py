@@ -76,6 +76,44 @@ def default_session(payload: dict) -> str:
     return selected if selected in available else available[-1]
 
 
+def preview_figure(payload: dict) -> go.Figure:
+    """Compact homepage preview of every saved equity mark, without resampling."""
+    figure = go.Figure()
+    for name, variant in payload["test"]["variants"].items():
+        curve = variant["curve"]
+        figure.add_trace(go.Scatter(
+            x=[_clock(row["timestamp"]) for row in curve],
+            y=[row["equity"] for row in curve],
+            customdata=[row["timestamp"] for row in curve],
+            name=CHART_LABELS[name], mode="lines",
+            line=dict(color=COLORS[name], width=2 if name == "filtered" else 1.5,
+                      simplify=False),
+            hovertemplate="%{customdata}<br>Equity $%{y:,.2f}<extra>%{fullData.name}</extra>",
+        ))
+    figure.add_hline(y=payload["test"]["initial_capital"],
+                     line_color=MUTED, line_width=1, line_dash="dot")
+    figure.update_layout(
+        title=dict(text="Synthetic replay", x=.02, xanchor="left", y=.96,
+                   yanchor="top", font=dict(size=16)),
+        height=330, margin=dict(l=58, r=18, t=78, b=44),
+        paper_bgcolor=BACKGROUND, plot_bgcolor=PANEL,
+        font=dict(family="Inter, Arial, sans-serif", color=TEXT, size=11),
+        legend=dict(orientation="h", x=0, xanchor="left", y=1.17, yanchor="top",
+                    font=dict(size=10, color=MUTED), bgcolor="rgba(0,0,0,0)",
+                    tracegroupgap=0, itemwidth=30),
+        hovermode="x unified",
+        hoverlabel=dict(bgcolor=PANEL, bordercolor=GRID, font_color=TEXT),
+        modebar=dict(bgcolor=BACKGROUND, color=MUTED, activecolor=MODEL),
+    )
+    figure.update_xaxes(title_text="New York time", tickformat="%b %d",
+                        showgrid=False, linecolor=GRID, tickfont_color=MUTED,
+                        title_font=dict(size=10, color=MUTED))
+    figure.update_yaxes(title_text="USD", tickprefix="$", tickformat=",.0f",
+                        gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID,
+                        tickfont_color=MUTED, title_font=dict(size=10, color=MUTED))
+    return figure
+
+
 def equity_figure(payload: dict) -> go.Figure:
     figure = make_subplots(rows=2, cols=1, shared_xaxes=True,
                            vertical_spacing=.10, row_heights=[.68, .32],

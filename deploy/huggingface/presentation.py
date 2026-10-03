@@ -45,7 +45,7 @@ body, .gradio-container { background:#0a0a0a !important; color:#ededed !importan
 .gradio-container [role="tablist"] [role="tab"][aria-selected="true"] { color:#fafafa; border-color:#fafafa; background:transparent; }
 .gradio-container [role="tabpanel"] { padding:20px 0 !important; border:0 !important; }
 .gradio-container .block { border-radius:12px; }
-.dw-masthead { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 32px; }
+.dw-masthead { flex-wrap:wrap; display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 10px; }
 .dw-brand { display:flex; align-items:center; gap:10px; color:#fafafa; font-size:20px; letter-spacing:-.8px; font-weight:500; }
 .dw-brand-mark { width:21px; height:21px; border:1px solid #e6e6e6; border-radius:50%; display:inline-block; box-shadow:inset 5px 0 0 #0a0a0a,inset 6px 0 0 #e6e6e6; }
 .dw-masthead-meta { display:flex; gap:24px; align-items:center; color:#969696; font-size:12px; }
@@ -84,7 +84,7 @@ body, .gradio-container { background:#0a0a0a !important; color:#ededed !importan
 .dw-branch .dw-label { color:#a3a3a3; font-size:10px; letter-spacing:1px; }
 .dw-join { color:#a3a3a3; border:1px solid #2b2b2b; border-radius:14px; background:#141414; font-size:13px; padding:24px 28px; margin:20px 0; line-height:1.9; }
 .dw-join strong { display:block; color:#ededed; font-size:15px; font-weight:400; margin-bottom:8px; }
-.dw-footer { border-top:1px solid #282828; margin-top:40px; padding-top:24px; color:#858585; font-size:12px; line-height:1.9; }.dw-footer a { color:#c7c7c7; text-underline-offset:4px; }
+.dw-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; border-top:1px solid #282828; margin-top:40px; padding-top:24px; color:#858585; font-size:12px; line-height:1.9; }.dw-footer a { color:#c7c7c7; text-underline-offset:4px; }
 @media(max-width:1000px) { .dw-flow { flex-wrap:wrap; }.dw-node { flex-basis:180px; }.dw-platform-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:760px) {
  .gradio-container { padding:22px 18px !important; }.dw-masthead { padding-bottom:24px; }.dw-masthead-meta span { display:none; }
@@ -96,17 +96,35 @@ body, .gradio-container { background:#0a0a0a !important; color:#ededed !importan
  .dw-node { padding:20px; flex-basis:140px; }.dw-branches { grid-template-columns:1fr; }.dw-branch { padding:24px; }
  .dw-section h2 { font-size:22px; }.gradio-container [role="tablist"] { gap:20px; }
 }
+
+.dw-demo-status { margin:0; color:#a3a3a3; font-size:11px; }
+.gradio-container .dw-home { align-items:center; gap:48px; padding:36px 0 20px; }
+.dw-home-copy { gap:24px !important; }
+.dw-home-heading h1 { color:#fafafa; font-size:56px; font-weight:400; letter-spacing:-2.3px; line-height:1.08; margin:24px 0 20px; max-width:450px; }
+.dw-home-heading p { color:#969696; font-size:17px; line-height:1.6; max-width:360px; margin:0; }
+.gradio-container .dw-home-actions { gap:12px; }
+.gradio-container .dw-home-actions button,.gradio-container .dw-home-actions a { min-height:44px; font-size:13px; }
+.dw-home-visual { border:1px solid #282828; border-radius:18px; padding:20px 8px 16px; background:#0a0a0a; gap:0 !important; }
+.dw-preview-note { color:#969696; font-size:11px; text-align:center; margin:4px 12px; line-height:1.7; }
+.gradio-container .dw-home-visual .block { border:0 !important; background:transparent !important; }
+.gradio-container [role="tabpanel"] > .gap { gap:16px; }
+.gradio-container details { border-radius:10px !important; }
+@media(max-width:760px) {
+ .dw-masthead { gap:12px; }.dw-masthead-meta { width:100%; justify-content:space-between; }
+ .gradio-container .dw-home { padding:12px 0 8px; gap:28px; }
+ .dw-home-heading h1 { font-size:42px; letter-spacing:-1.6px; max-width:330px; margin:18px 0; }
+ .dw-home-heading p { font-size:15px; }
+ .gradio-container .dw-home-actions { flex-direction:row !important; }
+ .gradio-container .dw-home-actions > * { flex:1 !important; width:auto !important; }
+ .dw-home-visual { padding:12px 0; }
+}
+
 @media(prefers-reduced-motion:reduce) { .gradio-container * { scroll-behavior:auto !important; transition:none !important; } }
 """
 HERO = """<div class="dw-masthead"><div class="dw-brand"><span class="dw-brand-mark" aria-hidden="true"></span>Dwight</div>
-<div class="dw-masthead-meta"><span>QQQ research toolkit</span><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">GitHub</a></div></div>
-<div class="dw-hero"><div><div class="dw-wordmark">RESEARCH PREVIEW</div>
-<h1>Every decision, examined.</h1><p>QQQ · VWAP strategy · Five minute bars · Model research</p></div>
-<div class="dw-hero-aside"><span class="dw-tag">SYNTHETIC REPLAY</span>
-<p>Invented prices. No account connected.</p></div></div>"""
-FOOTER = """<div class="dw-footer">DWIGHT RESEARCH · Simulated results from generated data. No real QQQ history or broker fills.
-<br><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">Source and methodology</a>
- · This app is not connected to TradingView.</div>"""
+<div class="dw-masthead-meta"><p class="dw-demo-status">Synthetic demo · No account connected</p><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">GitHub</a></div></div>"""
+FOOTER = """<div class="dw-footer"><span>Dwight · Research preview 0.6.0</span>
+<a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">Source &amp; methodology</a></div>"""
 
 def section(title, subtitle=""):
     return f'<div class="dw-section"><h2>{escape(title)}</h2><p>{escape(subtitle)}</p></div>'
@@ -151,9 +169,7 @@ def comparison_table(payload):
 def performance_note(payload):
     days = payload["report"]["partitions"]["test"]
     return (f'**{escape(payload["case"]["label"])} · test partition {days[0]} to {days[-1]} · '
-            f'{len(days)} fabricated sessions.** Starting capital ${payload["test"]["initial_capital"]:,.0f} per strategy. '
-            'Each strategy is replayed independently. Every displayed return is simulated. '
-            'Drag to zoom, hover to inspect, or select a legend label to hide a series.')
+            f'{len(days)} synthetic sessions.** ${payload["test"]["initial_capital"]:,.0f} starting capital per policy. Modeled costs included.')
 
 def robustness_view(result):
     rows = []
@@ -225,7 +241,7 @@ def method_note(payload):
             '**Your TradingView paper account**\n\n'
             'The intended workflow for Paper Trading by TradingView is to review a Dwight proposal, '
             'place any paper order manually, and bring exported results back for analysis. '
-            'That proposal and import workflow still needs implementation. This Space currently displays replay results only.\n\n'
+            'The local toolkit records proposals and normalized fill imports. Its native TradingView export mapping remains unverified. This Space displays replay results only.\n\n'
             f'**Input SHA256:** {r["input_sha256"]}\n\n**Model SHA256:** {r["model_sha256"]}\n\n'
             f'**Engine and features SHA256:** {r["code_sha256"]}')
 
@@ -239,13 +255,10 @@ def transformer_flow(choice="both"):
         f'<div class="dw-node"><span>{index:02d} / {step}</span><b>{title}</b><small>{subtitle}</small></div>' for index, (step, title, subtitle) in enumerate(nodes, 1)) + '</div>'
     branches = '<div class="dw-branches">' + ''.join(
         f'<div class="dw-branch"><div class="dw-label">PROPOSED · NOT CONNECTED</div><h3>{escape(p["title"])}</h3>'
-        f'<p>{escape(p["question"])}</p><p><strong>{"Forecast features from past bars" if p["title"] == "Price sequences" else "Sentiment features from timed text"}</strong></p>'
-        f'<p>{escape(p["handoff"])}</p></div>' for p in a["selected_paths"]) + '</div>'
-    return (section("Current decision path", "The numbered stages below are implemented in the synthetic replay.") + flow +
-            section("Proposed transformer inputs", "Dashed cards are proposed research connections. Their trading contribution has not been measured.") + branches +
-            '<div class="dw-join"><strong>Test a new model version</strong>New feature schema, preprocessing fitted on training data, and a retrained Dwight.<br>'
-            'Evaluate a new model against Dwight alone before considering a reviewed release.<br>'
-            'Transformer outputs never alter the fixed risk policy.</div>')
+        f'<p>{"Forecast features from past bars." if p["title"] == "Price sequences" else "Sentiment features from timed text."}</p></div>' for p in a["selected_paths"]) + '</div>'
+    return (section("Inside Dwight", "Current synthetic replay") + flow +
+            section("Proposed transformer inputs", "Their trading contribution has not been measured.") + branches +
+            '<div class="dw-join"><strong>Keep what improves the test.</strong>Compare each new input with Dwight alone. Transformer outputs never alter the fixed risk policy.</div>')
 
 def transformer_details(choice="both"):
     a = connection_analysis(choice)

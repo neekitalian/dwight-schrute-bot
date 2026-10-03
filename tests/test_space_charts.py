@@ -10,6 +10,23 @@ class SpaceChartsTests(unittest.TestCase):
     def setUpClass(cls):
         cls.payload = analytics.run_dashboard_experiment()
 
+    def test_homepage_preview_preserves_every_equity_mark_and_source_payload(self):
+        before = json.dumps(self.payload, sort_keys=True, allow_nan=False)
+        figure = charts.preview_figure(self.payload)
+        self.assertEqual(len(figure.data), 3)
+        for trace, (name, variant) in zip(figure.data, self.payload["test"]["variants"].items(), strict=True):
+            curve = variant["curve"]
+            self.assertEqual(trace.name, charts.CHART_LABELS[name])
+            self.assertEqual(list(trace.x), [charts._clock(row["timestamp"]) for row in curve])
+            self.assertEqual(list(trace.y), [row["equity"] for row in curve])
+            self.assertEqual(list(trace.customdata), [row["timestamp"] for row in curve])
+        self.assertEqual(len(figure.layout.shapes), 1)
+        reference = figure.layout.shapes[0]
+        self.assertEqual(reference.y0, self.payload["test"]["initial_capital"])
+        self.assertEqual(reference.y1, self.payload["test"]["initial_capital"])
+        self.assertTrue(figure.to_json())
+        self.assertEqual(json.dumps(self.payload, sort_keys=True, allow_nan=False), before)
+
     def test_equity_and_drawdown_use_every_saved_mark(self):
         figure = charts.equity_figure(self.payload)
         self.assertEqual(len(figure.data), 6)
