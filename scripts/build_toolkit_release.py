@@ -29,7 +29,11 @@ ROOT_FILES = {
 REQUIRED = {"LICENSE", "NOTICE", "docs/VWAP-LICENSE", "pyproject.toml",
             "dwight/__init__.py", "dwight/__main__.py", "vwap_bot/engine.py"}
 PRIVATE_PARTS = {".git", ".venv", "__pycache__", "private-data", "runs", "models",
-                 "mlruns", "releases", "secrets", "raw", "node_modules"}
+                 "mlruns", "releases", "secrets", "raw", "node_modules",
+                 "private-notes", "internal-business"}
+# Publication boundaries use explicit paths, not keywords that could hide
+# legitimate trading exits, market-data pricing or technical product docs.
+PRIVATE_FILES = {"docs/product-strategy.md"}
 SECRET_PATTERNS = (
     re.compile(rb"-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----"),
     re.compile(rb"gh[pousr]_[A-Za-z0-9]{30,}"),
@@ -47,6 +51,8 @@ def allowed_path(name):
     path = PurePosixPath(name)
     if (not name or "\\" in name or path.is_absolute() or name != str(path)
             or any(part in ("", ".", "..") or part.lower() in PRIVATE_PARTS for part in path.parts)):
+        return False
+    if name.lower() in PRIVATE_FILES:
         return False
     if name in ROOT_FILES or name == "docs/VWAP-LICENSE":
         return True

@@ -1,6 +1,6 @@
 """Public onboarding directions only. No workspace, account or credential access."""
 REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
-RELEASE = REPOSITORY + '/releases/tag/v0.7.0'
+RELEASE = REPOSITORY + '/releases/tag/v0.7.1'
 CHOICES = (
     'Explore the research demo',
     'Research my own QQQ history',

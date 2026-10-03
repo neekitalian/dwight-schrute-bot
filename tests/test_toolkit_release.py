@@ -38,6 +38,16 @@ class ToolkitReleaseTests(unittest.TestCase):
             "private-data/QQQ.csv": "PRIVATE_PRICES\n",
             "models/model.json": "PRIVATE_MODEL\n",
             "docs/raw/private.md": "PRIVATE_NOTES\n",
+            "docs/product-strategy.md": "PRIVATE_BUSINESS_STRATEGY\n",
+            "docs/private-notes/pricing.md": "PRIVATE_BUSINESS_PRICING\n",
+            "docs/guides/private-notes/sale.md": "PRIVATE_BUSINESS_SALE\n",
+            "docs/internal-business/valuation.md": "PRIVATE_BUSINESS_VALUATION\n",
+            "internal-business/exit.md": "PRIVATE_BUSINESS_EXIT\n",
+            "scripts/internal-business/publish.py": "# PRIVATE_BUSINESS_SCRIPT\n",
+            "docs/Private-Notes/revenue.md": "PRIVATE_BUSINESS_REVENUE\n",
+            "docs/trading-exits.md": "Protective trading exits and stop loss rules\n",
+            "docs/data-provider-costs.md": "Provider estimates and billing limits\n",
+            "docs/product.md": "Technical user workflow and product boundaries\n",
             ".github/workflows/tests.yml": "name: excluded workflow\n",
         }
         for name, text in initial.items():
@@ -79,14 +89,21 @@ class ToolkitReleaseTests(unittest.TestCase):
             prefix = first["name"]+"/"
             self.assertEqual(archive.read(prefix+"dwight/__main__.py"), b"print('committed')\n")
             self.assertNotIn(prefix+"dwight/untracked.py", archive.namelist())
-            for excluded in (".env", "private-data/QQQ.csv", "models/model.json", "docs/raw/private.md", ".github/workflows/tests.yml"):
+            for excluded in (".env", "private-data/QQQ.csv", "models/model.json", "docs/raw/private.md",
+                             "docs/product-strategy.md", "docs/private-notes/pricing.md",
+                             "docs/guides/private-notes/sale.md", "docs/internal-business/valuation.md",
+                             "internal-business/exit.md", "scripts/internal-business/publish.py",
+                             "docs/Private-Notes/revenue.md", ".github/workflows/tests.yml"):
                 self.assertNotIn(prefix+excluded, archive.namelist())
+            for included in ("docs/trading-exits.md", "docs/data-provider-costs.md", "docs/product.md"):
+                self.assertIn(prefix+included, archive.namelist())
             self.assertIn(prefix+".env.example", archive.namelist())
             self.assertIn(prefix+"deploy/linux/tradingview-nginx.conf.example", archive.namelist())
             self.assertIn(prefix+"examples/tradingview/qqq_observer.pine", archive.namelist())
             self.assertEqual((archive.getinfo(prefix+"scripts/launch.sh").external_attr >> 16) & 0o777, 0o755)
             manifest = json.loads(archive.read(prefix+BUILDER.MANIFEST))
             self.assertTrue(BUILDER.REQUIRED <= manifest["files"].keys())
+            self.assertFalse(any(b"PRIVATE_BUSINESS_" in archive.read(name) for name in archive.namelist()))
         verified = BUILDER.verify_release(first["archive"], first["sha256"])
         self.assertTrue(verified["verified"])
         with self.assertRaisesRegex(ValueError, "already exists"):
