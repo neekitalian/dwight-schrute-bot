@@ -258,7 +258,7 @@ def transformer_flow(choice="both"):
         f'<p>{"Forecast features from past bars." if p["title"] == "Price sequences" else "Sentiment features from timed text."}</p></div>' for p in a["selected_paths"]) + '</div>'
     return (section("Inside Dwight", "Current synthetic replay") + flow +
             section("Proposed transformer inputs", "Their trading contribution has not been measured.") + branches +
-            '<div class="dw-join"><strong>Keep what improves the test.</strong>Compare each new input with Dwight alone. Transformer outputs never alter the fixed risk policy.</div>')
+            '<div class="dw-join"><strong>Keep what improves the test</strong>Compare each new input with Dwight alone. Transformer outputs never alter the fixed risk policy.</div>')
 
 def transformer_details(choice="both"):
     a = connection_analysis(choice)

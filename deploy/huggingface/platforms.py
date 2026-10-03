@@ -9,7 +9,7 @@ from dwight.connection_catalog import PLATFORMS, build_profile
 from dwight.connection_checks import check_connection
 
 PUBLIC_PLATFORMS = frozenset({'coinbase', 'binance', 'kraken', 'polymarket'})
-INTRO = '''### Choose a platform. See what is ready.
+INTRO = '''### Choose a platform
 
 Use public data checks here, then download a setup profile for your private Dwight workspace.
 Account credentials stay on your machine or server. This Space has no account login or order routing.

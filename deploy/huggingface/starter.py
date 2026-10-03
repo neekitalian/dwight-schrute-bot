@@ -7,7 +7,7 @@ CHOICES = (
     'Connect TradingView alerts',
     'Record TradingView paper trades',
 )
-HOME_TITLE = 'Test your next trading idea.'
+HOME_TITLE = 'Test your next trading idea'
 HOME_SUBTITLE = 'Replay QQQ. Compare models. Review every trade.'
 INTRO = 'A public QQQ research demo using synthetic prices.'
 FLOW = '''<div class="dw-flow">

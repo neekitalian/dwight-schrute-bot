@@ -127,7 +127,7 @@ def build_app():
                     gr.Markdown(starter.BOUNDARY)
                     gr.Markdown(starter.DOWNLOAD)
             with gr.Tab("Connections", id="connections"):
-                html(ui.section("Find your platform.", "Public data checks and private setup profiles. No account or order access here."))
+                html(ui.section("Find your platform", "Public data checks and private setup profiles. No account or order access here."))
                 html(platforms.overview())
                 with gr.Row():
                     platform = gr.Dropdown(choices=[(v['name'], k) for k, v in platforms.PLATFORMS.items()],
@@ -171,7 +171,7 @@ def build_app():
                 html(ui.section("Trade outcomes", "Simulated risk units and session P&L."))
                 outcomes = gr.Plot(show_label=False)
             with gr.Tab("Walk-forward", id="walkforward"):
-                html(ui.section("Test on later periods.", "Synthetic data · Long-only · Final holdout unscored"))
+                html(ui.section("Test on later periods", "Synthetic data · Long-only · Final holdout unscored"))
                 walkforward_run = gr.Button("Evaluate walk-forward", variant="primary")
                 walkforward_cards = html('<div class="dw-callout">Select Evaluate walk-forward to begin.</div>')
                 walkforward_timeline = gr.Plot(show_label=False)
@@ -190,7 +190,7 @@ def build_app():
                                       api_name="walkforward", concurrency_id="synthetic-research",
                                       concurrency_limit=1, trigger_mode="always_last")
             with gr.Tab("Trade explorer", id="trades"):
-                html(ui.section("Look inside a trade.", "Synthetic candles and simulated fills. Chart time: New York."))
+                html(ui.section("Look inside a trade", "Synthetic candles and simulated fills. Chart time: New York."))
                 with gr.Row():
                     day = gr.Dropdown(choices=[], label="Test session", interactive=True)
                     variant = gr.Dropdown(choices=[(v, k) for k, v in VARIANT_LABELS.items()], value="filtered", label="Policy", interactive=True)
@@ -209,7 +209,7 @@ def build_app():
                 with gr.Accordion("Reading the score & feature chart", open=False):
                     gr.Markdown("The score estimates a positive net outcome under this simulator’s rules. It does not guarantee profit. Each policy is replayed independently.\n\nFeatures use training statistics and fitted coefficients. The chart averages absolute contributions across labeled test candidates. This explains the fitted score, not causal importance.")
             with gr.Tab("Transformer connections", id="transformers"):
-                html(ui.section("Explore new inputs.", "Proposed research · Not connected · No measured trading value"))
+                html(ui.section("Explore new inputs", "Proposed research · Not connected · No measured trading value"))
                 connection = gr.Radio(choices=[("Both", "both"), ("Price sequences", "price"), ("News context", "news")], value="both", label="Input type")
                 flow = html(ui.transformer_flow())
                 with gr.Accordion("Models, inputs & licenses", open=False):
@@ -219,7 +219,7 @@ def build_app():
                 with gr.Accordion("How we would measure value", open=False):
                     gr.Markdown(ui.transformer_protocol())
             with gr.Tab("Method & evidence", id="method"):
-                html(ui.section("Check the evidence.", "Replay checks verify software behavior. They do not establish a market edge."))
+                html(ui.section("Check the evidence", "Replay checks verify software behavior. They do not establish a market edge."))
                 audit = html()
                 with gr.Accordion("Data, rules & account boundaries", open=False):
                     method = gr.Markdown()
