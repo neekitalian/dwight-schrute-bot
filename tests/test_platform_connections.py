@@ -13,6 +13,21 @@ from deploy.huggingface import platforms
 
 
 class PlatformConnectionTests(unittest.TestCase):
+    def test_shared_capabilities_never_imply_account_or_execution_readiness(self):
+        keys = {"historical_data", "live_data", "paper_execution", "live_execution"}
+        for identifier, platform in PLATFORMS.items():
+            with self.subTest(platform=identifier):
+                self.assertEqual(set(platform["capabilities"]), keys)
+                for capability in platform["capabilities"].values():
+                    self.assertIn(capability["status"], {"implemented", "planned", "unsupported"})
+                    self.assertIn(capability["verification"], {"fixture_tested", "not_verified"})
+                for kind in ("paper_execution", "live_execution"):
+                    self.assertNotEqual(platform["capabilities"][kind]["status"], "implemented")
+                    self.assertEqual(platform["capabilities"][kind]["verification"], "not_verified")
+        self.assertEqual(PLATFORMS["tradingview"]["capabilities"]["paper_execution"]["status"], "unsupported")
+        self.assertEqual(PLATFORMS["alpaca"]["capabilities"]["paper_execution"]["status"], "planned")
+        self.assertIs(build_profile("alpaca")["execution_enabled"], False)
+
     def test_profiles_have_no_credentials_and_accept_only_fixed_choices(self):
         self.assertEqual(set(PLATFORMS), {'tradingview', 'alpaca', 'ibkr', 'schwab', 'coinbase', 'binance', 'kraken', 'polymarket', 'databento', 'massive'})
         for platform in PLATFORMS:

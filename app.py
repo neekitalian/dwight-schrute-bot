@@ -10,7 +10,7 @@ import re
 from urllib.parse import parse_qs
 
 from dwight import __version__
-from dwight.connection_catalog import PLATFORMS, build_profile
+from dwight.connection_catalog import CAPABILITY_SCHEMA_VERSION, PLATFORMS, build_profile
 
 
 PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "index.html"
@@ -61,7 +61,8 @@ def app(environ, start_response):
     elif path in ("/health", "/api/health") and not query:
         body = _json({"status": "ok", "version": __version__, **CAPABILITIES})
     elif path == "/api/platforms" and not query:
-        body = _json({"version": __version__, **CAPABILITIES, "platforms": list(PLATFORMS.values())})
+        body = _json({"version": __version__, "capability_schema_version": CAPABILITY_SCHEMA_VERSION,
+                      **CAPABILITIES, "platforms": list(PLATFORMS.values())})
     elif path.startswith("/api/profile/"):
         platform = path.removeprefix("/api/profile/")
         if platform not in PLATFORMS:

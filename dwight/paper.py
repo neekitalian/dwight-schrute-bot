@@ -30,6 +30,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, quote as urlquote
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 
+from .authorization import AuthorizationError, AuthorizationLedger, canonical
+
 PAPER_URL = "https://paper-api.alpaca.markets"
 TERMINAL = {"filled", "canceled", "expired", "rejected", "replaced"}
 ACTIVE_PROTECTION = {"new", "accepted", "partially_filled", "accepted_for_bidding", "stopped"}
@@ -81,6 +83,11 @@ class AlpacaPaperClient:
             raise ValueError("timeout must be between 0 and 60 seconds")
         self._key, self._secret, self.timeout = key, secret, timeout
         self._opener = build_opener(_NoRedirect())
+
+    @property
+    def base_url(self):
+        """The request transport is hardwired to this paper origin."""
+        return PAPER_URL
 
     @classmethod
     def from_env(cls):
@@ -221,6 +228,8 @@ class OrderProposal:
     limit_price: float
     stop_price: float
     take_profit_price: float
+    strategy_id: str = ""
+    strategy_revision: str = ""
 
 
 class PaperExecutor:
@@ -257,6 +266,14 @@ class PaperExecutor:
                 sequence INTEGER PRIMARY KEY, created_at TEXT NOT NULL,
                 event TEXT NOT NULL, detail TEXT NOT NULL);
         """)
+        # Preserve old broker evidence. Historical intents have no retroactive
+        # authorization; reconciliation still works, but new entries need one.
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(paper_intents)")}
+        for column in ("authorization", "strategy_id", "strategy_revision"):
+            if column not in columns:
+                self.db.execute(f"ALTER TABLE paper_intents ADD COLUMN {column} TEXT")
+        self.db.commit()
+        self.authorizations = AuthorizationLedger(self.db)
 
     def close(self):
         self.db.close()
@@ -439,8 +456,15 @@ class PaperExecutor:
             raise RiskRejected("Position notional exceeds the approved limit")
         if gross + notional > _decimal(policy.max_gross_notional, "gross limit"):
             raise RiskRejected("Account gross exposure exceeds the approved limit")
+        return gross + notional
 
-    def submit(self, proposal: OrderProposal, quote: Quote, *, now=None):
+    def submit(self, proposal: OrderProposal, quote: Quote, *, authorization_id=None, now=None):
+        """Persist a scoped, authorized new intent before its single submission.
+
+        Existing intents remain recoverable after pause or expiry. A grant is a
+        local operator record, not authenticated web consent or worker readiness.
+        Pause cannot retract an intent once its submission is committed.
+        """
         if (proposal.symbol != "QQQ" or proposal.symbol not in self.policy.allowed_symbols or
                 quote.symbol != proposal.symbol):
             raise RiskRejected("Only QQQ paper proposals with a matching quote are supported")
@@ -453,19 +477,55 @@ class PaperExecutor:
         existing = self.db.execute("SELECT * FROM paper_intents WHERE signal_id=?", (proposal.signal_id,)).fetchone()
         if existing and existing["payload"] != _json(payload):
             self._block("A signal identifier was reused with different order fields")
+        try:
+            grant = self.authorizations.get(authorization_id)
+        except AuthorizationError as exc:
+            raise RiskRejected(str(exc)) from None
+        if getattr(self.client, "base_url", None) != PAPER_URL:
+            raise RiskRejected("Authorization requires the fixed Alpaca paper endpoint")
+        if existing:
+            try:
+                lineage = json.loads(existing["authorization"]) if existing["authorization"] else {}
+                same_scope = all(lineage[field] == grant[field]
+                                 for field in ("schema_version", "approved_at", "scope", "scope_hash"))
+            except (ValueError, KeyError, TypeError):
+                same_scope = False
+            if (not same_scope or existing["strategy_id"] != proposal.strategy_id or
+                    existing["strategy_revision"] != proposal.strategy_revision):
+                self._block("A signal identifier was reused with different authorization or strategy lineage")
         snapshot = self.reconcile()
         if existing:
             # Return the refreshed record, even when rejected/canceled; never resend.
             return json.loads(self.db.execute("SELECT broker_order FROM paper_intents WHERE client_order_id=?", (cid,)).fetchone()[0])
         clock = self.client.get_clock()
-        self._validate(proposal, quote, snapshot, clock, now or datetime.now(timezone.utc))
-        with self.db:
-            self.db.execute("INSERT INTO paper_intents VALUES(?,?,?,?,?,?,NULL)",
-                            (cid, proposal.signal_id, _json(payload), _json(asdict(self.policy)),
-                             "submitting", datetime.now(timezone.utc).isoformat()))
-            self._audit("intent_persisted", {"client_order_id": cid, "payload": payload})
-            self._audit("entry_risk_snapshot", {"client_order_id": cid,
-                        "quote": asdict(quote), "account": snapshot["account"], "clock": clock})
+        try:
+            with self.db:
+                # Serialize against private pause/revoke controls before reading
+                # current grant state. Broker I/O happens only after this commit.
+                self.db.execute("BEGIN IMMEDIATE")
+                checked_at = now if now is not None else datetime.now(timezone.utc)
+                gross = self._validate(proposal, quote, snapshot, clock, checked_at)
+                grant = self.authorizations.validate_entry(
+                    authorization_id, account_id=snapshot["account"]["id"],
+                    strategy_id=proposal.strategy_id, strategy_revision=proposal.strategy_revision,
+                    symbol=proposal.symbol, policy=asdict(self.policy), gross_notional=gross,
+                    now=checked_at)
+                self.db.execute("""INSERT INTO paper_intents
+                    (client_order_id,signal_id,payload,policy,state,created_at,broker_order,
+                     authorization,strategy_id,strategy_revision) VALUES(?,?,?,?,?,?,NULL,?,?,?)""",
+                    (cid, proposal.signal_id, _json(payload), _json(asdict(self.policy)),
+                     "submitting", _time(checked_at).isoformat(), canonical(grant),
+                     proposal.strategy_id, proposal.strategy_revision))
+                self._audit("intent_persisted", {"client_order_id": cid, "signal_id": proposal.signal_id,
+                            "payload": payload, "authorization_id": authorization_id,
+                            "authorization_hash": grant["scope_hash"],
+                            "strategy_id": proposal.strategy_id, "strategy_revision": proposal.strategy_revision})
+                self._audit("entry_risk_snapshot", {"client_order_id": cid,
+                            "authorization_hash": grant["scope_hash"], "checked_at": checked_at,
+                            "policy": asdict(self.policy), "quote": asdict(quote),
+                            "account": snapshot["account"], "clock": clock})
+        except AuthorizationError as exc:
+            raise RiskRejected(str(exc)) from None
         try:
             order = self.client.submit_order(payload)
         except (PaperError, TimeoutError, OSError):

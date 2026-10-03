@@ -1,6 +1,6 @@
 # Automatic paper trading product
 
-Status: product specification. The continuous broker execution worker, authenticated control console and automatic broker-fill reports described below are not implemented as an integrated product. This document does not enable trading or change an account selection.
+Status: product specification with a fixture-tested paper authorization library. The continuous broker execution worker, authenticated control console and automatic broker-fill reports are not implemented as an integrated product. This document does not enable trading or change an account selection.
 
 ## Product choice
 
@@ -37,21 +37,30 @@ Supported product routes should be explicit:
 
 TradingView messages are untrusted inputs. They must not carry broker keys, OAuth tokens or account secrets. A webhook signal cannot override the selected strategy, instrument allowlist, position limits, daily loss limits or account mode. Missing identity, stale bars, duplicates, unknown actions, mismatched intervals or provider disagreement fail closed. The broker remains authoritative for accepted orders, fills and positions.
 
-The shared connector contract should expose separate capabilities for historical/live data, account identity, positions, orders, partial fills, cancel/replace, protective orders, paper/test mode and restart reconciliation. Unknown or unsupported behavior blocks execution for that route. Do not share a strategy implementation across stocks, crypto and prediction markets without asset-specific validation and accounting.
+Use one capability contract for all adapters. Display historical data, live data, account identity, order submission, fills, cancellation, protection and restart reconciliation separately, with implementation and verification status for each. A successful quote check is not permission or readiness to trade. Unknown or unsupported behavior blocks execution for that route. Do not share a strategy implementation across stocks, crypto and prediction markets without asset-specific validation and accounting.
+
+The current public contract exposes four groups: history, live observations, paper execution and real-money execution. Account identity and lifecycle-level readiness remain private-worker requirements; the catalog does not certify them. All execution routes remain unavailable for unattended operation.
 
 Alpaca documents a paper API with separate credentials and the endpoint `https://paper-api.alpaca.markets`. TradingView documents that Pine strategies cannot place orders in its built-in paper account or directly through the Trading Panel. An external broker API is therefore the proposed execution route; adding Python after a TradingView alert does not remove the native account limitation. [Alpaca paper API](https://docs.alpaca.markets/us/docs/paper-trading), [TradingView strategy limitations](https://www.tradingview.com/pine-script-docs/faq/strategies/#can-i-connect-my-strategies-to-my-paper-trading-account)
 
 ## Customer flow
 
-1. **Connect**: choose an API paper account in the private installation. Verify the exact account, permissions and requested market-data feed. Show the paper label and masked account identity persistently.
-2. **Choose**: select QQQ VWAP on completed five-minute bars. The first version uses the deterministic baseline. A learned filter stays unavailable until separately evaluated and qualified.
-3. **Set limits**: choose the permitted allocation, maximum position, per-trade planned risk, daily loss limit and trading session. Validate against account state. Defaults are not approval for a customer's account.
-4. **Start paper trading**: show a concise preflight summary of account, strategy version, data feed and limits. Start only after the user activates that exact configuration and preflight passes.
-5. **Review**: watch actual broker fills, current positions, equity, costs and skipped-trade reasons. Reports are generated from reconciled broker evidence without manual CSV conversion.
+1. **Connect a paper account**: verify the exact account, permissions and market-data feed. Keep its paper label and masked identity visible.
+2. **Choose a strategy and limits**: select QQQ VWAP on completed five-minute bars, allocation, position and loss limits. The baseline is the first execution target; learned filters require separate qualification.
+3. **Review authorization and start**: show the account, QQQ long-only scope, pinned strategy revision, feed, limits and authorization expiry. Start only after the operator confirms that exact configuration and preflight passes. Defaults and data credentials are not approval.
+4. **Monitor and pause**: show reconciled fills, positions, equity, costs and exceptions. Pause blocks new entry intents while supervision of existing exposure continues.
 
 Keep the console small: **Overview**, **Strategy**, **Activity**, **Settings**. Overview shows account mode, worker/data health, positions, return and drawdown when supported by valid evidence. Activity explains each accepted or skipped setup and its broker outcome. Research and model training remain a separate workflow.
 
 Use two distinct controls: **Pause new entries** leaves supervision and protective exits running; **Close Dwight positions** is a separate explicit action that cancels only owned conflicting orders, waits for confirmed cancellation and closes the reconciled remaining quantity. Never describe a paused worker as a flat account. An exit request is not a confirmed exit fill.
+
+## Authorization and execution evidence
+
+An execution authorization is narrower than connecting an account. It binds the paper account, permitted instrument and direction, strategy revision, allocation, exact risk policy and expiry. Any changed strategy or policy needs a new authorization. Provider permissions, Dwight authorization and worker readiness are separate checks.
+
+The paper library now requires an authorization identifier and matching strategy lineage for each new entry. It stores the immutable authorization snapshot and hash with the durable intent, signal identifier, order payload and risk evidence. Broker responses remain linked by the stable client order identifier. The local ledger supports pause, resume and irrevocable revocation; it does not authenticate a web user or activate a service. See [paper authorization](paper-authorization.md).
+
+Pause, revocation and expiry prevent new intents. A submission already committed can still reach the broker or fill, so the console must show pending entries and existing exposure. Reconciliation and owned-order recovery remain available after authorization ends. A local authorization record is not a cryptographic proof of customer consent and is not an integration with Mastercard Agent Connect or Verifiable Intent.
 
 ## First execution scope
 
@@ -68,6 +77,7 @@ The worker uses current broker state and executable quotes for sizing and decisi
 | Strategy | Causal baseline replay and completed-bar manual observer | Account-independent candidate interface consumed by a broker worker |
 | Broker transport | Paper-only Alpaca client and mock-tested durable entry intents in `dwight/paper.py` | Verified real paper API integration, executable quote ingestion and continuous supervision |
 | Risk checks | Symbol, quote, spread, exposure and loss checks on entry | Session-wide enforcement, account-reset detection, expiry and policy identity across restarts |
+| Authorization | Immutable, bounded local grants linked to new paper intents; pause, resume and revocation | Authenticated operator consent, protected credential storage and a verified execution worker |
 | Orders | Stable client identifiers, persisted intent and reconciliation | Partial-entry protection, exit ownership, rejected exit recovery and confirmed session-close handling |
 | Storage | Private research, manual and paper ledgers | Persisted broker fill identities, positions, equity snapshots and restart recovery |
 | Controls | No private control console | Authenticated setup, preflight, start, pause, close and clear status feedback |
@@ -80,6 +90,8 @@ The current paper library halts new entries when a bracket parent is partially f
 | Scenario | Required outcome |
 | --- | --- |
 | Missing credentials, wrong endpoint or changed account | No order request; clear setup failure |
+| Missing, paused, revoked, expired or mismatched authorization | No new intent; existing orders remain available for reconciliation |
+| Strategy or risk configuration changes | New authorization required; old intents retain their original lineage |
 | Repeated signal or webhook | One durable intent; no duplicate entry |
 | Submission times out after acceptance | Lookup and reconcile by client order identifier; never blindly resubmit |
 | Worker restarts with an open order or position | Recover account and ledger state before accepting a new candidate |
@@ -90,7 +102,7 @@ The current paper library halts new entries when a bracket parent is partially f
 | Daily loss threshold | Block entries and apply the chosen exit policy; never promise a guaranteed maximum loss |
 | Session end or early close | Use the exchange calendar; cancel owned entries and confirm exits, or report unresolved exposure |
 | Unknown account order or position | Halt and report the conflict; do not cancel unrelated orders |
-| Pause requested | No new entries; existing exposure remains supervised |
+| Pause requested | No new intents after pause is committed; disclose in-flight submissions and continue existing-exposure supervision |
 | Flat requested | Report success only after broker positions and relevant open orders reconcile to flat |
 | Report generated | Separate simulated broker PnL from historical replay; identify missing fees or equity evidence |
 

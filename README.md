@@ -6,6 +6,8 @@ A small toolkit for reproducible QQQ research and reviewed paper trading. The fi
 
 The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, private Alpaca, Databento and Massive checks, and downloadable setup profiles. [Market data connections](docs/data-providers.md) covers local key entry and QQQ history downloads. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
 
+Current `main` adds a shared platform capability contract and [bounded paper authorization](docs/paper-authorization.md) linked to entry intents and broker evidence. These additions are not in the existing 0.7.1 archive. The [four-step private trading flow](docs/automatic-paper-product.md) is the target experience; its continuous execution worker and authenticated console remain unfinished.
+
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 
 **Working now:** private FirstRate QQQ sample ingestion, Alpaca historical ingestion, calendar validation, baseline and model-filtered replay, chronological and walk-forward classifier experiments, a manual TradingView paper journal, local MLflow tracking, frozen releases, a live-data shadow monitor, paper-order/recovery library, and public Polymarket book snapshots.

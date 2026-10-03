@@ -32,6 +32,14 @@ Trading account. Each profile reports integration roles, account-access state
 and execution status separately; `execution_enabled` remains false for every
 profile.
 
+Current source uses a shared, versioned capability record for history, live
+observations, paper execution and real-money execution. Each reports Dwight's
+implementation state and its software verification separately. Public ticker
+checks do not establish a continuous feed, and a software test does not establish
+any customer's entitlement or account permission. No catalog entry is execution
+ready. The private [paper authorization ledger](paper-authorization.md) records
+the narrower account and strategy scope; a setup profile never creates that grant.
+
 Checks describe only the requests actually made. The result reports capabilities,
 status, timestamp, and a message; it does not expose raw prices or account data.
 `public_data_available` means the public response passed validation, not that an

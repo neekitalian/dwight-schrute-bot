@@ -59,7 +59,9 @@ class VercelPortalTests(unittest.TestCase):
     def test_public_catalog_and_profile_roundtrip_all_platforms(self):
         response, body = self.request("/api/platforms")
         self.assertEqual(response["status"], "200 OK")
-        self.assertEqual({row["id"] for row in json.loads(body)["platforms"]}, set(PLATFORMS))
+        catalog = json.loads(body)
+        self.assertEqual(catalog["capability_schema_version"], 1)
+        self.assertEqual({row["id"] for row in catalog["platforms"]}, set(PLATFORMS))
         for platform in PLATFORMS:
             with self.subTest(platform=platform):
                 response, body = self.request("/api/profile/" + platform, query="feed=iex")
@@ -106,7 +108,8 @@ class VercelPortalTests(unittest.TestCase):
                                 cwd=ROOT, check=True, capture_output=True, text=True)
         modules = json.loads(result.stdout)
         for prefix in ("gradio", "numpy", "sklearn", "dwight.research", "dwight.analytics",
-                       "dwight.connection_checks", "dwight.config", "dwight.__main__"):
+                       "dwight.connection_checks", "dwight.config", "dwight.__main__",
+                       "dwight.authorization", "dwight.paper"):
             self.assertFalse(any(module == prefix or module.startswith(prefix + ".") for module in modules), prefix)
 
     def test_vercel_entrypoint_and_private_bundle_exclusions_are_declared(self):

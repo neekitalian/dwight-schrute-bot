@@ -1,12 +1,20 @@
 # Dwight product direction and current boundary
 
-The product direction is a small automatic trading service with a private web console and a Python execution worker. A user connects a supported broker account, selects a tested strategy, sets risk limits and starts a paper session. TradingView is an optional chart and signal interface. The intended customer experience does not require writing Python, entering each order or converting fills to CSV.
+The product direction is a private web console backed by a persistent Python execution worker. Its four steps are **connect a paper account**, **choose a strategy and limits**, **review authorization and start**, and **monitor or pause**. TradingView is an optional chart and signal interface. The intended customer experience does not require writing Python, entering each order or converting fills to CSV.
 
 This is the target experience, not a description of current execution support. The [automatic paper product specification](automatic-paper-product.md) defines the first version, acceptance criteria and unfinished work. The first proposed execution integration is Alpaca Paper; the existing selected account remains Paper Trading by TradingView until the operator explicitly chooses a separate execution account. No existing campaign or account is migrated by this product decision.
 
 The published Dwight toolkit remains a research preview for one QQQ strategy and one private workspace. Its working flow prepares data, replays a baseline, tests added features, inspects evidence, connects observations and keeps a manual paper journal.
 
 The downloadable toolkit contains source, configuration templates, a workspace initializer, data validation, research commands, private reports, a TradingView observation inbox and deployment runbooks. The Hugging Face app is a public demonstration using synthetic data. Neither package includes a proven profitable model or a managed brokerage account.
+
+## Connection and authorization design
+
+Keep one shared capability contract while displaying what each adapter actually implements and verifies. Reading quotes, submitting paper orders and submitting real-money orders are different capabilities. Connecting market data cannot grant execution access.
+
+Authorize one account, instrument, strategy revision, allocation and exact risk policy for a fixed period. Link each new entry to that authorization, its signal, risk evidence and broker response. Pause new entries separately from closing positions; existing exposure still requires supervision.
+
+The [paper authorization library](paper-authorization.md) implements bounded local grants, durable intent linkage and pause, resume and revocation checks in the paper executor. Its verification uses broker fixtures. It does not provide an authenticated consent screen, an automatic worker, real-account readiness or a maximum-loss guarantee. The public setup page never creates grants or submits orders.
 
 ## License and deployment scope
 

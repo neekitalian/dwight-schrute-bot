@@ -251,6 +251,47 @@ PLATFORMS = {
 }
 
 
+# Dwight implementation states, not a customer's account entitlements or a
+# provider's full product offering. Runtime verification belongs to that exact
+# private connection. No platform currently has a ready execution worker.
+CAPABILITY_SCHEMA_VERSION = 1
+
+
+def _capability(status, label):
+    return {"status": status, "label": label,
+            "verification": "fixture_tested" if status == "implemented" else "not_verified"}
+
+
+_CAPABILITY_MATRIX = {
+    "tradingview": (("unsupported", "No history adapter"), ("planned", "Alert input planned"),
+                    ("unsupported", "Manual native paper")),
+    "alpaca": (("implemented", "QQQ history"), ("implemented", "QQQ bar observer"),
+               ("planned", "Worker incomplete")),
+    "ibkr": (("planned", "Adapter planned"), ("planned", "Adapter planned"),
+             ("planned", "Paper adapter planned")),
+    "schwab": (("planned", "Adapter planned"), ("planned", "Adapter planned"),
+               ("unsupported", "No paper adapter")),
+    "coinbase": (("unsupported", "No history adapter"), ("implemented", "Public spot check"),
+                 ("unsupported", "No paper engine")),
+    "binance": (("unsupported", "No history adapter"), ("implemented", "Public spot check"),
+                ("planned", "Testnet adapter planned")),
+    "kraken": (("unsupported", "No history adapter"), ("implemented", "Public ticker check"),
+               ("unsupported", "No Spot paper adapter")),
+    "polymarket": (("unsupported", "No history adapter"), ("implemented", "Public book snapshots"),
+                   ("unsupported", "No paper engine")),
+    "databento": (("implemented", "Bounded QQQ history"), ("unsupported", "No live adapter"),
+                  ("unsupported", "Market data only")),
+    "massive": (("implemented", "QQQ minute history"), ("unsupported", "No live adapter"),
+                ("unsupported", "Market data only")),
+}
+for _platform, (_history, _live, _paper) in _CAPABILITY_MATRIX.items():
+    PLATFORMS[_platform]["capabilities"] = {
+        "historical_data": _capability(*_history), "live_data": _capability(*_live),
+        "paper_execution": _capability(*_paper),
+        "live_execution": _capability("unsupported", "No live execution"),
+    }
+
+
 def build_profile(platform: str, feed: str = "sip") -> dict:
     """Build a serializable research profile containing no credential values.
 

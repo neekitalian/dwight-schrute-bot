@@ -1,8 +1,9 @@
 import copy
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import MagicMock, Mock, patch
@@ -13,17 +14,30 @@ from dwight.paper import (
     PaperExecutor, PreparationRequired, Quote, ReconciliationRequired, RiskPolicy,
     RiskRejected, _NoRedirect,
 )
+from dwight.authorization import AuthorizationError, AuthorizationLedger
 
 
 NOW = datetime(2026, 10, 2, 15, 0, tzinfo=timezone.utc)
-PROPOSAL = OrderProposal("vwap-QQQ-20261002T150000-model1", "QQQ", 2, 500.01, 499.00, 503.00)
+PROPOSAL = OrderProposal("vwap-QQQ-20261002T150000-model1", "QQQ", 2, 500.01, 499.00, 503.00,
+                         "qqq-vwap", "a" * 64)
 QUOTE = Quote("QQQ", 500.00, 500.01, NOW, "sip")
+
+
+def grant_spec(policy=None, **updates):
+    spec = {"authorization_id": "fixture-consent", "granted_by": "fixture-operator",
+            "provider": "alpaca", "account_mode": "paper", "account_id": "paper-account",
+            "strategy_id": "qqq-vwap", "strategy_revision": "a" * 64,
+            "symbols": ["QQQ"], "side": "buy", "allocation_usd": "3000",
+            "risk_policy": json.loads(json.dumps(asdict(policy or RiskPolicy(max_order_notional=1100)))),
+            "expires_at": (NOW + timedelta(hours=12)).isoformat()}
+    return {**spec, **updates}
 
 
 class FakeBroker:
     """No sockets, keys, or real account use in these tests."""
 
     def __init__(self):
+        self.base_url = PAPER_URL
         self.account = {"id": "paper-account", "status": "ACTIVE", "trading_blocked": False,
                         "account_blocked": False, "equity": "100000", "last_equity": "100000",
                         "buying_power": "100000"}
@@ -156,13 +170,14 @@ class ExecutionTests(unittest.TestCase):
         self.broker = FakeBroker()
         self.policy = RiskPolicy(max_order_notional=1100)
         self.executor = PaperExecutor(self.broker, self.path, self.policy)
+        self.executor.authorizations.approve(grant_spec(self.policy), now=NOW)
 
     def tearDown(self):
         self.executor.close()
         self.temp.cleanup()
 
     def submit(self, proposal=PROPOSAL, quote=QUOTE):
-        return self.executor.submit(proposal, quote, now=NOW)
+        return self.executor.submit(proposal, quote, authorization_id="fixture-consent", now=NOW)
 
     def test_spy_proposal_is_rejected_before_broker_access_or_intent(self):
         self.broker.get_account = Mock(side_effect=AssertionError("No broker access expected"))
@@ -312,6 +327,232 @@ class ExecutionTests(unittest.TestCase):
             with self.subTest(symbols=symbols), self.assertRaisesRegex(ValueError, "only QQQ"):
                 RiskPolicy(allowed_symbols=symbols)
         with self.assertRaises(RiskRejected): RiskPolicy(max_order_notional=float("nan"))
+
+
+class AuthorizationTests(unittest.TestCase):
+    setUp = ExecutionTests.setUp
+    tearDown = ExecutionTests.tearDown
+    submit = ExecutionTests.submit
+
+    def test_missing_authorization_blocks_before_broker_access(self):
+        self.broker.get_account = Mock(side_effect=AssertionError("No broker access expected"))
+        for reference in (None, "missing-consent"):
+            with self.assertRaises(RiskRejected):
+                self.executor.submit(PROPOSAL, QUOTE, authorization_id=reference, now=NOW)
+        self.broker.get_account.assert_not_called()
+        self.assertEqual(self.broker.submits, 0)
+
+    def test_real_paper_transport_contract_works_with_mocked_broker_calls(self):
+        client = AlpacaPaperClient("fictional-key", "fictional-secret")
+        self.assertEqual(client.base_url, PAPER_URL)
+        with self.assertRaises(AttributeError):
+            client.base_url = "https://api.alpaca.markets"
+        # Use the actual client methods and route construction, while preventing
+        # all sockets: only _request is replaced with fictional responses.
+        def request(method, path, *, params=None, payload=None):
+            if method == "GET":
+                if path.startswith("/v2/orders/"):
+                    self.assertEqual(params, {"nested": "true"})
+                    return next(copy.deepcopy(order) for order in self.broker.orders.values()
+                                if path == "/v2/orders/" + order["id"])
+                return {"/v2/account": self.broker.get_account,
+                        "/v2/positions": self.broker.get_positions,
+                        "/v2/orders": self.broker.get_orders,
+                        "/v2/clock": self.broker.get_clock,
+                        "/v2/orders:by_client_order_id": lambda: self.broker.get_order_by_client_id(params["client_order_id"])}[path]()
+            self.assertEqual((method, path), ("POST", "/v2/orders"))
+            return self.broker.submit_order(payload)
+        client._request = Mock(side_effect=request)
+        self.executor.client = client
+        self.assertEqual(self.submit()["status"], "new")
+        self.assertEqual(self.submit()["status"], "new")
+        self.assertEqual(self.broker.submits, 1)
+
+    def test_wrong_account_endpoint_strategy_feed_and_policy_block(self):
+        cases = [
+            {"account_id": "another-account"}, {"strategy_id": "another-strategy"},
+            {"strategy_revision": "b" * 64},
+            {"risk_policy": {**grant_spec()["risk_policy"], "expected_feed": "iex"}},
+            {"risk_policy": {**grant_spec()["risk_policy"], "max_daily_loss": 1000}},
+            {"risk_policy": {**grant_spec()["risk_policy"], "max_daily_loss": 10}},
+        ]
+        for index, updates in enumerate(cases):
+            reference = "mismatched-" + str(index)
+            self.executor.authorizations.approve(grant_spec(authorization_id=reference, **updates), now=NOW)
+            with self.subTest(updates=updates), self.assertRaises(RiskRejected):
+                self.executor.submit(PROPOSAL, QUOTE, authorization_id=reference, now=NOW)
+        self.broker.base_url = "https://api.alpaca.markets"
+        with self.assertRaisesRegex(RiskRejected, "paper endpoint"):
+            self.submit()
+        self.assertEqual(self.broker.submits, 0)
+        self.assertEqual(self.executor.db.execute("SELECT count(*) FROM paper_intents").fetchone()[0], 0)
+
+    def test_allocation_caps_order_even_with_larger_risk_limits(self):
+        self.executor.authorizations.approve(grant_spec(authorization_id="small-allocation", allocation_usd="999"), now=NOW)
+        with self.assertRaisesRegex(RiskRejected, "allocation"):
+            self.executor.submit(PROPOSAL, QUOTE, authorization_id="small-allocation", now=NOW)
+        self.assertEqual(self.broker.submits, 0)
+
+    def test_expiry_boundary_and_future_approval_block_new_intents(self):
+        for timestamp in (NOW - timedelta(seconds=1), NOW + timedelta(hours=12)):
+            self.broker.clock["timestamp"] = timestamp.isoformat()
+            with self.subTest(timestamp=timestamp), self.assertRaisesRegex(RiskRejected, "future dated or expired"):
+                self.executor.submit(PROPOSAL, replace(QUOTE, timestamp=timestamp),
+                                     authorization_id="fixture-consent", now=timestamp)
+        self.assertEqual(self.broker.submits, 0)
+
+    def test_pause_resume_and_irreversible_revocation(self):
+        store = self.executor.authorizations
+        store.set_state("fixture-consent", "paused", now=NOW)
+        with self.assertRaisesRegex(RiskRejected, "paused or revoked"):
+            self.submit()
+        store.set_state("fixture-consent", "active", now=NOW)
+        store.set_state("fixture-consent", "revoked", now=NOW)
+        with self.assertRaises(AuthorizationError):
+            store.set_state("fixture-consent", "active", now=NOW)
+        with self.assertRaises(RiskRejected):
+            self.submit()
+        states = [row[0] for row in self.executor.db.execute(
+            "SELECT state FROM paper_authorization_events ORDER BY sequence")]
+        self.assertEqual(states, ["active", "paused", "active", "revoked"])
+        self.assertEqual(self.broker.submits, 0)
+
+    def test_external_pause_during_broker_reads_is_seen_before_intent_commit(self):
+        def get_clock():
+            with sqlite3.connect(self.path) as operator:
+                AuthorizationLedger(operator).set_state("fixture-consent", "paused", now=NOW)
+            return copy.deepcopy(self.broker.clock)
+        self.broker.get_clock = get_clock
+        with self.assertRaisesRegex(RiskRejected, "paused or revoked"):
+            self.submit()
+        self.assertEqual(self.broker.submits, 0)
+        self.assertEqual(self.executor.db.execute("SELECT count(*) FROM paper_intents").fetchone()[0], 0)
+
+    def test_authorization_risk_and_intent_are_durable_before_broker_submit(self):
+        def check(payload):
+            with sqlite3.connect(self.path) as observer:
+                row = observer.execute("SELECT authorization,strategy_id,strategy_revision FROM paper_intents").fetchone()
+                grant = json.loads(row[0])
+                self.assertEqual(grant["scope"]["authorization_id"], "fixture-consent")
+                self.assertEqual(row[1:], (PROPOSAL.strategy_id, PROPOSAL.strategy_revision))
+                evidence = json.loads(observer.execute(
+                    "SELECT detail FROM paper_audit WHERE event='entry_risk_snapshot'").fetchone()[0])
+                self.assertEqual(evidence["authorization_hash"], grant["scope_hash"])
+                self.assertEqual(evidence["policy"], grant["scope"]["risk_policy"])
+        self.broker.on_submit = check
+        order = self.submit()
+        receipt = json.loads(self.executor.db.execute(
+            "SELECT detail FROM paper_audit WHERE event='broker_order' ORDER BY sequence DESC LIMIT 1").fetchone()[0])
+        self.assertEqual(receipt["client_order_id"], order["client_order_id"])
+        self.assertEqual(receipt["order"]["id"], order["id"])
+
+    def test_audit_write_failure_rolls_back_intent_without_submitting(self):
+        self.executor.db.execute("""CREATE TRIGGER fail_risk_audit BEFORE INSERT ON paper_audit
+            WHEN NEW.event='entry_risk_snapshot' BEGIN SELECT RAISE(ABORT,'fixture write failure'); END""")
+        self.executor.db.commit()
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.submit()
+        self.assertEqual(self.broker.submits, 0)
+        self.assertEqual(self.executor.db.execute("SELECT count(*) FROM paper_intents").fetchone()[0], 0)
+        self.assertEqual(self.executor.db.execute("SELECT count(*) FROM paper_audit WHERE event='intent_persisted'").fetchone()[0], 0)
+
+    def test_committed_order_can_arrive_after_pause_and_is_not_resubmitted(self):
+        self.broker.on_submit = lambda payload: self.executor.authorizations.set_state("fixture-consent", "paused", now=NOW)
+        order = self.submit()
+        self.assertEqual(self.executor.authorizations.get("fixture-consent")["state"], "paused")
+        self.assertEqual(self.submit()["id"], order["id"])
+        self.assertEqual(self.broker.submits, 1)
+
+    def test_restart_and_duplicate_recovery_survive_revocation_and_expiry(self):
+        self.broker.mode = "timeout_accepted"
+        order = self.submit()
+        self.executor.authorizations.set_state("fixture-consent", "revoked", now=NOW)
+        self.executor.close()
+        self.executor = PaperExecutor(self.broker, self.path, self.policy)
+        recovered = self.executor.submit(PROPOSAL, QUOTE, authorization_id="fixture-consent", now=NOW + timedelta(days=1))
+        self.assertEqual(recovered["id"], order["id"])
+        self.assertEqual(self.broker.submits, 1)
+        with self.assertRaises(RiskRejected):
+            self.submit(replace(PROPOSAL, signal_id="next-signal"))
+
+    def test_same_signal_cannot_be_rebound_to_new_strategy_or_grant(self):
+        self.submit()
+        self.executor.authorizations.approve(grant_spec(authorization_id="second-consent"), now=NOW)
+        with self.assertRaisesRegex(ReconciliationRequired, "lineage"):
+            self.executor.submit(PROPOSAL, QUOTE, authorization_id="second-consent", now=NOW)
+        with self.assertRaisesRegex(ReconciliationRequired, "lineage"):
+            self.submit(replace(PROPOSAL, strategy_revision="b" * 64))
+        self.assertEqual(self.broker.submits, 1)
+
+    def test_corrupt_intent_authorization_snapshot_cannot_pass_duplicate_recovery(self):
+        self.submit()
+        snapshot = json.loads(self.executor.db.execute("SELECT authorization FROM paper_intents").fetchone()[0])
+        snapshot["scope"]["allocation_usd"] = "999999"
+        with self.executor.db:
+            self.executor.db.execute("UPDATE paper_intents SET authorization=?", (json.dumps(snapshot),))
+        with self.assertRaisesRegex(ReconciliationRequired, "lineage"):
+            self.submit()
+        self.assertEqual(self.broker.submits, 1)
+        self.assertEqual(len(self.executor.reconcile()["open_orders"]), 1)
+
+    def test_reconciliation_and_owned_cancellation_continue_after_revocation(self):
+        order = self.submit()
+        self.executor.authorizations.set_state("fixture-consent", "revoked", now=NOW)
+        self.executor.cancel_pending(order["client_order_id"])
+        self.assertEqual(self.broker.orders[order["client_order_id"]]["status"], "canceled")
+        self.assertEqual(self.executor.reconcile()["positions"], [])
+
+    def test_grants_and_control_history_are_immutable_and_detached_from_input(self):
+        spec = grant_spec(authorization_id="immutable")
+        self.executor.authorizations.approve(spec, now=NOW)
+        spec["risk_policy"]["max_daily_loss"] = 10000
+        self.assertEqual(self.executor.authorizations.get("immutable")["scope"]["risk_policy"]["max_daily_loss"], 100)
+        for table in ("paper_authorizations", "paper_authorization_events"):
+            with self.subTest(table=table), self.assertRaises(sqlite3.IntegrityError), self.executor.db:
+                self.executor.db.execute("DELETE FROM " + table)
+        with self.assertRaises(AuthorizationError):
+            self.executor.authorizations.approve(grant_spec(), now=NOW)
+
+    def test_incomplete_expanded_and_nonfinite_grants_are_rejected(self):
+        cases = [{"symbols": ["SPY"]}, {"side": "sell"}, {"account_mode": "live"},
+                 {"provider": "binance"}, {"strategy_revision": "latest"},
+                 {"strategy_revision": "../file"}, {"granted_by": "<script>"},
+                 {"allocation_usd": True}, {"allocation_usd": "NaN"},
+                 {"risk_policy": {**grant_spec()["risk_policy"], "expected_feed": []}},
+                 {"risk_policy": {**grant_spec()["risk_policy"], "max_daily_loss": True}},
+                 {"expires_at": "2026-10-02T16:00:00"}, {"expires_at": NOW.isoformat()},
+                 {"unapproved_extra_permission": True}]
+        for index, changes in enumerate(cases):
+            with self.subTest(changes=changes), self.assertRaises(AuthorizationError):
+                self.executor.authorizations.approve(grant_spec(authorization_id="invalid-" + str(index), **changes), now=NOW)
+        self.assertEqual(self.executor.db.execute("SELECT count(*) FROM paper_authorizations").fetchone()[0], 1)
+
+    def test_historical_intent_migration_preserves_reconciliation_without_inventing_consent(self):
+        order = self.submit()
+        self.executor.close()
+        with sqlite3.connect(self.path) as historical:
+            for column in ("authorization", "strategy_id", "strategy_revision"):
+                historical.execute("ALTER TABLE paper_intents DROP COLUMN " + column)
+        self.executor = PaperExecutor(self.broker, self.path, self.policy)
+        self.assertIsNone(self.executor.db.execute("SELECT authorization FROM paper_intents").fetchone()[0])
+        self.assertEqual(len(self.executor.reconcile()["open_orders"]), 1)
+        self.assertEqual(self.broker.submits, 1)
+        with self.assertRaisesRegex(ReconciliationRequired, "lineage"):
+            self.submit()
+        self.executor.cancel_pending(order["client_order_id"])
+
+    def test_ledger_initialization_and_controls_do_not_commit_or_rollback_caller_work(self):
+        self.executor.db.execute("CREATE TABLE unrelated(value TEXT)")
+        for operation in (lambda: AuthorizationLedger(self.executor.db),
+                          lambda: self.executor.authorizations.approve(grant_spec(authorization_id="new"), now=NOW),
+                          lambda: self.executor.authorizations.set_state("fixture-consent", "paused", now=NOW)):
+            self.executor.db.execute("INSERT INTO unrelated VALUES('pending')")
+            with self.assertRaises(AuthorizationError):
+                operation()
+            self.assertTrue(self.executor.db.in_transaction)
+            self.assertEqual(self.executor.db.execute("SELECT count(*) FROM unrelated").fetchone()[0], 1)
+            self.executor.db.rollback()
+            self.assertEqual(self.executor.db.execute("SELECT count(*) FROM unrelated").fetchone()[0], 0)
 
 
 if __name__ == "__main__":
