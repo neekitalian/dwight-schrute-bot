@@ -23,3 +23,6 @@ dwight = "dwight.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["dwight*", "vwap_bot*"]
+
+[tool.vercel]
+entrypoint = "app:app"

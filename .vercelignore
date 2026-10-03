@@ -1,0 +1,17 @@
+# The public portal needs only these reviewed source files.
+/*
+!/app.py
+!/pyproject.toml
+!/vercel.json
+!/.vercelignore
+!/LICENSE
+!/NOTICE
+!/dwight
+/dwight/*
+!/dwight/__init__.py
+!/dwight/connection_catalog.py
+!/deploy
+/deploy/*
+!/deploy/vercel
+/deploy/vercel/*
+!/deploy/vercel/index.html

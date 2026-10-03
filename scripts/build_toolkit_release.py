@@ -25,6 +25,7 @@ ROOT_FILES = {
     "LICENSE", "NOTICE", "README.md", "pyproject.toml", "Dockerfile",
     ".gitignore", ".dockerignore", ".env.example", "requirements.lock",
     "requirements-rl-env.lock",
+    "app.py", "vercel.json", ".vercelignore",
 }
 REQUIRED = {"LICENSE", "NOTICE", "docs/VWAP-LICENSE", "pyproject.toml",
             "dwight/__init__.py", "dwight/__main__.py", "vwap_bot/engine.py"}
@@ -58,7 +59,7 @@ def allowed_path(name):
         return True
     if any(part.startswith(".") for part in path.parts):
         return False
-    if name in {"examples/tradingview/qqq_observer.pine", "deploy/linux/tradingview-nginx.conf.example", "examples/github-actions-tests.yml"}:
+    if name in {"examples/tradingview/qqq_observer.pine", "deploy/linux/tradingview-nginx.conf.example", "examples/github-actions-tests.yml", "deploy/vercel/index.html"}:
         return True
     if name == "examples/manual-fills.csv":
         return True  # Contents are also required to explicitly declare synthetic.

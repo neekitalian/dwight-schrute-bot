@@ -14,6 +14,13 @@ SPEC.loader.exec_module(BUILDER)
 
 
 class ToolkitReleaseTests(unittest.TestCase):
+    def test_vercel_source_allowlist_preserves_portal_without_extra_assets(self):
+        for name in ("app.py", "vercel.json", ".vercelignore", "deploy/vercel/index.html"):
+            self.assertTrue(BUILDER.allowed_path(name), name)
+        for name in ("deploy/vercel/account.json", "deploy/vercel/export.html", ".vercel/project.json",
+                     "deploy/vercel/.env", "deploy/vercel/private-notes/pricing.md"):
+            self.assertFalse(BUILDER.allowed_path(name), name)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

@@ -43,6 +43,11 @@ interface is separate from the continuous shadow/paper worker.
 
 Open the public [Dwight QQQ Research Lab](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 
+The [Vercel web portal](docs/vercel.md) provides a lightweight public platform
+setup page and credential-free configuration downloads. It has an explicit
+Python entrypoint and needs no model training or account secrets. The continuous
+worker remains a separate private Linux deployment.
+
 An optional [FinRL research adapter](docs/finrl-research.md) lets an offline policy
 accept or skip existing long QQQ VWAP candidates while preserving the replay's
 stops, sizing and loss rules. Point-in-time context snapshots can add separately

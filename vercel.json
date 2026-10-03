@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "python",
+  "functions": {
+    "app.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{.*,**/.*,**/.*/**,**/__pycache__/**,**/*.pyc,**/*.sqlite*,**/{private-data,runs,mlruns,models,releases,private-notes,internal-business,work,outputs,build,dist,tests,scripts,docs,examples,configs,vwap_bot,node_modules}/**,deploy/{huggingface,linux}/**}"
+    }
+  }
+}
