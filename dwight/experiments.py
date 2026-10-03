@@ -397,6 +397,13 @@ def _provenance(data: Path, symbol: str, raw: bytes, synthetic: bool, manifest_p
     hashes = [x["sha256"] for x in manifest.get("files", []) if x.get("path") == expected_path]
     if hashes != [hashlib.sha256(raw).hexdigest()]:
         raise ValueError("input checksum does not match dataset manifest")
+    if manifest.get("schema_version") == "vendor-rth-bars-v1":
+        from .vendor_history import verify_manifest
+        verify_manifest(manifest, path.parent)
+        provenance = {key: manifest[key] for key in ("source", "feed", "adjustment", "dataset_sha256")}
+        provenance.update(research_only=True, live_feed=False, source_acquisition="https_download",
+                          provider_metadata=manifest["provider_metadata"])
+        return provenance, manifest
     keys = ("schema_version", "start", "end", "symbols", "feed", "adjustment", "files")
     try:
         fingerprint = {key: manifest[key] for key in keys}

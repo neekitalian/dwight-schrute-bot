@@ -123,7 +123,7 @@ body, .gradio-container { background:#0a0a0a !important; color:#ededed !importan
 """
 HERO = """<div class="dw-masthead"><div class="dw-brand"><span class="dw-brand-mark" aria-hidden="true"></span>Dwight</div>
 <div class="dw-masthead-meta"><p class="dw-demo-status">Synthetic demo · No account connected</p></div></div>"""
-FOOTER = """<div class="dw-footer"><span>Dwight · Research preview 0.6.0</span>
+FOOTER = """<div class="dw-footer"><span>Dwight · Research preview 0.7.0</span>
 <a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">Source &amp; methodology</a></div>"""
 
 def section(title, subtitle=""):

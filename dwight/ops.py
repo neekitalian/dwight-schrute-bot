@@ -32,6 +32,8 @@ def doctor():
     return {
         'alpaca_key_present': present('APCA_API_KEY_ID', 'ALPACA_API_KEY'),
         'alpaca_secret_present': present('APCA_API_SECRET_KEY', 'ALPACA_SECRET_KEY'),
+        'databento_key_present': present('DATABENTO_API_KEY'),
+        'massive_key_present': present('MASSIVE_API_KEY'),
         'docker_available': bool(shutil.which('docker')),
         'dependencies': {name: importlib.util.find_spec(name) is not None
                          for name in ('sklearn','exchange_calendars','mlflow','pyarrow')},

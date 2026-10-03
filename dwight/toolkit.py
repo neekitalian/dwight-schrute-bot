@@ -24,6 +24,8 @@ ENV_EXAMPLE = """# Edit a private .env locally. Values must never enter GitHub o
 # These empty values are placeholders, not working credentials.
 APCA_API_KEY_ID=
 APCA_API_SECRET_KEY=
+DATABENTO_API_KEY=
+MASSIVE_API_KEY=
 DWIGHT_DATA_FEED=sip
 # Data credentials do not connect to Paper Trading by TradingView.
 """
@@ -163,6 +165,10 @@ def _manifest_shape(manifest, directory):
     provenance reader remains responsible for fingerprints and file hashes.
     """
     source = manifest.get("source")
+    if manifest.get("schema_version") == "vendor-rth-bars-v1":
+        from .vendor_history import verify_manifest
+        verify_manifest(manifest, directory)
+        return
     expected = {"alpaca": ("alpaca-rth-bars-v1", ("sip", "iex")),
                 "firstrate": ("firstrate-sample-rth-bars-v1", ("firstrate_aggregate",))}
     if not isinstance(source, str) or source not in expected:
@@ -275,6 +281,8 @@ def toolkit_status(path, *, environ=None):
     present = lambda *names: any(bool(environment.get(name, "").strip()) for name in names)
     credentials = {"alpaca_key_present": present("APCA_API_KEY_ID", "ALPACA_API_KEY"),
                    "alpaca_secret_present": present("APCA_API_SECRET_KEY", "ALPACA_SECRET_KEY"),
+                   "databento_key_present": present("DATABENTO_API_KEY"),
+                   "massive_key_present": present("MASSIVE_API_KEY"),
                    "workspace_env_status": env_status, "values_reported": False}
     if env_status in ("unsafe", "invalid"):
         issues.append("workspace_env_unsafe_or_invalid")

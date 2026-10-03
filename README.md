@@ -4,7 +4,7 @@ A small toolkit for reproducible QQQ research and reviewed paper trading. The fi
 
 **0.6.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.6.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
 
-The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, a private Alpaca read-only check, and downloadable setup profiles. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
+The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, private Alpaca, Databento and Massive checks, and downloadable setup profiles. [Market data connections](docs/data-providers.md) covers local key entry and QQQ history downloads. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 

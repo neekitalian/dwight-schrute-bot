@@ -105,11 +105,13 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     from .connection_catalog import PLATFORMS
     commands.add_parser('connections', help='List supported connection setup paths and their implementation status')
+    p = commands.add_parser('prepare-data-keys', help='Prepare private empty key fields without overwriting existing secrets')
+    p.add_argument('--file', type=Path, default=Path('.env'))
     p = commands.add_parser('connection-profile', help='Export a credential-free read-only setup profile')
     p.add_argument('platform', choices=PLATFORMS)
     p.add_argument('--feed', choices=['sip', 'iex'], default='sip')
     p.add_argument('--output', type=Path, required=True)
-    p = commands.add_parser('connection-check', help='Check a fixed public feed or private Alpaca paper access; never orders')
+    p = commands.add_parser('connection-check', help='Check fixed public feeds or private data-provider access; never orders')
     connection_source = p.add_mutually_exclusive_group(required=True)
     connection_source.add_argument('--platform', choices=PLATFORMS)
     connection_source.add_argument('--profile', type=Path)
@@ -140,6 +142,17 @@ def main():
     p.add_argument('--end', required=True, help='YYYY-MM-DD inclusive session date')
     p.add_argument('--symbols', nargs='+', choices=['QQQ'], default=['QQQ'])
     p.add_argument('--feed', choices=['sip','iex'], required=True)
+    p.add_argument('--output', type=Path, default=Path('private-data'))
+    p = commands.add_parser('history-estimate', help='Check Databento cost/count metadata; does not download billable bars')
+    p.add_argument('--start', required=True, help='YYYY-MM-DD inclusive session date')
+    p.add_argument('--end', required=True, help='YYYY-MM-DD inclusive session date')
+    p.add_argument('--dataset', required=True, help='Explicit Databento dataset ID')
+    p = commands.add_parser('download-history', help='Download private QQQ research history from Databento or Massive')
+    p.add_argument('--provider', choices=['databento', 'massive'], required=True)
+    p.add_argument('--start', required=True, help='YYYY-MM-DD inclusive session date')
+    p.add_argument('--end', required=True, help='YYYY-MM-DD inclusive session date')
+    p.add_argument('--dataset', help='Databento only: explicit dataset ID')
+    p.add_argument('--max-cost-usd', help='Databento only: estimated-cost allowance; not a provider billing cap')
     p.add_argument('--output', type=Path, default=Path('private-data'))
     p = commands.add_parser('download-qqq-sample', help='Download the official FirstRate QQQ sample for private research; no broker credentials')
     p.add_argument('--output', type=Path, default=Path('private-data/firstrate'))
@@ -283,11 +296,14 @@ def main():
         # Onboarding checks only the selected workspace, without importing an
         # unrelated current-directory .env into this process.
         if (args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list',
-                                'connections', 'connection-profile', 'connection-check'}
+                                'connections', 'connection-profile', 'connection-check', 'prepare-data-keys'}
                 and not args.command.startswith('manual-campaign-')):
             load_env()
         if args.command == 'connections':
             result = {'platforms': list(PLATFORMS.values()), 'order_execution': False}
+        elif args.command == 'prepare-data-keys':
+            from .private_config import prepare_data_keys
+            result = prepare_data_keys(args.file)
         elif args.command == 'connection-profile':
             from .connection_catalog import build_profile
             result = build_profile(args.platform, feed=args.feed)
@@ -303,7 +319,7 @@ def main():
                 platform, feed = profile.get('platform'), profile.get('feed', 'sip')
                 if profile != build_profile(platform, feed=feed):
                     raise ValueError('Use an unchanged Dwight setup profile; custom endpoints and credentials are not accepted')
-            if platform == 'alpaca':
+            if platform in {'alpaca', 'databento', 'massive'}:
                 load_env()
             result = check_connection(platform, feed=feed)
         elif args.command == 'init-workspace':
@@ -341,6 +357,13 @@ def main():
         elif args.command == 'download-data':
             from .data import download_alpaca_dataset
             result = download_alpaca_dataset(args.output,args.start,args.end,args.symbols,args.feed)
+        elif args.command == 'history-estimate':
+            from .vendor_history import estimate_history
+            result = estimate_history(args.start, args.end, dataset=args.dataset)
+        elif args.command == 'download-history':
+            from .vendor_history import download_history
+            result = download_history(args.provider, args.output, args.start, args.end,
+                                      dataset=args.dataset, max_cost_usd=args.max_cost_usd)
         elif args.command == 'download-qqq-sample':
             from .firstrate import download_firstrate_sample
             result = download_firstrate_sample(args.output)

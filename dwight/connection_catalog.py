@@ -210,6 +210,44 @@ PLATFORMS = {
         ],
         "check_kind": "public",
     },
+    "databento": {
+        "id": "databento", "name": "Databento", "category": "market_data",
+        "integration_roles": ["historical_market_data"],
+        "account_access": "private_metadata_check", "execution_status": "not_available",
+        "status_label": "Private metadata and history adapter",
+        "summary": "Check private historical API authentication, estimate QQQ data cost, then explicitly request bounded history from a selected dataset.",
+        "setup_steps": [
+            "Fill DATABENTO_API_KEY in the ignored private .env file; rotate any key previously shared in chat.",
+            "Run the private connection check. Metadata authentication does not establish a live feed or data license.",
+            "Select the exact Databento dataset, inspect a free history estimate, then explicitly authorize a bounded historical download.",
+        ],
+        "limitations": [
+            "Keys belong in the private installation; the public Space cannot receive or check them.",
+            "Historical retrieval can incur provider charges. Dwight requires an explicit cost allowance and checks the provider estimate before retrieval; this is not a provider-enforced billing cap.",
+            "Dataset-specific volume must not be relabelled Alpaca SIP. This adapter is historical research only and cannot supply the existing live Alpaca worker.",
+        ],
+        "docs": [{"label": "Databento historical API", "url": "https://databento.com/docs/api-reference-historical?historical=http"}],
+        "check_kind": "private",
+    },
+    "massive": {
+        "id": "massive", "name": "Massive", "category": "market_data",
+        "integration_roles": ["historical_market_data"],
+        "account_access": "private_reference_metadata_check", "execution_status": "not_available",
+        "status_label": "Private metadata and history adapter",
+        "summary": "Check private QQQ reference access and explicitly download raw one-minute QQQ stock aggregates for research.",
+        "setup_steps": [
+            "Fill MASSIVE_API_KEY in the ignored private .env file.",
+            "Run the private connection check. Reference metadata success does not prove minute-history or real-time entitlement.",
+            "Request completed QQQ sessions and retain the provider-specific provenance for research.",
+        ],
+        "limitations": [
+            "Keys belong in the private installation; the public Space cannot receive or check them.",
+            "Historical availability and limits depend on the account plan. No subscription is created or upgraded by Dwight.",
+            "Massive aggregates remain a distinct source; they cannot be relabelled Alpaca SIP or used as an existing Alpaca shadow release.",
+        ],
+        "docs": [{"label": "Massive stocks REST API", "url": "https://massive.com/docs/rest/stocks/overview"}],
+        "check_kind": "private",
+    },
 }
 
 
@@ -217,7 +255,7 @@ def build_profile(platform: str, feed: str = "sip") -> dict:
     """Build a serializable research profile containing no credential values.
 
     Profiles describe the selected workflow; they do not connect or authorize
-    an account. Only Alpaca currently consumes private credential variables.
+    an account. Alpaca, Databento and Massive consume private credential variables.
     All endpoints remain fixed in the read-only connection-check layer.
     """
     if not isinstance(platform, str) or platform not in PLATFORMS:
@@ -240,4 +278,6 @@ def build_profile(platform: str, feed: str = "sip") -> dict:
     if platform == "alpaca":
         profile["credential_env_names"] = ["APCA_API_KEY_ID", "APCA_API_SECRET_KEY"]
         profile["feed"] = feed
+    elif platform in ("databento", "massive"):
+        profile["credential_env_names"] = ["DATABENTO_API_KEY" if platform == "databento" else "MASSIVE_API_KEY"]
     return profile

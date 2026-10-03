@@ -45,6 +45,8 @@ class ToolkitTests(unittest.TestCase):
         self.assertNotIn("tracking_uri", json.loads((self.root / "configs/walkforward.json").read_text()))
         self.assertFalse((self.root / ".env").exists())
         self.assertIn("APCA_API_KEY_ID=\n", (self.root / ".env.example").read_text())
+        self.assertIn("DATABENTO_API_KEY=\n", (self.root / ".env.example").read_text())
+        self.assertIn("MASSIVE_API_KEY=\n", (self.root / ".env.example").read_text())
         if os.name == "posix":
             for path in (self.root, *self.root.rglob("*")):
                 self.assertEqual(path.stat().st_mode & 0o777, 0o700 if path.is_dir() else 0o600)

@@ -33,7 +33,7 @@ PUBLIC_URLS = {
     "kraken": "https://api.kraken.com/0/public/Ticker?pair=XBTUSD",
     "polymarket": "https://gamma-api.polymarket.com/markets?limit=1&active=true&closed=false",
 }
-SUPPORTED_PLATFORMS = tuple(PUBLIC_URLS) + ("alpaca", "tradingview", "ibkr", "schwab")
+SUPPORTED_PLATFORMS = tuple(PUBLIC_URLS) + ("alpaca", "tradingview", "ibkr", "schwab", "databento", "massive")
 
 _ERROR_MESSAGES = {
     "authentication_failed": "Authentication was rejected. Check the private credentials for the selected environment.",
@@ -263,6 +263,12 @@ def check_connection(platform: str, *, environ: Mapping[str, str] | None = None,
         return _result(name, "manual_only", "Use TradingView with the manual paper journal, or optionally configure a separate private alert inbox. Dwight has no native TradingView account API connection.")
     if name in ("ibkr", "schwab"):
         return _result(name, "not_implemented", "An account connector for this platform is not implemented. Complete provider setup separately; Dwight has not verified a connection.")
+    if name == "databento":
+        from .databento_data import check_databento_connection
+        return check_databento_connection(environ, transport=transport)
+    if name == "massive":
+        from .massive_data import check_massive_connection
+        return check_massive_connection(environ, transport=transport)
     try:
         return _alpaca_probe(environ, transport, feed) if name == "alpaca" else _public_probe(name, transport)
     except _CheckFailure as exc:

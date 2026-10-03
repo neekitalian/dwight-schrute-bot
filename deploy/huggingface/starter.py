@@ -1,6 +1,6 @@
 """Public onboarding directions only. No workspace, account or credential access."""
 REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
-RELEASE = REPOSITORY + '/releases/tag/v0.6.0'
+RELEASE = REPOSITORY + '/releases/tag/v0.7.0'
 CHOICES = (
     'Explore the research demo',
     'Research my own QQQ history',
@@ -38,6 +38,8 @@ dwight download-qqq-sample --output ./my-dwight/private-data/firstrate
 Run `scripts/review_qqq_sample.py` with the downloaded manifest to create the private report.
 The available official sample is useful for checking the complete process; it is too short to train a deployment model.
 For model research, collect substantially more QQQ history and preserve the same feed definition for future observation.
+Databento and Massive history adapters are available privately. Run `dwight prepare-data-keys`,
+fill your local `.env`, then follow the [market data guide]({REPOSITORY}/blob/main/docs/data-providers.md).
 
 [Complete private research steps]({REPOSITORY}/blob/main/docs/quickstart.md)''',
     CHOICES[2]: f'''### TradingView to a private observation inbox

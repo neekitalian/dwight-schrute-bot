@@ -30,7 +30,7 @@ are documented research proposals; no transformer is loaded, evaluated or credit
 
 - **Start here:** four setup paths and a versioned source toolkit download. Directions
   keep private historical research and TradingView paper workflows off the public Space.
-- **Connections:** setup paths for TradingView, Alpaca, IBKR, Schwab, Coinbase, Binance, Kraken and Polymarket. Download credential-free profiles and check public crypto/discovery access. Alpaca checks run privately; IBKR and Schwab adapters are planned.
+- **Connections:** setup paths for TradingView, Alpaca, Databento, Massive, IBKR, Schwab, Coinbase, Binance, Kraken and Polymarket. Download credential-free profiles and check public crypto/discovery access. Alpaca and the historical data providers run privately; IBKR and Schwab adapters are planned.
 - **Performance:** simulated equity, drawdown, returns, session P&L and trade risk multiples.
   Compare VWAP, a simple volume filter and Dwight on the same later test sessions.
 - **Walk-forward:** three chronological long-only tests, with training and validation dates,

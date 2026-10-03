@@ -56,9 +56,9 @@ def details(platform):
     return f"### {item['name']}\n\n**{item['status_label']}**\n\n{item['summary']}\n\n{steps}\n\n**Current limits**\n\n{limits}\n\n{docs}"
 
 
-@lru_cache(maxsize=16)
+@lru_cache(maxsize=20)
 def profile_download(platform, feed):
-    # Validate before creating a path. At most eight platforms times two feeds;
+    # Validate before creating a path. At most ten platforms times two feeds;
     # the directory contains only generated, credential-free catalog profiles.
     profile = build_profile(platform, feed=feed)
     folder = Path(tempfile.mkdtemp(prefix='dwight-public-profile-'))
@@ -72,6 +72,10 @@ def setup(platform, feed='sip'):
     profile = build_profile(platform, feed=feed)
     command = f'dwight connection-check --profile ./dwight-{platform}.json'
     instructions = details(platform) + '\n\n**Use the downloaded profile locally**\n\n```sh\n' + command + '\n```\n\nInstall the current toolkit first. This command makes read-only checks; it cannot submit orders.'
+    if platform in {'databento', 'massive'}:
+        instructions += ('\n\n**Add your key privately**\n\nRun `dwight prepare-data-keys` in your local workspace. '
+                         'Open `.env` and fill the field named in this profile. Keep it off this public page. '
+                         '[History download guide](https://github.com/neekitalian/dwight-schrute-bot/blob/main/docs/data-providers.md)')
     return instructions, json.dumps(profile, indent=2), profile_download(platform, feed)
 
 

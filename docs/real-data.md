@@ -1,5 +1,10 @@
 # Real QQQ data and the deployment boundary
 
+[Market data connections](data-providers.md) includes private Databento and
+Massive API adapters, local key entry, bounded QQQ minute retrieval and verified
+research manifests. These adapters have fixture coverage; actual account access
+and history require private keys and the applicable data entitlement.
+
 Dwight can privately download the official [FirstRate Data QQQ sample](https://firstratedata.com/i/etf/QQQ) without an account or a payment. The product page links the exact ZIP used by `dwight.firstrate.download_firstrate_sample`. This is a real vendor sample, not synthetic prices and not an Alpaca feed.
 
 ```sh

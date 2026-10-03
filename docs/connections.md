@@ -2,7 +2,7 @@
 
 The Connections page distinguishes working Dwight checks from setup guidance.
 It can check public crypto prices and public prediction-market discovery. The
-Alpaca account check runs only in your private runtime. The public Hugging Face
+Alpaca, Databento and Massive checks run only in your private runtime. The public Hugging Face
 Space has **no authenticated account connection flow**: do not enter API keys,
 passwords, OAuth tokens, wallet secrets, or account exports there.
 
@@ -21,6 +21,8 @@ does not open an account, complete OAuth, connect a wallet, or place an order.
 | `binance` | Public BTCUSDT Spot price check | No authenticated account or testnet integration; future testnet adapter |
 | `kraken` | Public XBTUSD Spot ticker check | No authenticated account integration; future adapter |
 | `polymarket` | Public market discovery; existing public book snapshot recording | Research only; no wallet or authenticated trading integration |
+| `databento` | Private metadata check, cost estimate and bounded QQQ history | Market data only; requires explicit dataset and download cost allowance |
+| `massive` | Private QQQ reference check and bounded minute history | Market data only; coverage depends on your data plan |
 
 The product separates **chart**, **signal source**, **market data** and
 **execution account**. A TradingView alert may eventually reach Dwight's private
@@ -68,6 +70,12 @@ python -m dwight connection-check --platform alpaca --feed sip
 Use either `--profile FILE` or `--platform PLATFORM`. `--feed` accepts `sip` or
 `iex` and applies to Alpaca. These commands do not place orders. TradingView
 returns manual-workflow guidance; IBKR and Schwab remain planned adapters.
+
+For Databento or Massive, prepare private key fields with
+`python -m dwight prepare-data-keys`. Fill your local `.env`, then run
+`python -m dwight connection-check --platform databento` or `--platform massive`.
+Follow [market data connections](data-providers.md) for history downloads and
+Databento cost controls. These provider checks do not run in the public Space.
 
 ## Stocks
 
