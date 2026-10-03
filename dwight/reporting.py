@@ -15,7 +15,7 @@ import re
 
 from vwap_bot.engine import Config
 from .connectors.csv import read_bars
-from .experiments import JSONModel, NY, _PriorVolumeFilter, _metrics, _replay, complete_sessions, split_sessions
+from .experiments import JSONModel, NY, _PriorVolumeFilter, _metrics, _replay, complete_sessions, direction_policy, split_sessions
 
 VARIANTS = {
     "baseline": ("VWAP baseline", "baseline", "#579bff"),
@@ -80,6 +80,8 @@ def _verified_replays(directory, report):
         raise ValueError("report requires QQQ with explicit data provenance")
     if report["synthetic"] != (report.get("source") == "synthetic"):
         raise ValueError("experiment data provenance is inconsistent")
+    policy = direction_policy(report)
+    long_only = policy == "long_only"
     raw = (directory/"input.csv").read_bytes()
     if hashlib.sha256(raw).hexdigest() != report.get("input_sha256"):
         raise ValueError("experiment input checksum mismatch")
@@ -89,6 +91,9 @@ def _verified_replays(directory, report):
         raise ValueError("experiment code changed; reproduce the run with its recorded version before charting")
     sessions, excluded = complete_sessions(list(read_bars(directory/"input.csv")))
     settings_record = report["experiment_settings"]
+    configured_long_only = settings_record.get("long_only", False)
+    if type(configured_long_only) is not bool or configured_long_only != long_only:
+        raise ValueError("experiment direction policy disagrees with settings")
     expected = split_sessions(sessions, settings_record["train_fraction"], settings_record["validation_fraction"])
     if expected != report.get("partitions") or expected != json.loads((directory/"splits.json").read_text()) or excluded != report.get("excluded_sessions"):
         raise ValueError("recorded chronological partitions do not match the dataset")
@@ -106,6 +111,8 @@ def _verified_replays(directory, report):
         for key in ("input_sha256", "synthetic", "symbol", "strategy", "code_sha256"):
             if model.artifact.get(key) != report.get(key):
                 raise ValueError(f"model and experiment disagree on {key}")
+        if direction_policy(model.artifact) != policy:
+            raise ValueError("model and experiment disagree on direction policy")
         if model.artifact.get("threshold") != report.get("selected_threshold"):
             raise ValueError("model and experiment disagree on threshold")
         models["filtered"] = model
@@ -114,7 +121,7 @@ def _verified_replays(directory, report):
         if variant not in evaluation:
             continue
         threshold = report["selected_threshold"] if variant == "filtered" else .5
-        bot = _replay(bars, settings, models[variant], threshold)
+        bot = _replay(bars, settings, models[variant], threshold, long_only=long_only)
         trade_path = directory/f"test-{VARIANTS[variant][1]}-trades.json"
         if not _same(bot.trades, json.loads(trade_path.read_text())):
             raise ValueError(f"saved {variant} trades do not match replay")

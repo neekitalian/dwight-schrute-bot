@@ -36,8 +36,17 @@ DEFAULTS = {
     "min_train_samples": 100, "min_validation_samples": 30,
     "min_test_samples": 30, "min_class_samples": 10,
     "min_validation_trades": 5, "thresholds": [.35, .5, .65],
+    "long_only": False,
     "tracking_uri": None, "dataset_manifest": None,
 }
+
+
+def direction_policy(artifact: dict) -> str:
+    """Legacy artifacts without a policy keep their original two directions."""
+    value = artifact.get("direction_policy", "long_and_short")
+    if type(value) is not str or value not in ("long_only", "long_and_short"):
+        raise ValueError("invalid direction policy")
+    return value
 
 
 def extract_features(bot: Bot, pending: dict) -> dict:
@@ -75,6 +84,7 @@ class JSONModel:
             raise ValueError("feature version mismatch")
         if artifact.get("feature_names") != list(FEATURE_NAMES):
             raise ValueError("feature names/order mismatch")
+        direction_policy(artifact)
         for name in ("mean", "scale", "coefficients"):
             vector = artifact.get(name)
             if not isinstance(vector, list) or len(vector) != len(FEATURE_NAMES):
@@ -129,10 +139,13 @@ class JSONModel:
 
 class CandidateBot(Bot):
     """Replay engine with candidate capture and an optional take/skip filter."""
-    def __init__(self, config=Config(), model=None, threshold=.5):
+    def __init__(self, config=Config(), model=None, threshold=.5, *, long_only=False):
         super().__init__(config)
+        if type(long_only) is not bool:
+            raise ValueError("long_only must be a boolean")
         if not 0 <= threshold <= 1:
             raise ValueError("threshold must be a probability")
+        self._long_only = long_only
         self.model, self.threshold = model, threshold
         self.candidates = []
         self._candidate_by_time = {}
@@ -149,7 +162,10 @@ class CandidateBot(Bot):
             "session": self.day.isoformat(), "feature_version": FEATURE_VERSION,
             "features": features, "taken": True,
         }
-        if self.model:
+        if self._long_only and self.pending["direction"] != 1:
+            candidate["taken"] = False
+            candidate["rejection_reason"] = "long_only_policy"
+        elif self.model:
             candidate["probability"] = self.model.predict_probability(features)
             candidate["taken"] = candidate["probability"] >= self.threshold
         self.candidates.append(candidate)
@@ -273,8 +289,8 @@ class _PriorVolumeFilter:
         return float(features["relative_volume"] >= 1)
 
 
-def _replay(bars, settings, model=None, threshold=.5):
-    bot = CandidateBot(settings, model, threshold)
+def _replay(bars, settings, model=None, threshold=.5, *, long_only=False):
+    bot = CandidateBot(settings, model, threshold, long_only=long_only)
     for b in bars:
         bot.feed(b)
     bot.finish()
@@ -423,6 +439,8 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
     if set(cfg)-set(DEFAULTS):
         raise ValueError(f"unknown experiment settings: {sorted(set(cfg)-set(DEFAULTS))}")
     options = {**DEFAULTS, **cfg}
+    if type(options["long_only"]) is not bool:
+        raise ValueError("long_only must be a boolean")
     for key in ("min_train_samples", "min_validation_samples", "min_test_samples", "min_class_samples", "min_validation_trades"):
         if type(options[key]) is not int or options[key] < 1:
             raise ValueError(f"{key} must be positive")
@@ -450,6 +468,7 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
             "status": "insufficient_data", "symbol": symbol, "synthetic": bool(synthetic),
             **provenance,
             "promotion_eligible": False, "feature_version": FEATURE_VERSION,
+            "direction_policy": "long_only" if options["long_only"] else "long_and_short",
             "input_sha256": hashlib.sha256(raw).hexdigest(),
             "code_sha256": hashlib.sha256(b"".join(p.read_bytes() for p in code_paths)).hexdigest(),
             "strategy": asdict(settings), "experiment_settings": options,
@@ -471,7 +490,7 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
         for name, days in partitions.items():
             bars = [b for day in days for b in sessions[day]]
             bars_by_partition[name] = bars
-            baseline = _replay(bars, settings)
+            baseline = _replay(bars, settings, long_only=options["long_only"])
             candidates[name] = baseline.candidates
             labeled, purged = purge_labels(baseline.candidates, bars[0].timestamp, bars[-1].timestamp+timedelta(minutes=5)) if bars else ([], 0)
             rows[name] = labeled
@@ -480,7 +499,7 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
                                              "purged": purged, "unlabeled": len(baseline.candidates)-len(labeled)-purged}
             report["evaluation"][name] = {"baseline": _metrics(baseline)}
             _write(directory/f"{name}-baseline-trades.json", baseline.trades)
-            simple = _replay(bars, settings, _PriorVolumeFilter())
+            simple = _replay(bars, settings, _PriorVolumeFilter(), long_only=options["long_only"])
             report["evaluation"][name]["simple_volume"] = _metrics(simple)
             _write(directory/f"{name}-simple-volume-trades.json", simple.trades)
             if not days or len(labeled) < options[f"min_{name}_samples"]:
@@ -493,7 +512,8 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
             model = fit_model(rows["train"], synthetic)
             trials = []
             for threshold in sorted(set(options["thresholds"])):
-                candidate = _replay(bars_by_partition["validation"], settings, model, threshold)
+                candidate = _replay(bars_by_partition["validation"], settings, model, threshold,
+                                    long_only=options["long_only"])
                 trials.append({"threshold": threshold, **_metrics(candidate)})
             report["validation_threshold_trials"] = trials
             eligible = [x for x in trials if x["trades"] >= options["min_validation_trades"]]
@@ -506,13 +526,15 @@ def experiment(data: Path, symbol: str, output: Path, synthetic=False, config: d
                 threshold = best["threshold"]
                 report["selected_threshold"] = threshold
                 model.artifact.update(threshold=threshold, symbol=symbol,
+                                      direction_policy=report["direction_policy"],
                                       **provenance,
                                       input_sha256=report["input_sha256"],
                                       code_sha256=report["code_sha256"],
                                       strategy=asdict(settings))
                 model = JSONModel(model.artifact)
                 for name in partitions:
-                    filtered = _replay(bars_by_partition[name], settings, model, threshold)
+                    filtered = _replay(bars_by_partition[name], settings, model, threshold,
+                                       long_only=options["long_only"])
                     report["evaluation"][name]["filtered"] = _metrics(filtered)
                     report["evaluation"][name]["probabilities_on_baseline_candidates"] = probability_metrics(rows[name], model)
                     _write(directory/f"{name}-filtered-trades.json", filtered.trades)

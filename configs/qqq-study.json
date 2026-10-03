@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "symbol": "QQQ",
+  "start": "2016-01-04",
+  "end": "2026-09-16",
+  "feed": "sip",
+  "adjustment": "raw",
+  "previously_inspected_periods": [["2026-09-17", "2026-10-01"]],
+  "experiment": {
+    "long_only": true,
+    "train_fraction": 0.6,
+    "validation_fraction": 0.2,
+    "min_train_samples": 100,
+    "min_validation_samples": 30,
+    "min_test_samples": 30,
+    "min_class_samples": 10,
+    "min_validation_trades": 5,
+    "thresholds": [0.35, 0.5, 0.65],
+    "strategy": {"commission": 0.005, "slippage": 0.01}
+  },
+  "cost_stress_multiplier": 2,
+  "minimum_filtered_test_trades": 30
+}

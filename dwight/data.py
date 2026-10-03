@@ -7,6 +7,7 @@ Raw HTTP response bytes are preserved separately and never contain headers.
 from __future__ import annotations
 
 import csv
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 import hashlib
@@ -15,11 +16,13 @@ import json
 import os
 from pathlib import Path
 import re
+import ssl
+import stat
 import time
 from typing import Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -159,8 +162,17 @@ class _NoRedirect(HTTPRedirectHandler):
         return None
 
 
+def _tls_context():
+    """Use maintained public roots when available without weakening TLS checks."""
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def _request_page(url: str, headers: dict[str, str]) -> bytes:
-    opener = build_opener(_NoRedirect())
+    opener = build_opener(_NoRedirect(), HTTPSHandler(context=_tls_context()))
     for attempt in range(4):
         try:
             with opener.open(Request(url, headers=headers, method="GET"), timeout=45) as response:
@@ -248,9 +260,47 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _private_output_directory(path: Path) -> None:
+    """Create private parents without chmodding unrelated existing ancestors."""
+    if path.exists():
+        if not path.is_dir() or (os.name == "posix" and stat.S_IMODE(path.stat().st_mode) != 0o700):
+            raise ValueError("Existing dataset output must be a mode-0700 directory; choose a new private child")
+        return
+    missing, ancestor = [], path
+    while not ancestor.exists():
+        missing.append(ancestor)
+        ancestor = ancestor.parent
+    if not ancestor.is_dir():
+        raise ValueError("Dataset output ancestor must be a directory")
+    for directory in reversed(missing):
+        directory.mkdir(mode=0o700)
+        directory.chmod(0o700)
+
+
+@contextmanager
+def _private_file(path: Path, *, binary=False, newline=None):
+    """A new file is private before its first byte; never change the umask."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        stream = os.fdopen(descriptor, "wb" if binary else "w", **({} if binary else {"newline": newline}))
+    except BaseException:
+        os.close(descriptor)
+        raise
+    with stream:
+        yield stream
+
+
+def _write_private_json(path: Path, value) -> None:
+    with _private_file(path) as stream:
+        json.dump(value, stream, indent=2, allow_nan=False)
+        stream.write("\n")
+
+
 def _write_bars(path: Path, bars: list[Bar], sessions: list[Session]) -> None:
     closes = {session.date: session.close.isoformat() for session in sessions}
-    with path.open("w", newline="") as stream:
+    with _private_file(path, newline="") as stream:
         writer = csv.writer(stream)
         writer.writerow(["timestamp", "open", "high", "low", "close", "volume", "session_close"])
         for bar in bars:
@@ -271,7 +321,8 @@ def _write_parquet(path: Path, bars: list[Bar], sessions: list[Session]) -> bool
         "session_close": pa.array([closes[bar.timestamp.astimezone(NY).date().isoformat()] for bar in bars],
                                   type=pa.timestamp("us", tz="UTC")),
     })
-    pq.write_table(table, path, compression="zstd")
+    with _private_file(path, binary=True) as stream:
+        pq.write_table(table, stream, compression="zstd")
     return True
 
 
@@ -321,10 +372,14 @@ def download_alpaca_dataset(output_dir: str | Path, start: str | date, end: str 
         raise ValueError("now must include a timezone")
     if sessions[-1].close + timedelta(minutes=1) > collected_at:
         raise ValueError("Requested final session has not fully completed")
-    directory = Path(output_dir).resolve() / (collected_at.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:12])
-    directory.mkdir(parents=True, exist_ok=False)
+    output = Path(output_dir).resolve()
+    _private_output_directory(output)
+    directory = output / (collected_at.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:12])
+    directory.mkdir(mode=0o700, exist_ok=False)
+    directory.chmod(0o700)
     raw_dir = directory / "raw"
-    raw_dir.mkdir()
+    raw_dir.mkdir(mode=0o700)
+    raw_dir.chmod(0o700)
     query = {"symbols": ",".join(symbols), "timeframe": "1Min", "start": sessions[0].open.isoformat(),
              "end": (sessions[-1].close - timedelta(microseconds=1)).isoformat(), "feed": feed,
              "adjustment": adjustment, "asof": "-", "limit": 10000, "sort": "asc"}
@@ -334,7 +389,8 @@ def download_alpaca_dataset(output_dir: str | Path, start: str | date, end: str 
         for number in range(1, max_pages + 1):
             content = _request_page(ALPACA_BARS_URL + "?" + urlencode(query), headers)
             page = raw_dir / f"page-{number:06d}.json"
-            page.write_bytes(content)
+            with _private_file(page, binary=True) as stream:
+                stream.write(content)
             pages.append(page)
             page_info.append({"path": str(page.relative_to(directory)), "sha256": sha256_file(page),
                               "retrieved_at": datetime.now(UTC).isoformat()})
@@ -353,7 +409,7 @@ def download_alpaca_dataset(output_dir: str | Path, start: str | date, end: str 
         else:
             raise ValueError("Alpaca page limit reached before history was complete")
         session_path = directory / "sessions.json"
-        session_path.write_text(json.dumps([session.as_dict() for session in sessions], indent=2) + "\n")
+        _write_private_json(session_path, [session.as_dict() for session in sessions])
         files = [{"path": "sessions.json", "sha256": sha256_file(session_path)}]
         counts, bar_paths = {}, {}
         for symbol in symbols:
@@ -384,10 +440,10 @@ def download_alpaca_dataset(output_dir: str | Path, start: str | date, end: str 
                                     "Historical revisions and split adjustments are not point-in-time corporate-action data"]}
         fingerprint = {key: manifest[key] for key in ("schema_version", "start", "end", "symbols", "feed", "adjustment", "files")}
         manifest["dataset_sha256"] = hashlib.sha256(json.dumps(fingerprint, sort_keys=True).encode()).hexdigest()
-        (directory / "manifest.json").write_text(json.dumps(manifest, indent=2, allow_nan=False) + "\n")
+        _write_private_json(directory / "manifest.json", manifest)
         return dict(manifest, directory=str(directory))
     except Exception as exc:
         # Do not persist provider error bodies, exception strings or credentials.
-        (directory / "failed.json").write_text(json.dumps({"status": "failed", "error_type": type(exc).__name__,
-                                                          "raw_pages": page_info}, indent=2) + "\n")
+        _write_private_json(directory / "failed.json", {"status": "failed", "error_type": type(exc).__name__,
+                                                         "raw_pages": page_info})
         raise

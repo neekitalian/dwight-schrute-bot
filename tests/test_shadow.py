@@ -25,7 +25,7 @@ def minute_rows(count):
 
 class _CandidateEveryBar:
     """Deterministic candidate producer isolates monitor persistence from strategy."""
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.candidates = []
 
     def feed(self, bar):

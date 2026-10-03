@@ -32,6 +32,15 @@ def _code_hash():
     return hashlib.sha256(Path(experiments.__file__).read_bytes() + engine.read_bytes()).hexdigest()
 
 
+class _LongOnlyReferenceBot(Bot):
+    """Reference strategy with the declared direction gate, without candidate capture."""
+
+    def _signal(self, bar, previous):
+        super()._signal(bar, previous)
+        if self.pending and self.pending["direction"] != 1:
+            self.pending = None
+
+
 def _exit_event(bar, trade, config):
     """Independently check the first executable exit under the OHLC convention."""
     direction, stop, target = trade["direction"], trade["stop"], trade["target"]
@@ -136,6 +145,21 @@ def audit_experiment(experiment_dir: Path) -> dict:
     try:
         report = read("report.json")
         result.update(run_id=report.get("run_id"), symbol=report.get("symbol"), synthetic=report.get("synthetic"))
+        direction_policy = report.get("direction_policy", "long_and_short")
+        configured_long_only = report["experiment_settings"].get("long_only", False)
+        direction_matches = (direction_policy in ("long_only", "long_and_short")
+                             and type(configured_long_only) is bool
+                             and configured_long_only == (direction_policy == "long_only"))
+        check("direction_policy", "Direction policy", "passed" if direction_matches else "failed",
+              "The declared direction policy must agree with experiment settings; absent legacy fields mean long and short.", 1)
+        if not direction_matches:
+            check("replay_evidence", "Replay evidence", "unverified", "Replay was withheld because direction policy is invalid or inconsistent.")
+            return finish()
+        long_only = direction_policy == "long_only"
+        result["direction_policy"] = direction_policy
+        if long_only:
+            result["paper_compatibility"]["detail"] = (
+                "The declared replay policy permits only long positions. This does not verify paper execution compatibility; no broker fills are audited here.")
         check("qqq_scope", "QQQ scope", "passed" if report.get("symbol") == "QQQ" else "failed", "The experiment declares QQQ as its instrument.", 1)
         raw = (directory / "input.csv").read_bytes()
         checksum_matches = hashlib.sha256(raw).hexdigest() == report.get("input_sha256")
@@ -164,8 +188,9 @@ def audit_experiment(experiment_dir: Path) -> dict:
             model = JSONModel.load(directory / "model.json", report["model_sha256"])
             coherent = all(_same(model.artifact.get(key), report.get(key)) for key in
                            ("symbol", "strategy", "synthetic", "input_sha256", "code_sha256"))
+            coherent = coherent and model.artifact.get("direction_policy", "long_and_short") == direction_policy
             coherent = coherent and _same(model.artifact.get("threshold"), report.get("selected_threshold"))
-            check("model_integrity", "Frozen model", "passed" if coherent else "failed", "Model checksum, strategy, input, code, provenance flag and decision threshold agree.", 1)
+            check("model_integrity", "Frozen model", "passed" if coherent else "failed", "Model checksum, strategy, direction policy, input, code, provenance flag and decision threshold agree.", 1)
             if not coherent:
                 model = None
         except (ValueError, OSError):
@@ -190,7 +215,8 @@ def audit_experiment(experiment_dir: Path) -> dict:
         for variant, filename, policy in variants:
             prefix = f"{partition}_{variant}"
             try:
-                bot = _replay(bars, settings, policy, report.get("selected_threshold", .5) if variant == "filtered" else .5)
+                bot = _replay(bars, settings, policy, report.get("selected_threshold", .5) if variant == "filtered" else .5,
+                              long_only=long_only)
                 saved_trades = read(f"{partition}-{filename}-trades.json")
                 trade_match = _same(saved_trades, bot.trades)
                 check(prefix + "_trades", f"{partition} {variant} trade replay", "passed" if trade_match else "failed", "Saved trades are compared with an independent replay of the same frozen inputs.", len(saved_trades))
@@ -201,11 +227,11 @@ def audit_experiment(experiment_dir: Path) -> dict:
                 trade_count += len(saved_trades)
                 result["paper_compatibility"]["short_trades"] += sum(trade.get("direction") == -1 for trade in saved_trades)
                 if variant == "baseline":
-                    reference = Bot(settings)
+                    reference = _LongOnlyReferenceBot(settings) if long_only else Bot(settings)
                     for bar in bars:
                         reference.feed(bar)
                     reference.finish()
-                    check(prefix + "_engine", f"{partition} baseline strategy", "passed" if _same(reference.trades, bot.trades) else "failed", "Candidate capture preserves trades from the unchanged reference strategy.", len(bot.trades))
+                    check(prefix + "_engine", f"{partition} baseline strategy", "passed" if _same(reference.trades, bot.trades) else "failed", "Candidate capture preserves reference-strategy trades under the declared direction policy.", len(bot.trades))
                     candidates = saved_candidates.get(partition)
                 elif variant == "filtered":
                     candidates = read(f"{partition}-filtered-candidates.json")

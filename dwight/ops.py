@@ -54,10 +54,23 @@ def source_sha256():
 
 
 def _validate_candidate(model, report, policy, feed, symbol):
-    from .experiments import JSONModel
+    from .experiments import JSONModel, direction_policy
     if symbol != 'QQQ' or policy.get('allowed_symbols') != ['QQQ']:
         raise ValueError('Dwight equity releases and policies must permit QQQ only')
     JSONModel(model)
+    direction = direction_policy(model)
+    if direction_policy(report) != direction:
+        raise ValueError('model/report direction policy mismatch')
+    if 'direction_policy' in policy and direction_policy(policy) != direction:
+        raise ValueError('shadow policy direction differs from the experiment')
+    settings = report.get('experiment_settings', {})
+    if not isinstance(settings, dict):
+        raise ValueError('invalid experiment settings')
+    if 'long_only' in settings:
+        if type(settings['long_only']) is not bool:
+            raise ValueError('invalid experiment long_only setting')
+        if ('long_only' if settings['long_only'] else 'long_and_short') != direction:
+            raise ValueError('experiment setting differs from direction policy')
     if model.get('symbol') != symbol or report.get('symbol') != symbol:
         raise ValueError('release symbol differs from the experiment')
     if model.get('feed') != feed or report.get('feed') != feed:
@@ -122,6 +135,7 @@ def release(experiment_dir, output, *, feed, symbol, policy_path):
               'application_source_sha256':source_sha256(),
               'feed':feed,'symbol':symbol,'mode':'shadow','paper_approved':False,
               'synthetic':artifact['synthetic'],
+              'direction_policy':artifact.get('direction_policy','long_and_short'),
               'files':{name:sha256(output/name) for name in ('model.json','report.json','policy.json')}}
     (output/'release.json').write_text(json.dumps(manifest,indent=2)+'\n')
     return manifest
@@ -143,6 +157,9 @@ def verify_release(directory, feed=None):
     report = json.loads((directory/'report.json').read_text())
     policy = json.loads((directory/'policy.json').read_text())
     _validate_candidate(artifact,report,policy,manifest['feed'],manifest['symbol'])
+    from .experiments import direction_policy
+    if direction_policy(manifest) != direction_policy(artifact):
+        raise ValueError('release direction policy differs from the model')
     if report.get('model_sha256') != sha256(directory/'model.json'):
         raise ValueError('model checksum differs from evaluated artifact')
     if manifest.get('synthetic') != artifact['synthetic'] or manifest.get('paper_approved') is not False:

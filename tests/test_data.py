@@ -2,14 +2,19 @@ import csv
 from datetime import datetime, timedelta, timezone
 import importlib.util
 import json
+import os
 from pathlib import Path
+import ssl
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
+from urllib.request import HTTPSHandler
 
 from dwight.data import (Session, download_alpaca_dataset, exchange_sessions, normalize_minutes,
-                         session_close_for_bar, sha256_file, fetch_alpaca_bars)
+                         session_close_for_bar, sha256_file, fetch_alpaca_bars,
+                         _request_page, _tls_context, _NoRedirect)
 
 UTC = timezone.utc
 
@@ -26,6 +31,42 @@ def records(s):
 
 
 class DataTests(unittest.TestCase):
+    def assert_private_tree(self, root):
+        if os.name == "posix":
+            for path in (root, *root.rglob("*")):
+                self.assertEqual(path.stat().st_mode & 0o777, 0o700 if path.is_dir() else 0o600)
+
+    def test_tls_certifi_keeps_peer_and_hostname_verification(self):
+        try:
+            import certifi
+        except ImportError:
+            self.skipTest("certifi is optional")
+        with patch("dwight.data.ssl.create_default_context", wraps=ssl.create_default_context) as create:
+            context = _tls_context()
+        create.assert_called_once_with(cafile=certifi.where())
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+
+    def test_tls_system_fallback_keeps_peer_and_hostname_verification(self):
+        with patch.dict(sys.modules, {"certifi": None}), patch(
+                "dwight.data.ssl.create_default_context", wraps=ssl.create_default_context) as create:
+            context = _tls_context()
+        create.assert_called_once_with()
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+
+    def test_request_page_uses_verified_https_handler_and_blocks_redirects(self):
+        context = ssl.create_default_context()
+        with patch("dwight.data._tls_context", return_value=context), patch("dwight.data.build_opener") as build:
+            build.return_value.open.return_value.__enter__.return_value.read.return_value = b'{"bars":{}}'
+            self.assertEqual(_request_page("https://data.alpaca.markets/v2/stocks/bars", {}), b'{"bars":{}}')
+        handlers = build.call_args.args
+        self.assertTrue(any(isinstance(handler, _NoRedirect) for handler in handlers))
+        https = next(handler for handler in handlers if isinstance(handler, HTTPSHandler))
+        self.assertIs(https._context, context)
+        self.assertEqual(https._context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(https._context.check_hostname)
+
     def test_early_close_is_complete_and_aggregates_exactly(self):
         s = session()
         one, five = normalize_minutes(reversed(records(s)), [s])
@@ -119,6 +160,7 @@ class DataTests(unittest.TestCase):
             with (directory / result["bars"]["QQQ"]["5Min"]).open() as stream:
                 last = list(csv.DictReader(stream))[-1]
             self.assertEqual(last["session_close"], s.close.isoformat())
+            self.assert_private_tree(Path(temp))
 
     def test_incomplete_response_has_no_success_manifest(self):
         s = session()
@@ -132,6 +174,73 @@ class DataTests(unittest.TestCase):
             self.assertFalse(list(Path(temp).glob("*/manifest.json")))
             self.assertEqual(len(list(Path(temp).glob("*/failed.json"))), 1)
             self.assertEqual(len(list(Path(temp).glob("*/raw/*.json"))), 1)
+            self.assert_private_tree(Path(temp))
+
+    @unittest.skipUnless(os.name == "posix", "POSIX private directory contract")
+    def test_download_creates_private_output_before_request_without_changing_ancestor(self):
+        s = session()
+        payload = json.dumps({"bars": {"QQQ": records(s)}}).encode()
+        with tempfile.TemporaryDirectory() as temp:
+            ancestor = Path(temp) / "existing-shared-parent"
+            ancestor.mkdir(mode=0o755)
+            ancestor.chmod(0o755)
+            output = ancestor / "new-private-parent" / "datasets"
+
+            def response(*_):
+                self.assert_private_tree(ancestor / "new-private-parent")
+                self.assertEqual(ancestor.stat().st_mode & 0o777, 0o755)
+                return payload
+
+            with patch("dwight.data.exchange_sessions", return_value=[s]), \
+                    patch("dwight.data._request_page", side_effect=response), \
+                    patch("dwight.data.os.umask", side_effect=AssertionError("do not change process umask")):
+                result = download_alpaca_dataset(output, s.date, s.date,
+                    environ={"APCA_API_KEY_ID": "fake", "APCA_API_SECRET_KEY": "fake-secret"},
+                    now=s.close + timedelta(hours=1))
+            self.assert_private_tree(ancestor / "new-private-parent")
+            self.assertTrue((Path(result["directory"]) / "manifest.json").is_file())
+            self.assertEqual(ancestor.stat().st_mode & 0o777, 0o755)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX private directory contract")
+    def test_existing_public_output_is_rejected_without_chmod_or_requests(self):
+        s = session()
+        with tempfile.TemporaryDirectory() as temp, patch("dwight.data.exchange_sessions", return_value=[s]), \
+                patch("dwight.data._request_page") as request:
+            output = Path(temp) / "unrelated-existing"
+            output.mkdir(mode=0o755)
+            output.chmod(0o755)
+            with self.assertRaisesRegex(ValueError, "mode-0700"):
+                download_alpaca_dataset(output, s.date, s.date,
+                    environ={"APCA_API_KEY_ID": "fake", "APCA_API_SECRET_KEY": "fake-secret"},
+                    now=s.close + timedelta(hours=1))
+            request.assert_not_called()
+            self.assertEqual(output.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(list(output.iterdir()), [])
+
+    @unittest.skipUnless(importlib.util.find_spec("pyarrow"), "Parquet extra not installed")
+    def test_partially_written_parquet_and_failure_metadata_remain_private(self):
+        s = session()
+        payload = json.dumps({"bars": {"QQQ": records(s)}}).encode()
+
+        def interrupted_write(_table, stream, **_):
+            if os.name == "posix":
+                self.assertEqual(os.fstat(stream.fileno()).st_mode & 0o777, 0o600)
+            stream.write(b"incomplete fixture Parquet bytes")
+            raise OSError("private failure sentinel")
+
+        with tempfile.TemporaryDirectory() as temp, patch("dwight.data.exchange_sessions", return_value=[s]), \
+                patch("dwight.data._request_page", return_value=payload), \
+                patch("pyarrow.parquet.write_table", side_effect=interrupted_write):
+            with self.assertRaisesRegex(OSError, "private failure sentinel"):
+                download_alpaca_dataset(temp, s.date, s.date,
+                    environ={"APCA_API_KEY_ID": "fake", "APCA_API_SECRET_KEY": "fake-secret"},
+                    now=s.close + timedelta(hours=1))
+            self.assert_private_tree(Path(temp))
+            self.assertEqual(len(list(Path(temp).glob("*/*.parquet"))), 1)
+            self.assertFalse(list(Path(temp).glob("*/manifest.json")))
+            failure = next(Path(temp).glob("*/failed.json")).read_text()
+            self.assertNotIn("private failure sentinel", failure)
+            self.assertNotIn("fake-secret", failure)
 
     def test_repeat_token_and_incomplete_session_fail_closed(self):
         s = session()

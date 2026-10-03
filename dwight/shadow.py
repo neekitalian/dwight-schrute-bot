@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 from vwap_bot.engine import Config
 from .data import exchange_sessions, fetch_alpaca_bars, normalize_minutes
-from .experiments import CandidateBot, JSONModel
+from .experiments import CandidateBot, JSONModel, direction_policy
 from .ops import verify_release, sha256
 
 UTC = timezone.utc
@@ -132,7 +132,8 @@ class ShadowMonitor:
                 fresh_bars.append((bar, payload))
         if not fresh_bars:
             return self._status('waiting_for_bar', now, last_bar_close=last_close.isoformat())
-        bot = CandidateBot(self.config, self.model, self.model.artifact['threshold'])
+        bot = CandidateBot(self.config, self.model, self.model.artifact['threshold'],
+                           long_only=direction_policy(self.model.artifact) == 'long_only')
         for bar in bars:
             bot.feed(bar)
         decisions = []
@@ -148,7 +149,7 @@ class ShadowMonitor:
             # decision journal must retain only information at signal time.
             signal_fields = {key: candidate[key] for key in
                              ('signal_time', 'available_at', 'session', 'feature_version',
-                              'features', 'taken', 'probability') if key in candidate}
+                              'features', 'taken', 'probability', 'rejection_reason') if key in candidate}
             decisions.append({**signal_fields, 'signal_id':signal_id, 'symbol':self.symbol,
                               'observed_at':now.isoformat(), 'signal_age_seconds':age,
                               'shadow_take':bool(candidate['taken'] and actionable),

@@ -43,6 +43,8 @@ This runs the four research stages together. Read `report.json`, `candidates.jso
 
 Default minimums are 100 training labels and 30 each in validation/test, with ten of each outcome per partition. These are engineering minimums, not statistical proof. Insufficient data produces a blocking report and no model. Collect more history or reconsider the strategy rather than relaxing real-data checks. Repeated examination of the holdout requires a fresh final period before promotion. The [walk-forward command](walkforward.md) compares successive unseen windows with a separately reserved final period, matching long-only direction across baseline and filters. Its models are research-only and cannot be used as a deployment release.
 
+For the current long-only research path, use the [fixed QQQ study](qqq-study.md). The single-split experiment now accepts explicit `long_only: true`; the choice is recorded in the model and report and enforced by audits, report replay and shadow. Legacy experiments without that option retain their original long-and-short behavior. Do not silently reuse their results as a long-only evaluation.
+
 The pinned strategy currently requires full 78-bar sessions. Early/partial sessions are explicitly excluded. Costs are fixed simulator assumptions; quotes and spread features are not yet collected. Historical next-bar-open fills are not executable broker fills.
 
 MLflow uses a local SQLite store and private artifacts. Model identity is its run, data/code hashes and JSON checksum; no automatic registry promotion occurs. Tracking failures are recorded. The installed skinny package provides tracking; a hosted MLflow UI is not configured. All data and artifacts stay outside GitHub.
