@@ -15,9 +15,9 @@ This public app demonstrates the research using invented prices. Its Connections
 '''
 FLOW = '''<div class="dw-flow">
 <div class="dw-node"><span>01 / PREPARE</span><b>Create your workspace</b><small>Private configuration, datasets and journals on your machine or server.</small></div>
-<div class="dw-arrow">→</div><div class="dw-node"><span>02 / MEASURE</span><b>Replay QQQ history</b><small>Compare a fixed baseline, costs and features on later periods.</small></div>
-<div class="dw-arrow">→</div><div class="dw-node"><span>03 / OBSERVE</span><b>Connect your tools</b><small>Capture TradingView alerts. Review before any manual paper action.</small></div>
-<div class="dw-arrow">→</div><div class="dw-node"><span>04 / REVIEW</span><b>Keep the evidence</b><small>Inspect fills, missed data and model results before changing a strategy.</small></div></div>'''
+<div class="dw-node"><span>02 / MEASURE</span><b>Replay QQQ history</b><small>Compare a fixed baseline, costs and features on later periods.</small></div>
+<div class="dw-node"><span>03 / OBSERVE</span><b>Connect your tools</b><small>Capture TradingView alerts. Review before any manual paper action.</small></div>
+<div class="dw-node"><span>04 / REVIEW</span><b>Keep the evidence</b><small>Inspect fills, missed data and model results before changing a strategy.</small></div></div>'''
 DOWNLOAD = f'''[Download the versioned toolkit]({RELEASE}) · [Setup guide]({REPOSITORY}/blob/main/docs/quickstart.md) · [Source]({REPOSITORY})
 
 **What the release includes:** a Python CLI, a private workspace initializer, historical-data validation,
@@ -50,7 +50,8 @@ For model research, collect substantially more QQQ history and preserve the same
 [Complete private research steps]({REPOSITORY}/blob/main/docs/quickstart.md)''',
     CHOICES[2]: f'''### TradingView to a private observation inbox
 
-TradingView chart → closed five minute bar alert → your HTTPS endpoint → Dwight inbox → human review.
+A TradingView chart sends an alert after a five minute bar closes. Your HTTPS endpoint delivers it
+to the private Dwight inbox. You review the observation there.
 
 The toolkit includes a QQQ Pine observer template and a local receiver. After preparing the private endpoint capability:
 
@@ -69,9 +70,9 @@ or proof that the VWAP strategy should enter a position.
 [Connection guide]({REPOSITORY}/blob/main/docs/tradingview-alerts.md)''',
     CHOICES[3]: f'''### Use your native TradingView paper account
 
-Alpaca completed bars → Dwight baseline setup → your proposed price and quantity → review →
-you enter an order in **Paper Trading by TradingView** →
-you normalize and import execution evidence → Dwight reports the imported fills.
+Dwight uses completed Alpaca bars to record a baseline setup. You supply a proposed price and quantity,
+then review the proposal. You enter the order in **Paper Trading by TradingView** yourself.
+Afterward, normalize and import execution evidence so Dwight can report the imported fills.
 
 Pine alerts cannot automatically place orders in TradingView's built-in paper account. That simulator is separate
 from an Alpaca paper account. The toolkit does not silently switch accounts or automate the browser.

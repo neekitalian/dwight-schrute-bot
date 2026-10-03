@@ -20,9 +20,9 @@ are not implemented. A successful data check does not connect your account.
 '''
 FLOW = '''<div class="dw-flow">
 <div class="dw-node"><span>01 / SELECT</span><b>Your platform</b><small>Stocks, crypto or prediction markets.</small></div>
-<div class="dw-arrow">→</div><div class="dw-node"><span>02 / CHECK</span><b>Public data access</b><small>A timestamped read-only result from this server.</small></div>
-<div class="dw-arrow">→</div><div class="dw-node"><span>03 / PREPARE</span><b>Private workspace</b><small>Download a profile. Supply supported credentials locally.</small></div>
-<div class="dw-arrow">→</div><div class="dw-node"><span>04 / REVIEW</span><b>Research first</b><small>Validate your feed and strategy before any manual paper order.</small></div></div>'''
+<div class="dw-node"><span>02 / CHECK</span><b>Public data access</b><small>A timestamped read-only result from this server.</small></div>
+<div class="dw-node"><span>03 / PREPARE</span><b>Private workspace</b><small>Download a profile. Supply supported credentials locally.</small></div>
+<div class="dw-node"><span>04 / REVIEW</span><b>Research first</b><small>Validate your feed and strategy before any manual paper order.</small></div></div>'''
 BOUNDARY = '''**Account boundary.** Paper Trading by TradingView and Alpaca paper are separate accounts.
 Pine strategies cannot place orders in TradingView's native paper simulator. Dwight's TradingView route
 receives observations in a private inbox; you review and enter native paper orders yourself.
@@ -42,10 +42,10 @@ def _platform(platform):
 def overview():
     cards = []
     for item in PLATFORMS.values():
-        cards.append('<div class="dw-node"><span>' + escape(item['category']) + '</span><b>'
+        cards.append('<div class="dw-node"><span>' + escape(item['category'].replace('_', ' ').title()) + '</span><b>'
                      + escape(item['name']) + '</b><small>' + escape(item['status_label'])
                      + '</small></div>')
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:18px 0">' + ''.join(cards) + '</div>'
+    return '<div class="dw-platform-grid">' + ''.join(cards) + '</div>'
 
 
 def details(platform):

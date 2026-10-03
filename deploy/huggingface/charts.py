@@ -9,15 +9,16 @@ from dwight.experiments import NY
 from .analytics import VARIANT_LABELS
 
 
-BACKGROUND = "#101318"
-PANEL = "#151a23"
-TEXT = "#dce3ee"
-MUTED = "#8d9aad"
-GRID = "#28303d"
-MODEL = "#27d9b0"
-BASELINE = "#6699ff"
-VOLUME = "#ecb75f"
-LOSS = "#f1667a"
+BACKGROUND = "#0a0a0a"
+PANEL = "#141414"
+TEXT = "#fafafa"
+MUTED = "#969696"
+GRID = "#2b2b2b"
+MODEL = "#839aa8"
+BASELINE = "#e8e8e8"
+VOLUME = "#b6a88c"
+GAIN = "#86a995"
+LOSS = "#c58c8c"
 COLORS = {"baseline": BASELINE, "simple_volume": VOLUME, "filtered": MODEL}
 CHART_LABELS = {"baseline": "VWAP", "simple_volume": "Volume filter", "filtered": "Dwight"}
 FEATURE_LABELS = {
@@ -50,14 +51,16 @@ def _layout(figure: go.Figure, title: str, height=590) -> go.Figure:
         # Title, legend and subplot headings have distinct vertical bands.
         # Compact policy labels fit a narrow viewport without crossing a chart.
         legend=dict(orientation="h", x=0, xanchor="left", y=1 + 64 / plot_height,
-                    yanchor="top", bgcolor="rgba(0,0,0,0)", font_size=10,
+                    yanchor="top", bgcolor="rgba(0,0,0,0)", font=dict(size=10, color=MUTED),
                     tracegroupgap=0, itemwidth=30),
         modebar=dict(bgcolor=BACKGROUND, color=MUTED, activecolor=MODEL),
         uirevision=title,
     )
-    figure.update_xaxes(gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID)
-    figure.update_yaxes(gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID, fixedrange=False)
-    figure.update_annotations(font_size=12)
+    figure.update_xaxes(gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID,
+                        tickfont_color=MUTED, title_font_color=MUTED)
+    figure.update_yaxes(gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID, fixedrange=False,
+                        tickfont_color=MUTED, title_font_color=MUTED)
+    figure.update_annotations(font_size=12, font_color=TEXT)
     return figure
 
 
@@ -93,7 +96,7 @@ def equity_figure(payload: dict) -> go.Figure:
             name=CHART_LABELS[name], legendgroup=name, showlegend=False,
             line=dict(color=COLORS[name], width=1.5), mode="lines",
             fill="tozeroy" if name == "filtered" else None,
-            fillcolor="rgba(39,217,176,0.09)" if name == "filtered" else None,
+            fillcolor="rgba(131,154,168,0.08)" if name == "filtered" else None,
             hovertemplate="%{x|%d %b %Y %H:%M}<br>Drawdown %{y:.2f}%<extra>%{fullData.name}</extra>",
         ), row=2, col=1)
     figure.add_hline(y=payload["test"]["initial_capital"], line_dash="dot", line_color=MUTED, row=1, col=1)
@@ -117,7 +120,7 @@ def session_figure(payload: dict, session: str, variant="filtered") -> go.Figure
     figure.add_trace(go.Candlestick(
         x=x, open=[row["open"] for row in candles], high=[row["high"] for row in candles],
         low=[row["low"] for row in candles], close=[row["close"] for row in candles],
-        increasing_line_color=MODEL, increasing_fillcolor=MODEL,
+        increasing_line_color=GAIN, increasing_fillcolor=GAIN,
         decreasing_line_color=LOSS, decreasing_fillcolor=LOSS,
         name="OHLC", whiskerwidth=.35,
     ), row=1, col=1)
@@ -129,11 +132,11 @@ def session_figure(payload: dict, session: str, variant="filtered") -> go.Figure
         ), row=1, col=1)
     figure.add_trace(go.Bar(
         x=x, y=[row["volume"] for row in candles], name="Generated volume",
-        marker_color=["rgba(39,217,176,0.45)" if row["close"] >= row["open"] else "rgba(241,102,122,0.45)" for row in candles],
+        marker_color=["rgba(134,169,149,0.45)" if row["close"] >= row["open"] else "rgba(197,140,140,0.45)" for row in candles],
         hovertemplate="%{x|%H:%M} bar<br>Volume %{y:,.0f}<extra>Generated volume</extra>",
         showlegend=False,
     ), row=2, col=1)
-    for direction, name, symbol, color in ((1, "Long entry", "triangle-up", MODEL), (-1, "Short entry", "triangle-down", LOSS)):
+    for direction, name, symbol, color in ((1, "Long entry", "circle", GAIN), (-1, "Short entry", "square", LOSS)):
         selected = [row for row in trades if row["direction"] == direction]
         if not selected:
             continue
@@ -142,13 +145,13 @@ def session_figure(payload: dict, session: str, variant="filtered") -> go.Figure
             name=name, mode="markers", showlegend=False,
             marker=dict(symbol=symbol, color=color, size=13, line=dict(color=BACKGROUND, width=1.4)),
             customdata=[[row["quantity"], row["stop"], row["target"], row["risk"]] for row in selected],
-            hovertemplate="Entry bar %{x|%H:%M}<br>Simulated fill $%{y:.4f}<br>%{customdata[0]} shares<br>Stop $%{customdata[1]:.4f}<br>Target $%{customdata[2]:.4f}<br>Planned risk $%{customdata[3]:.2f}<extra>%{fullData.name}</extra>",
+            hovertemplate=name + "<br>Entry bar %{x|%H:%M}<br>Simulated fill $%{y:.4f}<br>%{customdata[0]} shares<br>Stop $%{customdata[1]:.4f}<br>Target $%{customdata[2]:.4f}<br>Planned risk $%{customdata[3]:.2f}<extra>%{fullData.name}</extra>",
         ), row=1, col=1)
     if trades:
         figure.add_trace(go.Scatter(
             x=[_clock(row["exit_time"]) for row in trades], y=[row["exit"] for row in trades],
             name="Simulated exit", mode="markers", showlegend=False,
-            marker=dict(symbol="x", color=[MODEL if row["net_pnl"] > 0 else LOSS for row in trades], size=10, line_width=2),
+            marker=dict(symbol="x", color=[GAIN if row["net_pnl"] > 0 else LOSS for row in trades], size=10, line_width=2),
             customdata=[[row["exit_reason"], row["net_pnl"], row["net_r"]] for row in trades],
             hovertemplate="Exit bar %{x|%H:%M}<br>Simulated fill $%{y:.4f}<br>Reason %{customdata[0]}<br>Net result $%{customdata[1]:.2f}<br>Net R %{customdata[2]:.2f}<br>Exact intrabar fill time is unknown<extra>Simulated exit</extra>",
         ), row=1, col=1)
@@ -202,7 +205,7 @@ def outcomes_figure(payload: dict) -> go.Figure:
     trades = payload["test"]["variants"]["filtered"]["trades"]
     figure.add_trace(go.Bar(
         x=list(range(1, len(trades) + 1)), y=[row["net_r"] for row in trades],
-        marker_color=[MODEL if row["net_pnl"] > 0 else LOSS for row in trades],
+        marker_color=[GAIN if row["net_pnl"] > 0 else LOSS for row in trades],
         name="Dwight trade R", showlegend=False,
         customdata=[[_clock(row["exit_time"]).strftime("%d %b %Y %H:%M"), row["net_pnl"], row["exit_reason"]] for row in trades],
         hovertemplate="Trade %{x}<br>Net R %{y:.3f}<br>Net result $%{customdata[1]:.2f}<br>Exit bar %{customdata[0]}<br>%{customdata[2]}<extra>Dwight classifier</extra>",

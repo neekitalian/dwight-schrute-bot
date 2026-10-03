@@ -159,7 +159,7 @@ def build_app():
                 day = gr.Dropdown(choices=[], label="Test session · New York date", interactive=True)
                 variant = gr.Dropdown(choices=[(v, k) for k, v in VARIANT_LABELS.items()], value="filtered", label="Policy", interactive=True)
             price = gr.Plot(show_label=False)
-            gr.Markdown("**Chart time: New York.** Candles are stamped at their opening time; completed values are known five minutes later. Up triangles mark long entries, down triangles mark short entries, and crosses mark exits. Entry fills are simulated at the next bar. Exit markers identify the bar; exact intrabar fill times are unknown. VWAP is computed from bar typical prices.")
+            gr.Markdown("**Chart time: New York.** Candles are stamped at their opening time; completed values are known five minutes later. Circles mark long entries, squares mark short entries, and crosses mark exits. Entry fills are simulated at the next bar. Exit markers identify the bar; exact intrabar fill times are unknown. VWAP is computed from bar typical prices.")
             trades = gr.Dataframe(headers=["Entry bar / NY", "Side", "Shares", "Entry", "Stop", "Target", "Exit bar / NY", "Exit", "Reason", "Net P&L / USD", "Net R"],
                                   datatype=["str", "str", "number", "number", "number", "number", "str", "number", "str", "number", "number"],
                                   type="array", interactive=False, label="Simulated trade ledger · selected session", wrap=True)
@@ -203,7 +203,7 @@ def build_app():
 
 
 def launch_app(server_name="0.0.0.0", server_port=7860):
-    theme = gr.themes.Base(primary_hue="teal", secondary_hue="blue", neutral_hue="slate", font=["Inter", "system-ui", "sans-serif"])
+    theme = gr.themes.Base(primary_hue="neutral", secondary_hue="neutral", neutral_hue="neutral", font=["Inter", "system-ui", "sans-serif"])
     return build_app().launch(server_name=server_name, server_port=server_port, show_error=False,
                               # Native style rules preserve root media queries;
                               # Gradio scopes its css argument inside .contain.

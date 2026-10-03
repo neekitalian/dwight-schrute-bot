@@ -88,7 +88,7 @@ class SpaceChartsTests(unittest.TestCase):
                        charts.diagnostics_figure(self.payload), charts.outcomes_figure(self.payload)):
             encoded = figure.to_json()
             self.assertTrue(encoded)
-            self.assertEqual(figure.layout.paper_bgcolor, "#101318")
+            self.assertEqual(figure.layout.paper_bgcolor, "#0a0a0a")
             self.assertNotIn("https://", encoded)
         self.assertEqual(json.dumps(self.payload, sort_keys=True, allow_nan=False), before)
 

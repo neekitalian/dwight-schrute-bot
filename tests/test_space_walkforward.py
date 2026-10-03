@@ -125,7 +125,7 @@ class SpaceWalkForwardTests(unittest.TestCase):
             self.assertEqual(list(trace.y), [window['test_evaluation'][variant]['net_pnl'] for window in self.report['windows']])
         self.assertIn('Independent', figure.layout.xaxis.title.text)
         self.assertIn('Synthetic', figure.layout.title.text)
-        self.assertEqual(figure.layout.paper_bgcolor, '#101318')
+        self.assertEqual(figure.layout.paper_bgcolor, '#0a0a0a')
         self.assertTrue(figure.to_json())
 
     def test_insufficient_window_stays_visible_without_invented_zero_pnl(self):

@@ -146,16 +146,16 @@ def timeline_figure(report):
     """Calendar spans show exact session ranges; no returns on the holdout row."""
     figure = go.Figure()
     partitions = (
-        ("train", "Train", "#6699ff"),
-        ("validation", "Validate", "#ecb75f"),
-        ("test", "Test", "#27d9b0"),
+        ("train", "Train", COLORS["baseline"]),
+        ("validation", "Validate", COLORS["simple_volume"]),
+        ("test", "Test", COLORS["filtered"]),
     )
     for partition, label, color in partitions:
         rows = [(f'Window {w["window"]}', w[partition], w["status"]) for w in report["windows"]]
         _timeline_bars(figure, label, color, rows)
     _timeline_bars(figure, "Unused dev.", MUTED,
                    [("Untouched data", report["plan"]["unused_development_sessions"], "not evaluated")])
-    _timeline_bars(figure, "Final holdout", "#bb9ef1",
+    _timeline_bars(figure, "Final holdout", GRID,
                    [("Untouched data", report["final_holdout"]["sessions"], "reserved, not evaluated")])
     rows = [f'Window {w["window"]}' for w in report["windows"]] + ["Untouched data"]
     figure.update_layout(barmode="overlay", bargap=.40)

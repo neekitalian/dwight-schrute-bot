@@ -6,70 +6,107 @@ from .analytics import VARIANT_LABELS
 from .transformer_analysis import connection_analysis
 
 CSS = """
-body, .gradio-container { background:#101318 !important; color:#dce3ee !important; }
-.gradio-container { width:100% !important; min-width:0 !important; max-width:1440px !important; box-sizing:border-box; margin:auto; padding:28px 36px !important;
- --body-background-fill:#101318; --block-background-fill:#151a23; --input-background-fill:#1b2230;
- --body-text-color:#dce3ee; --block-label-text-color:#aebaca; --border-color-primary:#2a3443;
- --block-border-color:#2a3443; --input-border-color:#344155; --body-text-color-subdued:#99a8bd;
- --button-secondary-background-fill:#1b2230; --button-secondary-text-color:#dce3ee;
- --button-primary-background-fill:#26caa7; --button-primary-text-color:#08231d;
- --link-text-color:#63b6ff; font-family:Inter,system-ui,sans-serif !important; }
-.gradio-container .prose { color:#b5c0d1; line-height:1.7; }
-.gradio-container .prose h1,.gradio-container .prose h2,.gradio-container .prose h3,.gradio-container .prose strong { color:#e9eef6; }
-.gradio-container input,.gradio-container textarea { color:#dce3ee !important; }
-.gradio-container .main, .gradio-container main.contain, .gradio-container .main > .wrap { min-width:0 !important; width:100%; padding:0 !important; }
-.gradio-container .row, .gradio-container .column, .gradio-container .tabs, .gradio-container .tab-container { min-width:0 !important; }
-.gradio-container .tab-nav { max-width:100%; overflow-x:auto; flex-wrap:nowrap; }
-.gradio-container .tab-nav button { white-space:nowrap; }
-.gradio-container .tab-nav { border-bottom:1px solid #2a3443 !important; gap:16px; }
-.gradio-container .tab-nav button { color:#99a8bd; padding:15px 4px; font-size:14px; }
-.gradio-container .tab-nav button.selected { color:#27d9b0; border-color:#27d9b0; }
-.dw-hero { display:flex;justify-content:space-between;align-items:center;gap:24px;margin:0 0 24px; }
-.dw-wordmark { color:#27d9b0;font-size:12px;letter-spacing:3px;font-weight:700; }
-.dw-hero h1 { margin:9px 0;font-weight:600;font-size:36px;letter-spacing:-1.2px;color:#edf3fb; }
-.dw-hero p { color:#93a4bb;font-size:14px;margin:0; }
-.dw-tag { display:inline-block;padding:6px 10px;border:1px solid #365249;border-radius:5px;color:#79d9b9;background:#142820;font-size:11px;letter-spacing:1px;font-weight:600; }
-.dw-hero-aside { text-align:right;flex-shrink:0; }.dw-hero-aside p { margin-top:9px;font-size:12px; }
-.dw-section { margin:18px 0 12px; }.dw-section h2 { font-size:20px;letter-spacing:-.3px;font-weight:500;margin:0 0 6px;color:#edf3fb; }
-.dw-section p,.dw-note { font-size:13px;color:#99a8bd;line-height:1.65;margin:0; }
-.dw-cards { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0 8px; }
-.dw-card { background:#151a23;border:1px solid #293344;border-radius:9px;padding:20px; }
-.dw-label { color:#9bacbf;font-size:12px;letter-spacing:.3px; }
-.dw-value { color:#ecf2fa;font-variant-numeric:tabular-nums;font-size:29px;letter-spacing:-.8px;margin:12px 0 8px; }
-.dw-card small { color:#96a6ba;font-size:12px; }.dw-positive { color:#27d9b0 !important; }.dw-negative { color:#f1667a !important; }
-.dw-table-wrap { width:100%;overflow-x:auto;border:1px solid #293344;border-radius:9px;margin:12px 0 20px; }
-.dw-table { width:100%;border-collapse:collapse;white-space:nowrap;font-size:13px;background:#151a23; }
-.dw-table th { color:#94a6be;font-size:11px;font-weight:500;letter-spacing:.3px;padding:14px 16px;text-align:right;background:#181e28; }
+:root { color-scheme:dark; }
+body, .gradio-container { background:#0a0a0a !important; color:#ededed !important; }
+.gradio-container { width:100% !important; min-width:0 !important; max-width:1440px !important;
+ box-sizing:border-box; margin:auto; padding:30px 48px !important;
+ --body-background-fill:#0a0a0a; --background-fill-primary:#0a0a0a; --background-fill-secondary:#141414;
+ --block-background-fill:#141414; --input-background-fill:#191919;
+ --body-text-color:#ededed; --block-label-text-color:#a3a3a3; --border-color-primary:#2b2b2b;
+ --border-color-accent:#595959; --block-border-color:#2b2b2b; --input-border-color:#333333;
+ --body-text-color-subdued:#969696; --block-title-text-color:#ededed;
+ --button-secondary-background-fill:#191919; --button-secondary-background-fill-hover:#252525;
+ --button-secondary-border-color:#333333; --button-secondary-text-color:#ededed;
+ --button-primary-background-fill:#fafafa; --button-primary-background-fill-hover:#dedede;
+ --button-primary-text-color:#111111; --button-primary-border-color:#fafafa;
+ --input-placeholder-color:#858585; --link-text-color:#ededed; --link-text-color-hover:#ffffff;
+ --checkbox-background-color:#191919; --checkbox-border-color:#595959;
+ --checkbox-label-background-fill:#191919; --checkbox-label-background-fill-hover:#252525;
+ --checkbox-label-border-color:#333333; --checkbox-label-border-color-selected:#595959;
+ --checkbox-background-color-selected:#ededed; --checkbox-border-color-selected:#ededed;
+ --checkbox-label-background-fill-selected:#252525; --checkbox-label-text-color-selected:#fafafa;
+ --slider-color:#bdbdbd; --color-accent:#bdbdbd; --color-accent-soft:#252525;
+ font-family:Inter,system-ui,sans-serif !important; -webkit-font-smoothing:antialiased; }
+.gradio-container .prose { color:#a3a3a3; line-height:1.75; font-size:14px; }
+.gradio-container .prose h1,.gradio-container .prose h2,.gradio-container .prose h3 { color:#f5f5f5; font-weight:400; letter-spacing:-.5px; }
+.gradio-container .prose h2 { font-size:28px; line-height:1.3; margin:20px 0 12px; }
+.gradio-container .prose h3 { font-size:22px; line-height:1.35; margin:16px 0 12px; }
+.gradio-container .prose strong { color:#e6e6e6; font-weight:500; }
+.gradio-container .prose a { color:#e6e6e6; text-underline-offset:4px; }
+.gradio-container input,.gradio-container textarea { color:#ededed !important; }
+.gradio-container button.primary { background:#fafafa !important; color:#111111 !important; border:1px solid #fafafa !important; border-radius:999px !important; font-weight:500; box-shadow:none !important; }
+.gradio-container button.primary:hover { background:#dedede !important; border-color:#dedede !important; }
+.gradio-container button.secondary,.gradio-container a.secondary { border-radius:999px !important; }
+.gradio-container button:focus-visible,.gradio-container a:focus-visible { outline:2px solid #a3a3a3; outline-offset:4px; }
+.gradio-container .main,.gradio-container main.contain,.gradio-container .main > .wrap { min-width:0 !important; width:100%; padding:0 !important; }
+.gradio-container .row,.gradio-container .column,.gradio-container .tabs,.gradio-container .tab-container { min-width:0 !important; }
+.gradio-container [role="tablist"] { max-width:100%; overflow-x:auto; flex-wrap:nowrap; border-bottom:1px solid #2b2b2b !important; gap:24px; margin:18px 0 12px; }
+.gradio-container [role="tablist"] button { white-space:nowrap; color:#969696; padding:16px 0; font-size:13px; font-weight:400; }
+.gradio-container [role="tablist"] [role="tab"][aria-selected="true"] { color:#fafafa; border-color:#fafafa; background:transparent; }
+.gradio-container [role="tabpanel"] { padding:20px 0 !important; border:0 !important; }
+.gradio-container .block { border-radius:12px; }
+.dw-masthead { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 32px; }
+.dw-brand { display:flex; align-items:center; gap:10px; color:#fafafa; font-size:20px; letter-spacing:-.8px; font-weight:500; }
+.dw-brand-mark { width:21px; height:21px; border:1px solid #e6e6e6; border-radius:50%; display:inline-block; box-shadow:inset 5px 0 0 #0a0a0a,inset 6px 0 0 #e6e6e6; }
+.dw-masthead-meta { display:flex; gap:24px; align-items:center; color:#969696; font-size:12px; }
+.dw-masthead-meta a { color:#d4d4d4; text-decoration:none; }
+.dw-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:28px; margin:12px 0 28px; padding:0 0 36px; border-bottom:1px solid #242424; }
+.dw-wordmark { color:#969696; font-size:11px; letter-spacing:1.2px; font-weight:400; }
+.dw-hero h1 { margin:15px 0 12px; font-weight:400; font-size:44px; line-height:1.12; letter-spacing:-1.8px; color:#fafafa; }
+.dw-hero p { color:#969696; font-size:15px; margin:0; line-height:1.65; }
+.dw-tag { display:inline-block; padding:6px 11px; border:1px solid #363636; border-radius:999px; color:#c7c7c7; background:#141414; font-size:10px; letter-spacing:.8px; font-weight:400; }
+.dw-hero-aside { text-align:right; flex-shrink:0; }.dw-hero-aside p { margin-top:10px; font-size:12px; }
+.dw-section { margin:28px 0 16px; }.dw-section h2 { font-size:24px; letter-spacing:-.6px; font-weight:400; margin:0 0 8px; color:#fafafa; }
+.dw-section p,.dw-note { font-size:13px; color:#969696; line-height:1.75; margin:0; }
+.dw-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:16px 0 12px; }
+.dw-card { background:#141414; border:1px solid #2b2b2b; border-radius:14px; padding:24px; }
+.dw-label { color:#a3a3a3; font-size:12px; letter-spacing:.1px; }
+.dw-value { color:#fafafa; font-variant-numeric:tabular-nums; font-size:30px; font-weight:400; letter-spacing:-1px; margin:18px 0 10px; }
+.dw-card small { color:#969696; font-size:12px; line-height:1.6; }.dw-positive { color:#86a995 !important; }.dw-negative { color:#c58c8c !important; }
+.dw-table-wrap { width:100%; overflow-x:auto; border:1px solid #2b2b2b; border-radius:14px; margin:16px 0 24px; }
+.dw-table { width:100%; border-collapse:collapse; white-space:nowrap; font-size:13px; background:#101010; }
+.dw-table th { color:#969696; font-size:11px; font-weight:400; letter-spacing:.2px; padding:16px 20px; text-align:right; background:#141414; }
 .dw-table th:first-child,.dw-table td:first-child { text-align:left; }
-.dw-table td { padding:16px;border-top:1px solid #263040;text-align:right;color:#dce3ee;font-variant-numeric:tabular-nums; }
-.dw-table tr.dw-highlight td { background:#142620; }.dw-dot { width:7px;height:7px;display:inline-block;border-radius:50%;margin-right:8px; }
-.dw-callout { border-left:3px solid #6599ff;background:#151e2b;padding:16px 20px;margin:12px 0 20px;color:#bfcde0;font-size:14px;line-height:1.7; }
-.dw-callout strong { color:#edf3fb; }
-.dw-flow { display:flex;gap:8px;align-items:stretch;margin:14px 0 22px; }
-.dw-node { background:#15251f;border:1px solid #2c5748;border-radius:8px;padding:15px;flex:1;min-width:0; }
-.dw-node b { display:block;color:#d8eee7;font-size:13px;margin:8px 0; }.dw-node small { color:#9bbaaf;font-size:12px;line-height:1.5; }
-.dw-node span { color:#65d6b0;font-size:10px;letter-spacing:1px; }.dw-arrow { align-self:center;color:#5a7c6f; }
-.dw-branches { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0; }
-.dw-branch { background:#1c192b;border:1px dashed #65528c;border-radius:9px;padding:20px; }
-.dw-branch h3 { color:#e0d4ff;font-size:17px;margin:10px 0; }.dw-branch p { color:#b5a9cd;line-height:1.65;font-size:13px; }
-.dw-branch .dw-label { color:#bb9ef1; }.dw-join { text-align:center;color:#b59bdc;font-size:13px;padding:10px 18px 20px;line-height:1.8; }
-.dw-footer { border-top:1px solid #293344;margin-top:28px;padding-top:18px;color:#7f90a7;font-size:12px;line-height:1.8; }.dw-footer a { color:#80b5f5; }
+.dw-table td { padding:18px 20px; border-top:1px solid #282828; text-align:right; color:#dedede; font-variant-numeric:tabular-nums; }
+.dw-table tr.dw-highlight td { background:#1b1b1b; }.dw-dot { width:7px; height:7px; display:inline-block; border-radius:50%; margin-right:9px; }
+.dw-callout { border:1px solid #333333; border-radius:12px; background:#141414; padding:20px 24px; margin:16px 0 24px; color:#a3a3a3; font-size:14px; line-height:1.75; }
+.dw-callout strong { color:#ededed; font-weight:500; }
+.dw-flow { display:flex; gap:12px; align-items:stretch; margin:24px 0 32px; }
+.dw-node { background:#141414; border:1px solid #2b2b2b; border-radius:14px; padding:24px; flex:1; min-width:0; }
+.dw-node b { display:block; color:#ededed; font-size:15px; font-weight:400; margin:18px 0 10px; letter-spacing:-.2px; }
+.dw-node small { display:block; color:#969696; font-size:12px; line-height:1.75; }
+.dw-node span { color:#a3a3a3; font-size:10px; letter-spacing:1px; }
+.dw-platform-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }
+.dw-branches { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0; }
+.dw-branch { background:#101010; border:1px dashed #454545; border-radius:14px; padding:28px; }
+.dw-branch h3 { color:#ededed; font-size:22px; font-weight:400; letter-spacing:-.4px; margin:16px 0; }
+.dw-branch p { color:#969696; line-height:1.75; font-size:13px; }.dw-branch strong { color:#d4d4d4; font-weight:500; }
+.dw-branch .dw-label { color:#a3a3a3; font-size:10px; letter-spacing:1px; }
+.dw-join { color:#a3a3a3; border:1px solid #2b2b2b; border-radius:14px; background:#141414; font-size:13px; padding:24px 28px; margin:20px 0; line-height:1.9; }
+.dw-join strong { display:block; color:#ededed; font-size:15px; font-weight:400; margin-bottom:8px; }
+.dw-footer { border-top:1px solid #282828; margin-top:40px; padding-top:24px; color:#858585; font-size:12px; line-height:1.9; }.dw-footer a { color:#c7c7c7; text-underline-offset:4px; }
+@media(max-width:1000px) { .dw-flow { flex-wrap:wrap; }.dw-node { flex-basis:180px; }.dw-platform-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:760px) {
- .gradio-container { padding:16px 12px !important; }.dw-hero { align-items:flex-start;gap:16px;flex-direction:column; }
+ .gradio-container { padding:22px 18px !important; }.dw-masthead { padding-bottom:24px; }.dw-masthead-meta span { display:none; }
+ .dw-hero { align-items:flex-start; gap:24px; flex-direction:column; margin-top:0; padding-bottom:28px; }
  .gradio-container .row { flex-direction:column !important; }
  .gradio-container .row > * { width:100% !important; min-width:0 !important; flex:auto !important; }
- .dw-hero h1 { font-size:30px; }.dw-hero-aside { text-align:left; }.dw-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
- .dw-card { padding:14px; }.dw-value { font-size:25px; }.dw-flow { flex-wrap:wrap; }.dw-node { min-width:120px; }
- .dw-arrow { display:none; }.dw-branches { grid-template-columns:1fr; }
+ .dw-hero h1 { font-size:36px; letter-spacing:-1.2px; }.dw-hero p { font-size:14px; }.dw-hero-aside { text-align:left; }
+ .dw-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }.dw-card { padding:18px; }.dw-value { font-size:25px; }
+ .dw-node { padding:20px; flex-basis:140px; }.dw-branches { grid-template-columns:1fr; }.dw-branch { padding:24px; }
+ .dw-section h2 { font-size:22px; }.gradio-container [role="tablist"] { gap:20px; }
 }
+@media(prefers-reduced-motion:reduce) { .gradio-container * { scroll-behavior:auto !important; transition:none !important; } }
 """
-HERO = """<div class="dw-hero"><div><div class="dw-wordmark">DWIGHT / RESEARCH</div>
+HERO = """<div class="dw-masthead"><div class="dw-brand"><span class="dw-brand-mark" aria-hidden="true"></span>Dwight</div>
+<div class="dw-masthead-meta"><span>QQQ research toolkit</span><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">GitHub</a></div></div>
+<div class="dw-hero"><div><div class="dw-wordmark">RESEARCH PREVIEW</div>
 <h1>Every decision, examined.</h1><p>QQQ · VWAP strategy · Five minute bars · Model research</p></div>
 <div class="dw-hero-aside"><span class="dw-tag">SYNTHETIC REPLAY</span>
 <p>Invented prices. No account connected.</p></div></div>"""
 FOOTER = """<div class="dw-footer">DWIGHT RESEARCH · Simulated results from generated data. No real QQQ history or broker fills.
-<br><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">Source and methodology ↗</a>
- · The chart design is inspired by financial terminals. This app is not connected to TradingView.</div>"""
+<br><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">Source and methodology</a>
+ · This app is not connected to TradingView.</div>"""
 
 def section(title, subtitle=""):
     return f'<div class="dw-section"><h2>{escape(title)}</h2><p>{escape(subtitle)}</p></div>'
@@ -103,7 +140,7 @@ def metric_cards(payload):
 
 def comparison_table(payload):
     rows = []
-    for (key, label), tone in zip(VARIANT_LABELS.items(), ("#6699ff", "#ecb75f", "#27d9b0")):
+    for (key, label), tone in zip(VARIANT_LABELS.items(), ("#e8e8e8", "#b6a88c", "#839aa8")):
         m = payload["test"]["variants"][key]["metrics"]
         rows.append([f'<span class="dw-dot" style="background:{tone}"></span>{escape(label)}', str(m["trades"]),
                      f'<span class="{color(m["net_pnl"])}">{money(m["net_pnl"], True)}</span>',
@@ -198,15 +235,15 @@ def transformer_flow(choice="both"):
              ("PROPOSE", "VWAP candidate", "Ten numeric features"), ("FILTER", "Dwight classifier", "Current logistic model"),
              ("CONSTRAIN", "Fixed risk rules", "Sizing, stop, target, daily limit"),
              ("EVALUATE", "Replay outcomes", "Measured synthetic results")]
-    flow = '<div class="dw-flow">' + '<div class="dw-arrow">→</div>'.join(
-        f'<div class="dw-node"><span>{step}</span><b>{title}</b><small>{subtitle}</small></div>' for step, title, subtitle in nodes) + '</div>'
+    flow = '<div class="dw-flow">' + ''.join(
+        f'<div class="dw-node"><span>{index:02d} / {step}</span><b>{title}</b><small>{subtitle}</small></div>' for index, (step, title, subtitle) in enumerate(nodes, 1)) + '</div>'
     branches = '<div class="dw-branches">' + ''.join(
         f'<div class="dw-branch"><div class="dw-label">PROPOSED · NOT CONNECTED</div><h3>{escape(p["title"])}</h3>'
-        f'<p>{escape(p["question"])}</p><p><strong>{"Past bars → forecast features" if p["title"] == "Price sequences" else "Timed text → sentiment features"}</strong></p>'
+        f'<p>{escape(p["question"])}</p><p><strong>{"Forecast features from past bars" if p["title"] == "Price sequences" else "Sentiment features from timed text"}</strong></p>'
         f'<p>{escape(p["handoff"])}</p></div>' for p in a["selected_paths"]) + '</div>'
-    return (section("Current decision path", "Solid green cards are implemented in the synthetic replay.") + flow +
-            section("Proposed transformer inputs", "Purple cards are research connections. Their trading contribution has not been measured.") + branches +
-            '<div class="dw-join">↓ New feature schema + training only preprocessing + retrained Dwight ↓<br>'
+    return (section("Current decision path", "The numbered stages below are implemented in the synthetic replay.") + flow +
+            section("Proposed transformer inputs", "Dashed cards are proposed research connections. Their trading contribution has not been measured.") + branches +
+            '<div class="dw-join"><strong>Test a new model version</strong>New feature schema, preprocessing fitted on training data, and a retrained Dwight.<br>'
             'Evaluate a new model against Dwight alone before considering a reviewed release.<br>'
             'Transformer outputs never alter the fixed risk policy.</div>')
 
