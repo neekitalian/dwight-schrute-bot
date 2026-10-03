@@ -19,7 +19,7 @@ does not open an account, complete OAuth, connect a wallet, or place an order.
 | `schwab` | Setup guidance and a profile | OAuth, account and broker adapter planned; paper availability is not claimed |
 | `coinbase` | Public BTC-USD spot-price check | No authenticated account integration; future Advanced Trade adapter |
 | `binance` | Public BTCUSDT Spot price check | No authenticated account or testnet integration; future testnet adapter |
-| `kraken` | Public XBTUSD Spot ticker check | No authenticated account integration; future adapter |
+| `kraken` | Public XBTUSD Spot ticker check; separate QQQx research collector on `main` | No authenticated account integration; future adapter |
 | `polymarket` | Public market discovery; existing public book snapshot recording | Research only; no wallet or authenticated trading integration |
 | `databento` | Private metadata check, cost estimate and bounded QQQ history | Market data only; requires explicit dataset and download cost allowance |
 | `massive` | Private QQQ reference check and bounded minute history | Market data only; coverage depends on your data plan |
@@ -47,6 +47,10 @@ account is connected. A successful public response does not verify account
 access, region eligibility, data entitlements, strategy readiness, or a fill.
 Public prices are observations, not executable quotes. The
 QQQ VWAP stock strategy has **not** been ported or validated for crypto.
+
+The separate [QQQ and QQQx research workflow](tokenized-equity-research.md)
+compares private underlying history with public token market observations. It
+does not change these connection profiles or their execution capabilities.
 
 ## Command line
 

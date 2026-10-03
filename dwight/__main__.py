@@ -105,6 +105,12 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     from .connection_catalog import PLATFORMS
     commands.add_parser('connections', help='List supported connection setup paths and their implementation status')
+    p = commands.add_parser('collect-tokenized', help='Collect public QQQx bars and book into a new private directory; no account or orders')
+    p.add_argument('--out', type=Path, required=True)
+    p = commands.add_parser('compare-tokenized', help='Compare private raw QQQ history with an observed QQQx snapshot offline')
+    p.add_argument('--qqq-manifest', type=Path, required=True)
+    p.add_argument('--token-snapshot', type=Path, required=True)
+    p.add_argument('--out', type=Path, required=True)
     p = commands.add_parser('prepare-data-keys', help='Prepare private empty key fields without overwriting existing secrets')
     p.add_argument('--file', type=Path, default=Path('.env'))
     p = commands.add_parser('connection-profile', help='Export a credential-free read-only setup profile')
@@ -296,11 +302,18 @@ def main():
         # Onboarding checks only the selected workspace, without importing an
         # unrelated current-directory .env into this process.
         if (args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list',
-                                'connections', 'connection-profile', 'connection-check', 'prepare-data-keys'}
+                                'connections', 'connection-profile', 'connection-check', 'prepare-data-keys',
+                                'collect-tokenized', 'compare-tokenized'}
                 and not args.command.startswith('manual-campaign-')):
             load_env()
         if args.command == 'connections':
             result = {'platforms': list(PLATFORMS.values()), 'order_execution': False}
+        elif args.command == 'collect-tokenized':
+            from .tokenized_toolkit import collect_tokenized
+            result = collect_tokenized(args.out)
+        elif args.command == 'compare-tokenized':
+            from .tokenized_toolkit import compare_tokenized
+            result = compare_tokenized(args.qqq_manifest,args.token_snapshot,args.out)
         elif args.command == 'prepare-data-keys':
             from .private_config import prepare_data_keys
             result = prepare_data_keys(args.file)
