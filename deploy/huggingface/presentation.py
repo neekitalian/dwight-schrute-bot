@@ -45,7 +45,7 @@ body, .gradio-container { background:#0a0a0a !important; color:#ededed !importan
 .gradio-container [role="tablist"] [role="tab"][aria-selected="true"] { color:#fafafa; border-color:#fafafa; background:transparent; }
 .gradio-container [role="tabpanel"] { padding:20px 0 !important; border:0 !important; }
 .gradio-container .block { border-radius:12px; }
-.dw-masthead { flex-wrap:wrap; display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 10px; }
+.dw-masthead { flex-wrap:wrap; display:flex; justify-content:flex-start; align-items:center; gap:20px; padding:0 0 10px; }
 .dw-brand { display:flex; align-items:center; gap:10px; color:#fafafa; font-size:20px; letter-spacing:-.8px; font-weight:500; }
 .dw-brand-mark { width:21px; height:21px; border:1px solid #e6e6e6; border-radius:50%; display:inline-block; box-shadow:inset 5px 0 0 #0a0a0a,inset 6px 0 0 #e6e6e6; }
 .dw-masthead-meta { display:flex; gap:24px; align-items:center; color:#969696; font-size:12px; }
@@ -122,7 +122,7 @@ body, .gradio-container { background:#0a0a0a !important; color:#ededed !importan
 @media(prefers-reduced-motion:reduce) { .gradio-container * { scroll-behavior:auto !important; transition:none !important; } }
 """
 HERO = """<div class="dw-masthead"><div class="dw-brand"><span class="dw-brand-mark" aria-hidden="true"></span>Dwight</div>
-<div class="dw-masthead-meta"><p class="dw-demo-status">Synthetic demo · No account connected</p><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">GitHub</a></div></div>"""
+<div class="dw-masthead-meta"><p class="dw-demo-status">Synthetic demo · No account connected</p></div></div>"""
 FOOTER = """<div class="dw-footer"><span>Dwight · Research preview 0.6.0</span>
 <a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener">Source &amp; methodology</a></div>"""
 
