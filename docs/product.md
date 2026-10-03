@@ -1,6 +1,10 @@
-# Dwight toolkit product boundary
+# Dwight product direction and current boundary
 
-Dwight 0.5.0 is a small research preview for one QQQ strategy and one private workspace. Its useful product is the repeatable process: prepare data, replay a baseline, test added features, inspect evidence, connect observations and keep a manual paper journal.
+The product direction is a small automatic trading service with a private web console and a Python execution worker. A user connects a supported broker account, selects a tested strategy, sets risk limits and starts a paper session. TradingView is an optional chart and signal interface. The intended customer experience does not require writing Python, entering each order or converting fills to CSV.
+
+This is the target experience, not a description of current execution support. The [automatic paper product specification](automatic-paper-product.md) defines the first version, acceptance criteria and unfinished work. The first proposed execution integration is Alpaca Paper; the existing selected account remains Paper Trading by TradingView until the operator explicitly chooses a separate execution account. No existing campaign or account is migrated by this product decision.
+
+The published Dwight 0.6.0 toolkit remains a research preview for one QQQ strategy and one private workspace. Its working flow prepares data, replays a baseline, tests added features, inspects evidence, connects observations and keeps a manual paper journal.
 
 The downloadable toolkit contains source, configuration templates, a workspace initializer, data validation, research commands, private reports, a TradingView observation inbox and deployment runbooks. The Hugging Face app is a public demonstration using synthetic data. Neither package includes a proven profitable model or a managed brokerage account.
 
@@ -12,7 +16,7 @@ This release has no tenant isolation, customer authentication, uptime commitment
 
 Market-data redistribution rights and model-weight licenses remain separate. Keep data and credentials in the private deployment. Code licensing does not grant rights to package a vendor's market dataset.
 
-## Supported user flow
+## Currently supported user flow
 
 1. Explore synthetic examples in the public app.
 2. Install the versioned toolkit and create a private workspace.

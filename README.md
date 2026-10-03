@@ -22,6 +22,8 @@ The [native paper milestone workflow](docs/manual-milestones.md) freezes 12, 24,
 
 Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
 
+The [next product specification](docs/automatic-paper-product.md) targets a private web console and an automatic Python worker for a separately selected API paper account. It defines the customer flow and missing execution requirements; it does not enable automatic orders in this release.
+
 The [TradingView observation inbox](docs/tradingview-alerts.md) receives validated QQQ five-minute bar messages into a private, durable journal. It is separate from model decisions and manual proposals. The local HTTP flow is tested; the Pine observer template still needs compilation and a real delivery test in TradingView. Linux service and HTTPS proxy templates are provided, but no public endpoint is activated.
 
 [Real QQQ sample research](docs/real-data.md) now validates an official vendor download and reproduces a private historical replay. The observed 11-session sample is too small to train a deployable model. [Feature enrichment](docs/enrichment.md) compares four additional causal session features with the original classifier using fixed chronological windows. More features have not established better performance.
