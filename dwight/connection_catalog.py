@@ -9,6 +9,9 @@ PLATFORMS = {
         "id": "tradingview",
         "name": "TradingView",
         "category": "stocks",
+        "integration_roles": ["chart", "signal_source_future", "native_paper_manual"],
+        "account_access": "manual_only",
+        "execution_status": "native_account_manual_only",
         "status_label": "Manual paper workflow",
         "summary": "Review QQQ proposals and journal normalized paper fills locally. Place native TradingView paper orders yourself.",
         "setup_steps": [
@@ -31,6 +34,9 @@ PLATFORMS = {
         "id": "alpaca",
         "name": "Alpaca",
         "category": "stocks",
+        "integration_roles": ["market_data", "paper_broker_candidate"],
+        "account_access": "private_paper_read_check",
+        "execution_status": "paper_client_incomplete",
         "status_label": "Private read-only check",
         "summary": "Check an Alpaca paper account and QQQ market-data access from your private runtime. Existing QQQ research and observation use Alpaca data.",
         "setup_steps": [
@@ -55,6 +61,9 @@ PLATFORMS = {
         "id": "ibkr",
         "name": "Interactive Brokers",
         "category": "stocks",
+        "integration_roles": ["market_data_future", "paper_broker_future"],
+        "account_access": "planned",
+        "execution_status": "planned",
         "status_label": "Adapter planned",
         "summary": "Setup guidance only. Dwight has no implemented IBKR account or market-data adapter.",
         "setup_steps": [
@@ -77,6 +86,9 @@ PLATFORMS = {
         "id": "schwab",
         "name": "Charles Schwab",
         "category": "stocks",
+        "integration_roles": ["market_data_future", "broker_future"],
+        "account_access": "planned",
+        "execution_status": "planned",
         "status_label": "Adapter planned",
         "summary": "Setup guidance only. Dwight has no implemented Schwab OAuth, account, or market-data adapter.",
         "setup_steps": [
@@ -99,6 +111,9 @@ PLATFORMS = {
         "id": "coinbase",
         "name": "Coinbase",
         "category": "crypto",
+        "integration_roles": ["public_market_data"],
+        "account_access": "not_connected",
+        "execution_status": "planned",
         "status_label": "Public BTC-USD price check",
         "summary": "Read Coinbase's public BTC-USD spot price without credentials. This checks public data access, not an Advanced Trade account.",
         "setup_steps": [
@@ -122,6 +137,9 @@ PLATFORMS = {
         "id": "binance",
         "name": "Binance",
         "category": "crypto",
+        "integration_roles": ["public_market_data", "spot_testnet_future"],
+        "account_access": "not_connected",
+        "execution_status": "planned",
         "status_label": "Public BTCUSDT price check",
         "summary": "Read Binance Spot's public BTCUSDT price through its market-data-only service, without an account or API key.",
         "setup_steps": [
@@ -146,6 +164,9 @@ PLATFORMS = {
         "id": "kraken",
         "name": "Kraken",
         "category": "crypto",
+        "integration_roles": ["public_market_data"],
+        "account_access": "not_connected",
+        "execution_status": "planned",
         "status_label": "Public XBTUSD ticker check",
         "summary": "Read the Kraken Spot public XBTUSD ticker without credentials. Kraken's XBT notation denotes bitcoin.",
         "setup_steps": [
@@ -168,6 +189,9 @@ PLATFORMS = {
         "id": "polymarket",
         "name": "Polymarket",
         "category": "prediction_markets",
+        "integration_roles": ["public_market_discovery", "public_orderbook_research"],
+        "account_access": "not_connected",
+        "execution_status": "not_available",
         "status_label": "Public market discovery",
         "summary": "Read public market metadata. Dwight also has bounded public order-book snapshot recording for prediction-market research.",
         "setup_steps": [
@@ -209,6 +233,9 @@ def build_profile(platform: str, feed: str = "sip") -> dict:
         "execution_enabled": False,
         "instrument": instruments.get(platform, "QQQ"),
         "credential_env_names": [],
+        "integration_roles": list(PLATFORMS[platform]["integration_roles"]),
+        "account_access": PLATFORMS[platform]["account_access"],
+        "execution_status": PLATFORMS[platform]["execution_status"],
     }
     if platform == "alpaca":
         profile["credential_env_names"] = ["APCA_API_KEY_ID", "APCA_API_SECRET_KEY"]

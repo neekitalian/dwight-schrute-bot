@@ -11,11 +11,33 @@ Build a private web console backed by a persistent Python service. Start with on
 | Private Dwight console | Account setup, strategy settings, session controls and results | Main product interface |
 | Python worker | Observe bars, evaluate the strategy, enforce risk, manage orders and reconcile fills | Runs on an always-on server |
 | Broker API | Authoritative orders, fills, positions and account equity | Proposed: Alpaca Paper, subject to account selection |
-| TradingView | Optional chart display; optional later alert input | Not required to keep the worker running |
+| TradingView | Optional chart display and signal input | Native Paper Trading is manual only; alerts can be routed to Dwight and then to a separately selected broker paper account |
+| Other platforms | Additional market-data and broker adapters | Connector catalog only until each adapter passes its own paper readiness gates |
 | Hugging Face | Public demonstration and research comparisons | No customer account credentials or order controls |
 | Developer API | Integration with other products | Later, after the worker lifecycle is verified |
 
 A browser extension is not an execution dependency. Closing the browser must not stop supervision of existing orders. Do not automate clicks in TradingView's native paper account as a substitute for a broker API.
+
+## Connection model
+
+Treat each platform as one or more independent roles. A user may select a chart, a signal source, a market-data provider and an execution account separately. Connecting one role never implies the others are connected. The console must display the exact platform and account for each role.
+
+| Role | What Dwight uses it for | Example |
+| --- | --- | --- |
+| Chart | Visual review | TradingView chart for QQQ |
+| Signal source | Supplies a candidate event | TradingView alert webhook, after that route is implemented |
+| Market data | Bars and quotes used to validate a candidate | Alpaca QQQ feed, selected explicitly as SIP or IEX |
+| Execution account | Orders, fills, positions and equity | Alpaca Paper account, after its worker is complete |
+
+Supported product routes should be explicit:
+
+1. **TradingView native Paper Trading**: Dwight can present a setup and record manually entered orders. It cannot programmatically submit orders to this native account.
+2. **TradingView alert to a broker paper account**: TradingView sends a signal to Dwight's private HTTPS endpoint. Dwight validates the payload, timestamp, symbol, interval and duplicate identifier, then independently checks fresh market and account state, applies the selected strategy and fixed risk policy, and may route an order to a separately connected broker paper account. This does not trade the TradingView account.
+3. **Dwight strategy to a broker paper account**: Dwight evaluates its own completed-bar strategy and uses the same broker-side checks and order lifecycle, without TradingView as a signal source.
+
+TradingView messages are untrusted inputs. They must not carry broker keys, OAuth tokens or account secrets. A webhook signal cannot override the selected strategy, instrument allowlist, position limits, daily loss limits or account mode. Missing identity, stale bars, duplicates, unknown actions, mismatched intervals or provider disagreement fail closed. The broker remains authoritative for accepted orders, fills and positions.
+
+The shared connector contract should expose separate capabilities for historical/live data, account identity, positions, orders, partial fills, cancel/replace, protective orders, paper/test mode and restart reconciliation. Unknown or unsupported behavior blocks execution for that route. Do not share a strategy implementation across stocks, crypto and prediction markets without asset-specific validation and accounting.
 
 Alpaca documents a paper API with separate credentials and the endpoint `https://paper-api.alpaca.markets`. TradingView documents that Pine strategies cannot place orders in its built-in paper account or directly through the Trading Panel. An external broker API is therefore the proposed execution route; adding Python after a TradingView alert does not remove the native account limitation. [Alpaca paper API](https://docs.alpaca.markets/us/docs/paper-trading), [TradingView strategy limitations](https://www.tradingview.com/pine-script-docs/faq/strategies/#can-i-connect-my-strategies-to-my-paper-trading-account)
 
@@ -33,7 +55,7 @@ Use two distinct controls: **Pause new entries** leaves supervision and protecti
 
 ## First execution scope
 
-The proposed first worker supports only QQQ, whole-share long entries, one strategy and one dedicated paper account. No leverage expansion, pyramiding, unrelated positions, account resets or real-money endpoint is part of this version. The user must explicitly select the execution account; existing market-data credentials alone do not authorize order submission.
+The proposed first worker supports only QQQ, whole-share long entries, one strategy and one dedicated Alpaca paper account. This is the first execution target, not a claim that other listed platforms are already connected. TradingView is supported as a chart and planned signal source; its native paper account remains manual. IBKR, Schwab, Coinbase, Binance, Kraken and Polymarket retain their connector-specific status in `docs/connections.md`; they do not inherit the QQQ strategy or Alpaca execution readiness. No leverage expansion, pyramiding, unrelated positions, account resets or real-money endpoint is part of this version. The user must explicitly select the execution account; existing market-data credentials alone do not authorize order submission.
 
 Use the same declared feed, bar construction and causal strategy version in research and forward evaluation. Keep model inference optional. The first automatic trial tests the VWAP baseline and the order lifecycle, not a claim that a trained model improves returns. TradingView alerts, if added later, enter as untrusted observations or proposals and must pass the same freshness, identity and risk checks.
 
@@ -81,7 +103,9 @@ Exercise these cases with deterministic broker fixtures and fault injection firs
 3. Build the small control console on that verified worker, including authentication and credential storage before remote exposure.
 4. Package reproducible installation, upgrades, backups and health monitoring for a self-hosted edition.
 5. Add a hosted edition with customer isolation, account authorization and independent execution state per customer.
-6. Add optional TradingView signal inputs and qualified model versions after the first route works end to end.
+6. Add TradingView signal inputs as a separate, audited input route to the selected broker paper adapter. Do not label that as native TradingView Paper Trading automation.
+7. Add other paper/test adapters one at a time after their account identity, order lifecycle, fills, recovery and asset-specific strategy have been verified.
+8. Consider qualified model versions only after the deterministic baseline is measured end to end.
 
 For a later hosted edition, Alpaca's OAuth flow can let a user authorize a particular paper account. Application registration, redirect validation, anti-forgery state, backend token storage and any provider approval are additional work. Request paper authorization explicitly and only the scopes used by the product. Do not present OAuth as currently implemented or approved. [Alpaca OAuth documentation](https://docs.alpaca.markets/us/docs/using-oauth2-and-trading-api)
 

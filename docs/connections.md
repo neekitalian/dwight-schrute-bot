@@ -13,14 +13,22 @@ does not open an account, complete OAuth, connect a wallet, or place an order.
 
 | Platform ID | Working Dwight support | Account integration |
 |---|---|---|
-| `tradingview` | Private QQQ manual paper journal and normalized fill import | Manual actions in TradingView; no account API |
-| `alpaca` | Private paper-account read check and explicit SIP/IEX QQQ data check; existing stock data research | Private paper credentials required; connection checks do not submit orders |
-| `ibkr` | Setup guidance and a profile | Adapter planned |
-| `schwab` | Setup guidance and a profile | OAuth/account adapter planned |
-| `coinbase` | Public BTC-USD spot-price check | No authenticated account integration |
-| `binance` | Public BTCUSDT Spot price check | No authenticated account or testnet integration |
-| `kraken` | Public XBTUSD Spot ticker check | No authenticated account integration |
-| `polymarket` | Public market discovery; existing public book snapshot recording | No wallet or authenticated trading integration |
+| `tradingview` | QQQ chart, private manual paper journal, normalized fill import; webhook signal route is a future role | Native account manual only; no account API or order submission |
+| `alpaca` | Private paper-account read check and explicit SIP/IEX QQQ data check; existing stock research | Candidate first broker paper route; current order lifecycle is incomplete and must not run unattended |
+| `ibkr` | Setup guidance and a profile | Market data and paper broker adapter planned |
+| `schwab` | Setup guidance and a profile | OAuth, account and broker adapter planned; paper availability is not claimed |
+| `coinbase` | Public BTC-USD spot-price check | No authenticated account integration; future Advanced Trade adapter |
+| `binance` | Public BTCUSDT Spot price check | No authenticated account or testnet integration; future testnet adapter |
+| `kraken` | Public XBTUSD Spot ticker check | No authenticated account integration; future adapter |
+| `polymarket` | Public market discovery; existing public book snapshot recording | Research only; no wallet or authenticated trading integration |
+
+The product separates **chart**, **signal source**, **market data** and
+**execution account**. A TradingView alert may eventually reach Dwight's private
+webhook and be validated before routing to an independently selected broker
+paper account. That route would not place an order in TradingView's own Paper
+Trading account. Each profile reports integration roles, account-access state
+and execution status separately; `execution_enabled` remains false for every
+profile.
 
 Checks describe only the requests actually made. The result reports capabilities,
 status, timestamp, and a message; it does not expose raw prices or account data.
@@ -167,6 +175,9 @@ profile = build_profile("alpaca", feed="sip")
 #  'mode': 'research_read_only', 'execution_enabled': False,
 #  'instrument': 'QQQ',
 #  'credential_env_names': ['APCA_API_KEY_ID', 'APCA_API_SECRET_KEY'],
+#  'integration_roles': ['market_data', 'paper_broker_candidate'],
+#  'account_access': 'private_paper_read_check',
+#  'execution_status': 'paper_client_incomplete',
 #  'feed': 'sip'}
 
 public_profile = build_profile("coinbase")
@@ -178,3 +189,28 @@ and feeds are rejected. Only Alpaca consumes private credential variables;
 planned adapters and public probes export an empty credential-name list. The
 catalog and profile builder make no network requests, read no secrets, and
 accept no arbitrary endpoint URL.
+
+## Readiness gates for the multi-platform route
+
+The web console should not show a single green “connected” state. It should
+show separate results for account identity, market-data entitlement, selected
+paper mode, strategy compatibility, order permissions, protective-order
+support and recovery. Only the complete route can become pilot-ready. A
+public-price probe or a successful login is not an execution check.
+
+For TradingView webhooks, the alert is a candidate input. Validate its fixed
+schema, configured symbol and interval, completed-bar time, age, unique event
+identity and replay status. Keep secrets out of alert content, reject unknown
+actions, then fetch current data and broker state before applying Dwight’s own
+risk rules. Never trust the alert’s requested quantity as the final order size.
+TradingView webhooks send HTTP requests to an external endpoint, but do not
+provide an API for Pine strategies to place orders in the built-in paper
+account. See the [webhook setup guide](https://www.tradingview.com/support/solutions/43000529348-how-to-configure-webhook-alerts/)
+and [Pine strategy limitations](https://www.tradingview.com/pine-script-docs/faq/strategies/#can-i-connect-my-strategies-to-my-paper-trading-account).
+
+The first automated route remains Alpaca Paper for QQQ only, after completion
+of the unfinished partial-fill protection, session exit, reconnect recovery and
+broker-derived reporting work described in
+[`automatic-paper-product.md`](automatic-paper-product.md). All other
+platforms are explicitly staged; crypto and prediction-market execution need
+their own strategy, sizing and settlement model.
