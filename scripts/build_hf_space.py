@@ -14,6 +14,7 @@ FILES = (
     "LICENSE", "NOTICE", "pyproject.toml", "docs/VWAP-LICENSE",
     "docs/architecture.md", "docs/workflow.md", "docs/vwap.md",
     "docs/validation.md", "docs/huggingface.md",
+    "docs/connections.md", "dwight/connection_catalog.py", "dwight/connection_checks.py",
     "docs/manual-paper.md", "docs/manual-observer.md", "docs/manual-milestones.md", "docs/walkforward.md", "docs/finrl-research.md",
     "docs/real-data.md", "docs/enrichment.md", "docs/quickstart.md", "docs/tradingview-alerts.md", "docs/toolkit-release.md",
     "docs/experiments-and-reports.md", "docs/server-experiment.md", "docs/transformer-research.md",
@@ -32,6 +33,7 @@ FILES = (
     "deploy/huggingface/charts.py", "deploy/huggingface/presentation.py",
     "deploy/huggingface/transformer_analysis.py",
     "deploy/huggingface/walkforward_view.py", "deploy/huggingface/starter.py",
+    "deploy/huggingface/platforms.py",
 )
 MAPPED_FILES = {
     "README.md": "PROJECT-README.md",
@@ -58,7 +60,7 @@ def stage(output: Path, root: Path = ROOT) -> dict:
         "schema_version": 1,
         "source_repository": "https://github.com/neekitalian/dwight-schrute-bot",
         "source_commit": revision,
-        "application": "synthetic_research_only",
+        "application": "synthetic_research_and_public_data_checks",
         "broker_execution_enabled": False,
         "files": {p: hashlib.sha256(data).hexdigest() for p, data in sorted(blobs.items())},
     }

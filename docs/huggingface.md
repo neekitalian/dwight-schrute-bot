@@ -2,7 +2,7 @@
 
 The public app is [neekthekid/dwight-schrute-bot](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 This is the research interface, not the always-on paper trading worker.
-The **Start here** tab links the versioned 0.5.0 toolkit and offers four fixed
+The **Start here** tab links the versioned 0.6.0 toolkit and offers four fixed
 paths: explore the demo, research private QQQ history, connect an observation
 inbox, or record manual TradingView paper trades. This tab provides directions
 only; it cannot create workspaces or connect accounts on the public server.
@@ -18,6 +18,10 @@ result; the process holds up to four dashboard cases, the compact legacy report,
 and one on-demand walk-forward report in memory. Temporary data is
 cleaned up. MLflow logging is disabled in this ephemeral demo; use the documented
 local workflow for private datasets, persistent artifacts and MLflow tracking.
+
+## Platform connections
+
+The Connections tab offers eight platform setup paths and credential-free JSON downloads. Public Coinbase, Binance, Kraken and Polymarket checks use fixed endpoints, bounded requests and no account credentials. Alpaca checks run only in the private CLI; the public callback blocks them even if called directly. IBKR and Schwab remain planned adapters. Public check success is labeled `public_data_available`, never an account connection. The crypto probes do not change the synthetic performance charts. See [capabilities and setup](connections.md).
 
 ## Verified deployment
 

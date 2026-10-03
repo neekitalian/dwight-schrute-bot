@@ -2,7 +2,9 @@
 
 A small toolkit for reproducible QQQ research and reviewed paper trading. The first integrated strategy is the existing **VWAP + market-structure pullback bot**, pinned to its source commit. Model research is separate from deterministic execution.
 
-**0.5.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.5.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
+**0.6.0 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.6.0), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining work before a hosted commercial service.
+
+The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, a private Alpaca read-only check, and downloadable setup profiles. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 

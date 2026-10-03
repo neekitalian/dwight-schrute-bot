@@ -1,4 +1,4 @@
-"""Public synthetic research dashboard. No data uploads or execution endpoints."""
+"""Public research and read-only connection setup. No account or order endpoints."""
 import os
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -9,6 +9,7 @@ from .charts import default_session, diagnostics_figure, equity_figure, outcomes
 from . import presentation as ui
 from . import walkforward_view as walkforward
 from . import starter
+from . import platforms
 from .research import COMPARISON_HEADERS, present_experiment, run_synthetic_experiment
 
 
@@ -51,6 +52,24 @@ def inspect_connections(choice):
         raise gr.Error("Choose price sequences, news context or both.") from None
 
 
+def platform_setup(platform, feed):
+    try:
+        instructions, profile, path = platforms.setup(platform, feed)
+        public = platform in platforms.PUBLIC_PLATFORMS
+        return (instructions, profile, path,
+                gr.Button(value="Check public data" if public else "Check privately using the toolkit", interactive=public),
+                {"platform": platform, "status": "not_checked", "account_connected": False})
+    except (ValueError, TypeError, KeyError):
+        raise gr.Error("Choose a listed platform and feed.") from None
+
+
+def public_connection_check(platform):
+    try:
+        return platforms.public_check(platform)
+    except Exception:
+        raise gr.Error("The public data check could not complete. No account was connected.") from None
+
+
 def evaluate_walkforward():
     try:
         report = walkforward.run_public_walkforward()
@@ -81,6 +100,31 @@ def build_app():
             starter_steps = gr.Markdown(starter.plan(starter.CHOICES[0]))
             starter_choice.input(starter.plan, starter_choice, starter_steps, api_name="starter_plan")
             gr.Markdown(starter.BOUNDARY)
+        with gr.Tab("Connections"):
+            gr.Markdown(platforms.INTRO)
+            html(platforms.overview())
+            html(platforms.FLOW)
+            with gr.Row():
+                platform = gr.Dropdown(choices=[(v['name'], k) for k, v in platforms.PLATFORMS.items()],
+                                       value="tradingview", label="Investment platform", scale=3)
+                feed = gr.Dropdown(choices=[("SIP · consolidated US stocks", "sip"), ("IEX · one exchange", "iex")],
+                                   value="sip", label="Alpaca feed · applies only to Alpaca", scale=2)
+            initial_details, initial_profile, initial_path = platforms.setup("tradingview")
+            platform_details = gr.Markdown(initial_details)
+            with gr.Row():
+                check_public = gr.Button("Check privately using the toolkit", interactive=False)
+                profile_download = gr.DownloadButton("Download setup profile", value=initial_path)
+            connection_status = gr.JSON(value={"platform": "tradingview", "status": "not_checked", "account_connected": False},
+                                        label="Read-only check · no account or order access")
+            gr.Markdown("Public checks run from the Space's server and may differ from your region. Results are timestamped; they do not verify your account or strategy.")
+            with gr.Accordion("Inspect the credential-free setup profile", open=False):
+                connection_profile = gr.Code(value=initial_profile, language="json", interactive=False)
+            gr.Markdown(platforms.BOUNDARY)
+            setup_outputs = [platform_details, connection_profile, profile_download, check_public, connection_status]
+            platform.input(platform_setup, [platform, feed], setup_outputs, api_name="platform_setup")
+            feed.input(platform_setup, [platform, feed], setup_outputs, api_name=False)
+            check_public.click(public_connection_check, platform, connection_status, api_name="public_connection_check",
+                               concurrency_id="public-data-checks", concurrency_limit=2, trigger_mode="once")
         with gr.Tab("Performance"):
             cards = html('<div class="dw-callout">Computing the fixed synthetic experiments…</div>')
             note = gr.Markdown()

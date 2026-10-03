@@ -1,6 +1,6 @@
 """Public onboarding directions only. No workspace, account or credential access."""
 REPOSITORY = 'https://github.com/neekitalian/dwight-schrute-bot'
-RELEASE = REPOSITORY + '/releases/tag/v0.5.0'
+RELEASE = REPOSITORY + '/releases/tag/v0.6.0'
 CHOICES = (
     'Explore the research demo',
     'Research my own QQQ history',
@@ -10,8 +10,8 @@ CHOICES = (
 INTRO = '''### A small toolkit for learning before trading
 
 Start with a repeatable VWAP strategy, measure what changes, and keep a record of every decision.
-Dwight 0.5.0 packages historical research, model experiments, baseline QQQ observations, a private TradingView inbox and fixed paper-experiment milestone reports.
-This public app demonstrates the research using invented prices. It does not host your trading account.
+Dwight 0.6.0 packages historical research, model experiments, baseline QQQ observations, a private TradingView inbox and fixed paper-experiment milestone reports.
+This public app demonstrates the research using invented prices. Its Connections tab adds public crypto data checks and private setup profiles. It does not host your trading account.
 '''
 FLOW = '''<div class="dw-flow">
 <div class="dw-node"><span>01 / PREPARE</span><b>Create your workspace</b><small>Private configuration, datasets and journals on your machine or server.</small></div>

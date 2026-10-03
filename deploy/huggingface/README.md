@@ -8,7 +8,7 @@ sdk_version: 6.29.0
 python_version: "3.11"
 app_file: app.py
 license: apache-2.0
-short_description: QQQ research with interactive performance and model analysis
+short_description: QQQ research, platform setup and public crypto data checks
 tags:
   - finance
   - research
@@ -22,7 +22,7 @@ tags:
 Explore a reproducible **synthetic** QQQ VWAP experiment through interactive performance charts,
 a trade explorer, classifier diagnostics, replay evidence and proposed transformer connections.
 
-**Prices are invented. No account is connected. No orders are submitted.**
+**Performance charts use invented prices. Connection probes read public endpoints. No account is connected and no orders are submitted.**
 The current research classifier is logistic regression. Price sequence and news transformer paths
 are documented research proposals; no transformer is loaded, evaluated or credited with improvement.
 
@@ -30,6 +30,7 @@ are documented research proposals; no transformer is loaded, evaluated or credit
 
 - **Start here:** four setup paths and a versioned source toolkit download. Directions
   keep private historical research and TradingView paper workflows off the public Space.
+- **Connections:** setup paths for TradingView, Alpaca, IBKR, Schwab, Coinbase, Binance, Kraken and Polymarket. Download credential-free profiles and check public crypto/discovery access. Alpaca checks run privately; IBKR and Schwab adapters are planned.
 - **Performance:** simulated equity, drawdown, returns, session P&L and trade risk multiples.
   Compare VWAP, a simple volume filter and Dwight on the same later test sessions.
 - **Walk-forward:** three chronological long-only tests, with training and validation dates,
@@ -65,7 +66,7 @@ This app has no credential entry, user uploads, custom code, broker operation or
 action. It does not ingest private journals or expose the milestone email campaign. The original
 inputless `/synthetic_experiment` endpoint is retained; `/dashboard` accepts only the fixed cases
 and evaluated strategy names. The inputless `/walkforward` endpoint evaluates the fixed window
-plan. Public charts use generated data only.
+plan. Public charts use generated data only. The separate `/public_connection_check` endpoint accepts only listed public platforms and exposes no private account checks; `/platform_setup` accepts fixed platform/feed choices and returns guidance with a credential-free profile download.
 
 A private 11-session official QQQ sample has been validated and replayed; it is too small to
 qualify a model. Transformer performance, forward shadow observation and the complete paper
