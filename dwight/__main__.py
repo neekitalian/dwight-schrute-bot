@@ -113,6 +113,8 @@ def main():
     p.add_argument('--out', type=Path, required=True)
     p = commands.add_parser('prepare-data-keys', help='Prepare private empty key fields without overwriting existing secrets')
     p.add_argument('--file', type=Path, default=Path('.env'))
+    p = commands.add_parser('prepare-news-config', help='Prepare private news relay addresses and key; no connection or orders')
+    p.add_argument('--file', type=Path, default=Path('.env'))
     p = commands.add_parser('connection-profile', help='Export a credential-free read-only setup profile')
     p.add_argument('platform', choices=PLATFORMS)
     p.add_argument('--feed', choices=['sip', 'iex'], default='sip')
@@ -302,7 +304,7 @@ def main():
         # Onboarding checks only the selected workspace, without importing an
         # unrelated current-directory .env into this process.
         if (args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list',
-                                'connections', 'connection-profile', 'connection-check', 'prepare-data-keys',
+                                'connections', 'connection-profile', 'connection-check', 'prepare-data-keys', 'prepare-news-config',
                                 'collect-tokenized', 'compare-tokenized'}
                 and not args.command.startswith('manual-campaign-')):
             load_env()
@@ -317,6 +319,9 @@ def main():
         elif args.command == 'prepare-data-keys':
             from .private_config import prepare_data_keys
             result = prepare_data_keys(args.file)
+        elif args.command == 'prepare-news-config':
+            from .private_config import prepare_news_config
+            result = prepare_news_config(args.file)
         elif args.command == 'connection-profile':
             from .connection_catalog import build_profile
             result = build_profile(args.platform, feed=args.feed)

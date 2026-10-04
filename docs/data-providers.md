@@ -3,6 +3,8 @@
 Dwight supports private Alpaca, Databento and Massive market data. These keys
 provide data access. They do not connect or automate a TradingView paper account.
 
+For the separate news relay configuration, see [News sources](news-sources.md).
+
 ## Add keys privately
 
 From your installed Dwight workspace:

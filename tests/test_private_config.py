@@ -7,7 +7,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from dwight.private_config import DATA_KEY_NAMES, MAX_ENV_BYTES, prepare_data_keys
+from dwight.private_config import (DATA_KEY_NAMES, MAX_ENV_BYTES, NEWS_CONFIG_NAMES,
+                                  prepare_data_keys, prepare_news_config)
 
 
 class PrivateConfigTests(unittest.TestCase):
@@ -154,6 +155,56 @@ class PrivateConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "would exceed its size limit"):
             prepare_data_keys(self.path)
         self.assertEqual(self.path.read_bytes(), original)
+
+    def test_news_preparation_preserves_market_keys_and_adds_no_values(self):
+        original = b"MASSIVE_API_KEY=fake-market-key\nCUSTOM_SETTING=keep\n"
+        self.path.write_bytes(original)
+        result = prepare_news_config(self.path)
+        self.assertTrue(self.path.read_bytes().startswith(original))
+        self.assertEqual(result["added_fields"], list(NEWS_CONFIG_NAMES))
+        for name in NEWS_CONFIG_NAMES:
+            self.assertIn(name + "=\n", self.path.read_text())
+        self.assertNotIn("fake-market-key", json.dumps(result))
+        self.assertFalse(result["network_checked"])
+        self.assertFalse(result["submits_orders"])
+        self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
+
+    def test_news_preparation_preserves_existing_private_addresses_and_key(self):
+        original = (b"BENZINGA_RELAY_REST=https://private.example/v1/news\n"
+                    b"BENZINGA_RELAY_WS=wss://private.example/v1/news/ws\n"
+                    b"BENZINGA_RELAY_KEY=fake-relay-key\n")
+        self.path.write_bytes(original)
+        result = prepare_news_config(self.path)
+        self.assertEqual(self.path.read_bytes(), original)
+        self.assertEqual(result["added_fields"], [])
+        self.assertNotIn("private.example", json.dumps(result))
+        self.assertNotIn("fake-relay-key", json.dumps(result))
+
+    def test_news_preparation_refuses_ambiguous_and_symlink_files(self):
+        original = b"BENZINGA_RELAY_KEY=fake-a\nBENZINGA_RELAY_KEY=fake-b\n"
+        self.path.write_bytes(original)
+        with self.assertRaisesRegex(ValueError, "Duplicate key entries"):
+            prepare_news_config(self.path)
+        self.assertEqual(self.path.read_bytes(), original)
+        alias = self.parent / "alias.env"
+        alias.symlink_to(self.path)
+        with self.assertRaisesRegex(ValueError, "symbolic links"):
+            prepare_news_config(alias)
+        self.assertEqual(self.path.read_bytes(), original)
+
+    def test_news_cli_does_not_load_environment_or_connect(self):
+        from dwight.__main__ import main
+        output = io.StringIO()
+        with patch("sys.argv", ["dwight", "prepare-news-config", "--file", str(self.path)]), \
+                patch("dwight.__main__.load_env") as load, \
+                patch("socket.create_connection") as connect, \
+                contextlib.redirect_stdout(output):
+            main()
+        load.assert_not_called()
+        connect.assert_not_called()
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["added_fields"], list(NEWS_CONFIG_NAMES))
+        self.assertFalse(result["values_reported"])
 
 
 if __name__ == "__main__":

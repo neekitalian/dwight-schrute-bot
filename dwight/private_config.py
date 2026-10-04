@@ -7,10 +7,23 @@ import re
 import stat
 
 DATA_KEY_NAMES = ("APCA_API_KEY_ID", "APCA_API_SECRET_KEY", "DATABENTO_API_KEY", "MASSIVE_API_KEY")
+NEWS_CONFIG_NAMES = ("BENZINGA_RELAY_REST", "BENZINGA_RELAY_WS", "BENZINGA_RELAY_KEY")
 MAX_ENV_BYTES = 65_536
 
 
 def prepare_data_keys(path: Path | str = Path(".env")) -> dict:
+    """Append missing private market-data key fields without exposing values."""
+    return _prepare_fields(path, DATA_KEY_NAMES,
+                           "Private data keys: fill locally; never paste them into chat or a public Space.")
+
+
+def prepare_news_config(path: Path | str = Path(".env")) -> dict:
+    """Prepare private relay addresses and its separate key; no connections."""
+    return _prepare_fields(path, NEWS_CONFIG_NAMES,
+                           "Private news relay: fill complete HTTPS/WSS addresses and its separate key locally.")
+
+
+def _prepare_fields(path: Path | str, fields: tuple[str, ...], comment: str) -> dict:
     """Append missing empty fields, preserving existing bytes and credentials.
 
     No values are accepted, read into the process environment, or returned.
@@ -50,10 +63,10 @@ def prepare_data_keys(path: Path | str = Path(".env")) -> dict:
             if key in names:
                 raise ValueError("Duplicate key entries are not allowed in the private key file")
             names.add(key)
-        missing = [name for name in DATA_KEY_NAMES if name not in names]
+        missing = [name for name in fields if name not in names]
         if missing:
             addition = ("\n" if raw and not raw.endswith(b"\n") else "")
-            addition += "# Private data keys: fill locally; never paste them into chat or a public Space.\n"
+            addition += "# " + comment + "\n"
             addition += "".join(name + "=\n" for name in missing)
             encoded = addition.encode("utf-8")
             if len(raw) + len(encoded) > MAX_ENV_BYTES:
