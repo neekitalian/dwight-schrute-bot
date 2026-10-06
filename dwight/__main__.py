@@ -115,6 +115,16 @@ def main():
     p.add_argument('--file', type=Path, default=Path('.env'))
     p = commands.add_parser('prepare-news-config', help='Prepare private news relay addresses and key; no connection or orders')
     p.add_argument('--file', type=Path, default=Path('.env'))
+    p = commands.add_parser('paper-init', help='Prepare a private automatic QQQ paper workspace; no orders')
+    p.add_argument('--directory', type=Path, required=True)
+    p.add_argument('--feed', choices=['sip', 'iex'], default='sip')
+    p = commands.add_parser('paper-worker', help='Run private Alpaca paper supervision; entries require console authorization')
+    p.add_argument('--directory', type=Path, required=True)
+    p.add_argument('--once', action='store_true', help='Read-only initial preflight; do not enable a new campaign')
+    p = commands.add_parser('paper-console', help='Serve the private paper control console on loopback only')
+    p.add_argument('--directory', type=Path, required=True)
+    p.add_argument('--port', type=int, default=8787)
+    p.add_argument('--open', action='store_true', help='Open an ephemeral authenticated session in your local browser')
     p = commands.add_parser('connection-profile', help='Export a credential-free read-only setup profile')
     p.add_argument('platform', choices=PLATFORMS)
     p.add_argument('--feed', choices=['sip', 'iex'], default='sip')
@@ -305,7 +315,7 @@ def main():
         # unrelated current-directory .env into this process.
         if (args.command not in {'init-workspace', 'toolkit-status', 'tradingview-list',
                                 'connections', 'connection-profile', 'connection-check', 'prepare-data-keys', 'prepare-news-config',
-                                'collect-tokenized', 'compare-tokenized'}
+                                'collect-tokenized', 'compare-tokenized', 'paper-init', 'paper-console'}
                 and not args.command.startswith('manual-campaign-')):
             load_env()
         if args.command == 'connections':
@@ -322,6 +332,29 @@ def main():
         elif args.command == 'prepare-news-config':
             from .private_config import prepare_news_config
             result = prepare_news_config(args.file)
+        elif args.command == 'paper-init':
+            from .paper_worker import init_paper_workspace
+            result = init_paper_workspace(args.directory, args.feed)
+        elif args.command == 'paper-worker':
+            from .paper_worker import run_paper_worker
+            result = run_paper_worker(args.directory, once=args.once)
+        elif args.command == 'paper-console':
+            import webbrowser
+            from .paper_console import make_console_server
+            from .paper_worker import ControlLedger, private_directory, write_private
+            root = private_directory(args.directory)
+            def command(action, payload):
+                with ControlLedger(root / 'controls.sqlite3') as ledger:
+                    return ledger.enqueue(action, payload)
+            with make_console_server(root / 'status.json', command, port=args.port) as server:
+                write_private(root / 'console-session.json', {'url': server.startup_url})
+                print('Private console: http://127.0.0.1:' + str(server.server_address[1]))
+                print('Private session saved to ' + str(root / 'console-session.json'))
+                print('Use --open locally or read the private session through SSH; keep this process running.')
+                if args.open:
+                    webbrowser.open(server.startup_url)
+                server.serve_forever()
+            return
         elif args.command == 'connection-profile':
             from .connection_catalog import build_profile
             result = build_profile(args.platform, feed=args.feed)

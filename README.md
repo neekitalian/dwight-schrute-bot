@@ -8,7 +8,7 @@ Current `main` also contains a private [QQQ and QQQx market comparison](docs/tok
 
 The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, private Alpaca, Databento and Massive checks, and downloadable setup profiles. [Market data connections](docs/data-providers.md) covers local key entry and QQQ history downloads. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
 
-Current `main` adds a shared platform capability contract and [bounded paper authorization](docs/paper-authorization.md) linked to entry intents and broker evidence. These additions are not in the existing 0.7.1 archive. The [four-step private trading flow](docs/automatic-paper-product.md) is the target experience; its continuous execution worker and authenticated console remain unfinished.
+Current `main` adds a private [automatic QQQ paper pilot](docs/automatic-paper-quickstart.md), with a loopback control console, continuous Alpaca paper worker, [bounded authorization](docs/paper-authorization.md) and [owned-order supervision](docs/paper-supervision.md). These additions are fixture-tested and are not in the existing 0.7.1 archive. Real broker lifecycle validation, remote activation and automatic fill-level performance reports remain pending. The public websites cannot start this worker.
 
 **Equities scope: QQQ only.** Data collection, experiments, shadow releases and paper-order policies enforce this scope. Public Polymarket research remains a separate connector.
 
@@ -22,7 +22,7 @@ The [native paper milestone workflow](docs/manual-milestones.md) freezes 12, 24,
 
 **Selected account:** Paper Trading by TradingView. Use [manual proposals and fill imports](docs/manual-paper.md); no automated orders are sent to that account. Alpaca is the planned market-data provider.
 
-**Deployment boundary:** the deployable service is shadow only and cannot submit orders. The paper library is mock-tested; the CLI permits read-only account checks. An unattended paper execution loop and a Polymarket fill simulator remain unfinished. Synthetic models cannot run in live shadow. No account is connected and no order has been submitted.
+**Deployment boundary:** existing public and shadow deployments do not submit orders. Current source includes a separately installed private Alpaca paper worker, which requires an explicitly selected account, approved limits and a start command. It has not been activated or verified with actual broker fills. A Polymarket fill simulator remains unfinished. Synthetic models cannot run in live shadow.
 
 Follow the [step-by-step workflow and preparation guide](docs/workflow.md).
 

@@ -1,6 +1,6 @@
 # Paper execution authorization
 
-Status: current source on `main`, tested with broker fixtures. These additions are not in the existing 0.7.1 release archive. There is no authorization CLI, authenticated control console or running execution service. The public setup page cannot create a grant or submit an order.
+Status: current source on `main`, tested with broker fixtures. These additions are not in the existing 0.7.1 release archive. A private loopback console can queue authorization and start/pause controls for the new worker; no running remote execution service or real broker pilot has been verified. The public setup page cannot create a grant or submit an order. See [the paper pilot guide](automatic-paper-quickstart.md).
 
 An account connection establishes access. A Dwight execution authorization records the narrower scope permitted for new paper entries. The first scope is a dedicated Alpaca paper account and whole-share, long-only QQQ orders.
 

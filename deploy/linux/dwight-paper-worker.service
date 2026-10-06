@@ -1,0 +1,25 @@
+[Unit]
+Description=Dwight QQQ automatic paper pilot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=dwight
+Group=dwight
+WorkingDirectory=/opt/dwight
+EnvironmentFile=/etc/dwight/paper.env
+Environment=PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+Environment=DWIGHT_ACCOUNT_LOCK_DIR=/var/lib/dwight/paper-account-locks
+ExecStart=/opt/dwight/.venv/bin/dwight paper-worker --directory /var/lib/dwight/automatic-paper
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/dwight
+
+[Install]
+WantedBy=multi-user.target

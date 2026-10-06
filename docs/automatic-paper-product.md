@@ -1,6 +1,6 @@
 # Automatic paper trading product
 
-Status: product specification with a fixture-tested paper authorization library. The continuous broker execution worker, authenticated control console and automatic broker-fill reports are not implemented as an integrated product. This document does not enable trading or change an account selection.
+Status: current `main` has a fixture-tested private console, continuous paper worker and order-supervision library. A real broker pilot, remote installation and automatic fill-level performance reports remain unverified or incomplete. The public websites cannot start this worker. See [the paper pilot guide](automatic-paper-quickstart.md). This document does not enable trading or change an account selection.
 
 ## Product choice
 
@@ -74,16 +74,16 @@ The worker uses current broker state and executable quotes for sizing and decisi
 
 | Component | Available today | Required for automatic operation |
 | --- | --- | --- |
-| Strategy | Causal baseline replay and completed-bar manual observer | Account-independent candidate interface consumed by a broker worker |
-| Broker transport | Paper-only Alpaca client and mock-tested durable entry intents in `dwight/paper.py` | Verified real paper API integration, executable quote ingestion and continuous supervision |
+| Strategy | Causal baseline observer consumed by the new private worker | Verify actual forward signal coverage |
+| Broker transport | Bounded paper client, same-feed quotes and durable intents | Verify real paper lifecycle transitions and fills |
 | Risk checks | Symbol, quote, spread, exposure and loss checks on entry | Session-wide enforcement, account-reset detection, expiry and policy identity across restarts |
 | Authorization | Immutable, bounded local grants linked to new paper intents; pause, resume and revocation | Authenticated operator consent, protected credential storage and a verified execution worker |
-| Orders | Stable client identifiers, persisted intent and reconciliation | Partial-entry protection, exit ownership, rejected exit recovery and confirmed session-close handling |
+| Orders | Fixture-tested partial-fill, exit ownership and calendar-close supervisor | Verify actual broker cancellation/fill races and unresolved exit handling |
 | Storage | Private research, manual and paper ledgers | Persisted broker fill identities, positions, equity snapshots and restart recovery |
-| Controls | No private control console | Authenticated setup, preflight, start, pause, close and clear status feedback |
+| Controls | Local capability-protected authorize, start and pause console | Remote installation, broader operator identity and separate explicit close control |
 | Reports | Replay reports and normalized manual-fill reports | Broker reconciliation, cost accounting, equity coverage and paper-specific milestone evidence |
 
-The current paper library halts new entries when a bracket parent is partially filled. That does not protect the filled shares: bracket exits may not yet be active. Treat the partial-fill path as an implementation blocker. A complete design must account for fills racing with cancellation, verify remaining quantity, avoid overlapping exits and keep emergency handling active when strategy evaluation fails. Inspect `PaperExecutor.reconcile`, `submit` and the broker's current order semantics before extending this module.
+The base paper library halts new entries on partial bracket fills. The new worker uses `SupervisedPaperExecutor`, which journals cancellation, waits for terminal parent and leg states, and closes verified owned residual exposure without overlapping executable exits. This is fixture-tested recovery, not a guarantee of protection or completed real broker validation. See [paper supervision](paper-supervision.md).
 
 ## Acceptance before a paper pilot
 
