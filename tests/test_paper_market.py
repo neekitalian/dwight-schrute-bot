@@ -215,6 +215,45 @@ class HardenedPaperClientTests(unittest.TestCase):
         client = HardenedAlpacaPaperClient("fixture-key", "fixture-secret", transport=Transport(status=404))
         self.assertIsNone(client.get_order_by_client_id("fixture-client-id"))
 
+    def test_fill_page_is_read_only_fixed_window_and_explicit_ascending(self):
+        transport = Transport([])
+        client = HardenedAlpacaPaperClient("fixture-key", "fixture-secret", transport=transport)
+        start = datetime(2026, 10, 5, 14, tzinfo=timezone.utc)
+        end = datetime(2026, 10, 5, 15, tzinfo=timezone.utc)
+        token = "20261005140100000::fixture-activity"
+        self.assertEqual(client.get_fill_activities(start, end, token, 25), [])
+        request, timeout = transport.calls[0]
+        parsed = urlsplit(request.full_url)
+        self.assertEqual((parsed.scheme, parsed.netloc, parsed.path),
+                         ("https", "paper-api.alpaca.markets", "/v2/account/activities/FILL"))
+        self.assertEqual(parse_qs(parsed.query), {"after": [start.isoformat()], "until": [end.isoformat()],
+                                                "direction": ["asc"], "page_size": ["25"], "page_token": [token]})
+        self.assertEqual((request.method, request.data, timeout), ("GET", None, 5))
+
+    def test_fill_query_rejects_ambiguous_window_and_unbounded_pages_before_http(self):
+        transport = Transport([])
+        client = HardenedAlpacaPaperClient("fixture-key", "fixture-secret", transport=transport)
+        start, end = "2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z"
+        for args in ((None, end), ("2026-10-05T14:00:00", end), (end, start), (start, start),
+                     (start, end, ""), (start, end, "bad\nvalue"), (start, end, "x" * 257),
+                     (start, end, None, True), (start, end, None, 0), (start, end, None, 101)):
+            with self.subTest(args=args), self.assertRaises(ValueError):
+                client.get_fill_activities(*args)
+        self.assertEqual(transport.calls, [])
+
+    def test_fill_page_must_be_bounded_array_and_failure_is_not_retried(self):
+        for payload in ({"activities": []}, None, [{}] * 101):
+            transport = Transport(payload)
+            client = HardenedAlpacaPaperClient("fixture-key", "fixture-secret", transport=transport)
+            with self.assertRaises(PaperError):
+                client.get_fill_activities("2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z")
+            self.assertEqual(len(transport.calls), 1)
+        transport = Transport([], status=429)
+        client = HardenedAlpacaPaperClient("fixture-key", "fixture-secret", transport=transport)
+        with self.assertRaises(BrokerHTTPError):
+            client.get_fill_activities("2026-10-05T14:00:00Z", "2026-10-05T15:00:00Z")
+        self.assertEqual(len(transport.calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

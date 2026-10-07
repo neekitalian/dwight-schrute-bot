@@ -123,11 +123,25 @@ early closes. The baseline observer currently abstains on early-close sessions;
 existing order supervision still runs. Stops, timing and loss limits do not
 guarantee execution prices or maximum losses.
 
-The console displays broker equity, positions and orders only from verified
-current snapshots. It does not invent a return curve or realized PnL. Automatic
-fill-level reporting, costs and reconciled equity-return accounting are remaining
-work. Historical replay, strategy observations and actual broker fills stay
-separate. News, transformers and FinRL do not alter this baseline.
+The console displays broker equity, positions and orders from current snapshots.
+An independent read-only reporter collects genuine Alpaca paper FILL activities
+and shows owned QQQ gross realized FIFO P&L only after quantity reconciliation.
+Stale or conflicting evidence withholds that figure. Fees, net P&L and account
+returns remain unknown; no account return curve is inferred from fills.
+
+Freeze an offline report into a new private directory:
+
+```sh
+.venv/bin/dwight paper-report --directory runs/automatic-paper \
+  --html-output runs/paper-reports/session-review
+```
+
+This command only reads the broker and writes private reporting evidence. It
+does not process control commands, submit orders or start any experiment clock.
+The [performance reporting guide](paper-performance.md) covers evidence,
+reconciliation and collection limits. Historical replay, strategy observations
+and broker paper fills stay separate. News, transformers and FinRL do not alter
+this baseline.
 
 TradingView remains an optional chart and observation source. Its native paper
 account is separate from Alpaca and requires manual orders. No TradingView

@@ -133,7 +133,8 @@ class HardenedAlpacaPaperClient(AlpacaPaperClient):
 
     def _request(self, method, path, *, params=None, payload=None):
         get_paths = {"/v2/account", "/v2/positions", "/v2/orders", "/v2/clock",
-                     "/v2/calendar", "/v2/orders:by_client_order_id", "/v2/assets/QQQ"}
+                     "/v2/calendar", "/v2/orders:by_client_order_id", "/v2/assets/QQQ",
+                     "/v2/account/activities/FILL"}
         order_path = isinstance(path, str) and re.fullmatch(r"/v2/orders/[a-zA-Z0-9-]+", path)
         if not ((method == "GET" and (path in get_paths or order_path))
                 or (method == "POST" and path == "/v2/orders")
@@ -149,6 +150,38 @@ class HardenedAlpacaPaperClient(AlpacaPaperClient):
     def get_asset(self):
         """Read only the exact QQQ asset definition; no arbitrary instrument URL."""
         return self._request("GET", "/v2/assets/QQQ")
+
+    def get_fill_activities(self, after, until, page_token=None, page_size=100):
+        """Read one bounded page of genuine paper executions, oldest first.
+
+        Alpaca filters activity creation time, not execution time. Callers must
+        retain a fixed window across pages and refresh that full window later
+        to discover late booked executions. No mutation or retry occurs here.
+        """
+        def timestamp(value):
+            try:
+                stamp = value if isinstance(value, datetime) else datetime.fromisoformat(value.replace("Z", "+00:00"))
+                if stamp.tzinfo is None or stamp.utcoffset() is None:
+                    raise ValueError()
+                return stamp.astimezone(timezone.utc)
+            except (ValueError, TypeError, AttributeError, OverflowError):
+                raise ValueError("Fill queries require explicit timezone-aware timestamps") from None
+
+        start, end = timestamp(after), timestamp(until)
+        if start >= end:
+            raise ValueError("Fill query window must have a positive duration")
+        if type(page_size) is not int or not 1 <= page_size <= 100:
+            raise ValueError("Fill page size must be an integer from one to 100")
+        if page_token is not None and (not isinstance(page_token, str) or not 1 <= len(page_token) <= 256
+                                      or any(ord(char) < 33 or ord(char) > 126 for char in page_token)):
+            raise ValueError("Fill pagination token is invalid")
+        params = {"after": start.isoformat(), "until": end.isoformat(), "direction": "asc", "page_size": page_size}
+        if page_token is not None:
+            params["page_token"] = page_token
+        result = self._request("GET", "/v2/account/activities/FILL", params=params)
+        if not isinstance(result, list) or len(result) > page_size:
+            raise PaperError("Alpaca returned an invalid fill activity page")
+        return result
 
 
 def _positive(value):

@@ -6,11 +6,12 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from dwight.authorization import AuthorizationLedger
 from dwight.paper import Quote, RiskPolicy, PaperError
 from dwight.paper_worker import (ControlLedger, PaperWorker, STRATEGY_ID,
-                                 init_paper_workspace, proposal_for)
+                                 ReportingThread, init_paper_workspace, proposal_for)
 from dwight.signals import strategy_identity
 from vwap_bot.engine import Config
 
@@ -187,6 +188,44 @@ class PaperWorkerTests(unittest.TestCase):
                        {"initially_eligible": False}, {"direction": -1}, {"feed": "iex"}):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 proposal_for({**candidate(), **change}, Market().latest_quote("sip"), self.executor.reconcile(), RiskPolicy(), 2000, REVISION, NOW)
+
+    def test_performance_is_optional_and_never_controls_supervision(self):
+        self.worker.performance = {"status": "unavailable", "gross_realized_pnl_usd": None}
+        before = self.executor.supervisions
+        status = self.worker.tick(NOW)
+        self.assertGreater(self.executor.supervisions, before)
+        self.assertEqual(status["performance"], self.worker.performance)
+        self.assertIsNone(status["pnl_usd"])
+
+    def test_reporter_has_separate_read_client_and_publishes_account_bound_summary(self):
+        readonly_client = object()
+        reporter = ReportingThread(self.root, readonly_client)
+        report = {"account_id": "fixture-account", "fixture": True,
+                  "console_summary": {"status": "ready", "as_of": NOW.isoformat(),
+                                      "gross_realized_pnl_usd": "4.25", "owned_fill_count": 3}}
+        with patch("dwight.paper_reporting.collect_paper_report", return_value=report) as collect:
+            result = reporter.collect_once()
+        self.assertIs(collect.call_args.args[0], readonly_client)
+        self.assertEqual(collect.call_args.args[1:], (self.root / "execution.sqlite3", self.root / "reporting.sqlite3"))
+        self.assertEqual(collect.call_args.kwargs, {"max_pages": 20})
+        self.assertEqual(result["account_id"], "fixture-account")
+        self.assertTrue(result["fixture"])
+        self.assertEqual(reporter.latest.get_nowait(), result)
+        self.assertEqual(json.loads((self.root / "report-status.json").read_text()), result)
+        self.assertEqual((self.root / "report-status.json").stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.executor.submissions, [])
+
+    def test_report_failure_replaces_prior_success_and_never_leaks_provider_error(self):
+        reporter = ReportingThread(self.root, object())
+        reporter.latest.put_nowait({"status": "ready", "gross_realized_pnl_usd": "99"})
+        with patch("dwight.paper_reporting.collect_paper_report", side_effect=PaperError("private-key-and-payload")):
+            summary = reporter.collect_once()
+        self.assertEqual(summary["status"], "unavailable")
+        self.assertIsNone(summary["gross_realized_pnl_usd"])
+        self.assertIsNone(summary["account_id"])
+        self.assertNotIn("private-key", json.dumps(summary))
+        self.assertEqual(reporter.latest.get_nowait(), summary)
+        self.assertEqual(self.executor.submissions, [])
 
 
 if __name__ == "__main__": unittest.main()

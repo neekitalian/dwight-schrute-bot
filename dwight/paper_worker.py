@@ -179,6 +179,52 @@ class ObservationThread(threading.Thread):
                                    "status": {"status": "observer_failed"}, "signals": []})
 
 
+class ReportingThread(threading.Thread):
+    """Read-only fill collection, isolated from order supervision and its DB.
+
+    A slow or unavailable activity API only makes performance unavailable.
+    This thread never owns an executor, handles commands or submits orders.
+    """
+
+    def __init__(self, root, client):
+        super().__init__(daemon=True, name="dwight-paper-reporter")
+        self.root, self.client = root, client
+        self.stop_event = threading.Event()
+        self.latest = queue.Queue(maxsize=1)
+
+    def collect_once(self):
+        from .paper_reporting import collect_paper_report
+        try:
+            report = collect_paper_report(self.client, self.root / "execution.sqlite3",
+                                          self.root / "reporting.sqlite3", max_pages=20)
+            summary = {**report["console_summary"], "account_id": report["account_id"],
+                       "fixture": report.get("fixture") is True}
+        except Exception:
+            # Do not publish exception strings, credentials, raw payloads or a
+            # previously successful value as fresh performance after a failure.
+            summary = {"status": "unavailable", "as_of": clock().isoformat(),
+                       "account_id": None, "gross_realized_pnl_usd": None,
+                       "fees_usd": None, "net_realized_pnl_usd": None,
+                       "account_return_pct": None, "owned_fill_count": 0,
+                       "excluded_fill_count": 0, "open_quantity": None,
+                       "reconciliation": "unverified", "fixture": False}
+        write_private(self.root / "report-status.json", summary)
+        try: self.latest.get_nowait()
+        except queue.Empty: pass
+        self.latest.put_nowait(summary)
+        return summary
+
+    def run(self):
+        while not self.stop_event.is_set():
+            try:
+                self.collect_once()
+            except Exception:
+                # Even private-disk failure cannot block the supervisor. The
+                # console expires the last summary instead of keeping it fresh.
+                pass
+            self.stop_event.wait(60)
+
+
 def proposal_for(record, quote, snapshot, policy, allocation, revision, now):
     """Convert one causal observation into a cash-funded, scoped candidate."""
     if (record.get("symbol") != "QQQ" or record.get("feed") != policy.expected_feed
@@ -206,6 +252,7 @@ class PaperWorker:
         self.root, self.executor, self.market, self.controls, self.config = root, executor, market, controls, config
         self.observation = None
         self.snapshot = None
+        self.performance = None
 
     def _policy(self, payload):
         allocation = float(payload["allocation_usd"])
@@ -360,6 +407,7 @@ class PaperWorker:
                   "readiness": {"ready": ready and feed_access and data_ready and not failures, "failures": failures},
                   "authorization": authorization, "risk_policy": json.loads(canonical(asdict(self.executor.policy))),
                   "equity_usd": account.get("equity"), "pnl_usd": None,
+                  "performance": self.performance,
                   "positions": self.snapshot["positions"] if ready else [],
                   "orders": self.snapshot["open_orders"] if ready else [],
                   "health": {"worker": state, "broker": "connected" if ready else "unknown", "data": "current" if data_ready else "waiting", "feed_access": feed_access,
@@ -373,7 +421,8 @@ def run_paper_worker(directory, *, once=False):
     from .paper_market import HardenedAlpacaPaperClient, PaperMarket
     from .paper_supervision import SupervisedPaperExecutor
     root = private_directory(directory)
-    for name in ("config.json", "execution.sqlite3", "execution.sqlite3.lock", "status.json"):
+    for name in ("config.json", "execution.sqlite3", "execution.sqlite3.lock", "status.json",
+                 "reporting.sqlite3", "report-status.json"):
         if (root / name).is_symlink():
             raise ValueError("Paper workspace files cannot be symbolic links")
     config = json.loads((root / "config.json").read_text())
@@ -385,6 +434,7 @@ def run_paper_worker(directory, *, once=False):
     old_umask = os.umask(0o077)
     account_lock = None
     observer = None
+    reporter = None
     try:
         client = HardenedAlpacaPaperClient.from_env()
         account = client.get_account()
@@ -400,9 +450,14 @@ def run_paper_worker(directory, *, once=False):
             if not once:
                 observer = ObservationThread(root, config["feed"])
                 observer.start()
+                reporter = ReportingThread(root, HardenedAlpacaPaperClient.from_env())
+                reporter.start()
             while True:
                 if observer:
                     try: worker.observation = observer.latest.get_nowait()
+                    except queue.Empty: pass
+                if reporter:
+                    try: worker.performance = reporter.latest.get_nowait()
                     except queue.Empty: pass
                 worker.tick(read_only=once)
                 if once: break
@@ -410,5 +465,6 @@ def run_paper_worker(directory, *, once=False):
         return {"status": "checked", "directory": str(root), "mode": "paper"}
     finally:
         if observer: observer.stop_event.set()
+        if reporter: reporter.stop_event.set()
         if account_lock: account_lock.close()
         os.umask(old_umask)

@@ -46,6 +46,23 @@ def snapshot(**changes):
     }
 
 
+def fill_report(**changes):
+    """Invented execution evidence for console boundary tests only."""
+    return {
+        "status": "ready", "account_id": "paper-account-fixture",
+        "as_of": NOW.isoformat(), "gross_realized_pnl_usd": "-12.3400",
+        "open_quantity": "2", "owned_fill_count": 3, "excluded_fill_count": 1,
+        "reconciliation": {"status": "matched", "raw": "must-not-leak-reconciliation"},
+        "fixture": True, "fees_usd": "0", "net_realized_pnl_usd": "1000",
+        "account_return_pct": "45", "raw_activity": "must-not-leak-activity", **changes,
+    }
+
+
+def performance_snapshot(report=None, **changes):
+    return snapshot(health={"worker": "healthy", "broker": "connected"},
+                    performance=fill_report() if report is None else report, **changes)
+
+
 class ConsoleProtocolTests(unittest.TestCase):
     def test_explicit_complete_scope_and_fixed_actions(self):
         requested = authorize()
@@ -99,6 +116,92 @@ class ConsoleProtocolTests(unittest.TestCase):
             alias = root / "alias.json"
             alias.symlink_to(status)
             self.assertTrue(read_status(alias)["stale"])
+
+    def test_verified_gross_is_bound_to_the_fresh_paper_account(self):
+        value = sanitize_status(performance_snapshot(), now=NOW)["performance"]
+        self.assertEqual(value["status"], "ready")
+        self.assertEqual(value["gross_realized_pnl_usd"], "-12.3400")
+        self.assertEqual(value["open_quantity"], "2")
+        self.assertEqual(value["owned_fill_count"], 3)
+        self.assertEqual(value["reconciliation"], "matched")
+        self.assertTrue(value["fixture"])
+        self.assertNotIn("account_id", value)
+        self.assertNotIn("must-not-leak", json.dumps(value))
+        for field in ("fees_usd", "net_realized_pnl_usd", "account_return_pct"):
+            self.assertIsNone(value[field])
+        for gross in ("0", "15.25", "-0.00"):
+            with self.subTest(gross=gross):
+                result = sanitize_status(performance_snapshot(fill_report(gross_realized_pnl_usd=gross)), now=NOW)
+                self.assertEqual(result["performance"]["gross_realized_pnl_usd"],
+                                 "0" if gross == "-0.00" else gross)
+
+    def test_performance_withholds_wrong_account_or_unverified_broker(self):
+        cases = (
+            performance_snapshot(fill_report(account_id="another-account")),
+            performance_snapshot(fill_report(account_id=None)),
+            snapshot(performance=fill_report()),
+            performance_snapshot(updated_at=(NOW - timedelta(seconds=31)).isoformat()),
+            performance_snapshot(account={"provider": "alpaca", "mode": "live", "id": "paper-account-fixture"}),
+            performance_snapshot(account={"provider": "other", "mode": "paper", "id": "paper-account-fixture"}),
+        )
+        for case in cases:
+            with self.subTest(case=case):
+                result = sanitize_status(case, now=NOW)["performance"]
+                self.assertEqual(result["status"], "unavailable")
+                self.assertIsNone(result["gross_realized_pnl_usd"])
+                self.assertIsNone(result["open_quantity"])
+                self.assertIsNone(result["owned_fill_count"])
+
+    def test_performance_cutoff_requires_explicit_current_time_evidence(self):
+        valid = sanitize_status(performance_snapshot(fill_report(
+            as_of=(NOW - timedelta(seconds=180)).isoformat())), now=NOW)["performance"]
+        self.assertEqual(valid["status"], "ready")
+        for stamp in (None, "invalid", "2026-10-05T14:35:03",
+                      (NOW - timedelta(seconds=181)).isoformat(),
+                      (NOW + timedelta(microseconds=1)).isoformat()):
+            with self.subTest(stamp=stamp):
+                result = sanitize_status(performance_snapshot(fill_report(as_of=stamp)), now=NOW)["performance"]
+                self.assertEqual(result["status"], "unavailable")
+                self.assertIsNone(result["gross_realized_pnl_usd"])
+
+    def test_mismatch_and_no_execution_evidence_do_not_invent_zero_profit(self):
+        for report in (fill_report(status="reconciliation_required", reconciliation="mismatch"),
+                       fill_report(reconciliation="unverified"),
+                       fill_report(reconciliation={"status": "unexpected-provider-text"})):
+            with self.subTest(report=report):
+                value = sanitize_status(performance_snapshot(report), now=NOW)["performance"]
+                self.assertEqual(value["status"], "reconciliation_required")
+                self.assertIsNone(value["gross_realized_pnl_usd"])
+                self.assertIsNone(value["open_quantity"])
+        for report in (fill_report(owned_fill_count=0, gross_realized_pnl_usd="0", open_quantity="0"),
+                       fill_report(status="no_evidence")):
+            with self.subTest(report=report):
+                value = sanitize_status(performance_snapshot(report), now=NOW)["performance"]
+                self.assertEqual(value["status"], "waiting")
+                self.assertIsNone(value["gross_realized_pnl_usd"])
+                self.assertIsNone(value["open_quantity"])
+        value = sanitize_status(performance_snapshot(fill_report(gross_realized_pnl_usd=None)), now=NOW)["performance"]
+        self.assertEqual(value["status"], "ready")
+        self.assertIsNone(value["gross_realized_pnl_usd"])
+        self.assertEqual(value["open_quantity"], "2")
+
+    def test_malformed_fill_summary_fails_closed_and_strips_provider_text(self):
+        changes = ({"gross_realized_pnl_usd": "NaN"}, {"gross_realized_pnl_usd": "Infinity"},
+                   {"gross_realized_pnl_usd": "1e100000"}, {"gross_realized_pnl_usd": True},
+                   {"gross_realized_pnl_usd": "<script>private</script>"},
+                   {"gross_realized_pnl_usd": 10 ** 400}, {"open_quantity": "-1"},
+                   {"owned_fill_count": True}, {"owned_fill_count": -1},
+                   {"owned_fill_count": 1000001}, {"excluded_fill_count": []},
+                   {"status": {"raw": "private"}})
+        for change in changes:
+            with self.subTest(change=change):
+                value = sanitize_status(performance_snapshot(fill_report(**change)), now=NOW)["performance"]
+                self.assertEqual(value["status"], "unavailable")
+                self.assertIsNone(value["gross_realized_pnl_usd"])
+                self.assertNotIn("private", json.dumps(value))
+        value = sanitize_status(performance_snapshot(fill_report(reconciliation=[])), now=NOW)["performance"]
+        self.assertEqual(value["status"], "reconciliation_required")
+        self.assertIsNone(value["gross_realized_pnl_usd"])
 
     def test_console_rejects_public_binding_and_bad_capabilities(self):
         for host in ("0.0.0.0", "::", "192.0.2.1", "localhost", "example.com"):
@@ -164,6 +267,22 @@ class ConsoleHttpTests(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
         code, _, _ = self.request(path="/api/status?session=" + TEST_CAPABILITY)
         self.assertEqual(code, 404)
+
+    def test_execution_results_are_private_sanitized_paper_evidence(self):
+        current = datetime.now(timezone.utc)
+        self.status_path.write_text(json.dumps(performance_snapshot(
+            fill_report(as_of=current.isoformat()), updated_at=current.isoformat())))
+        code, _, value = self.request()
+        self.assertEqual(code, 200)
+        self.assertEqual(value["performance"]["gross_realized_pnl_usd"], "-12.3400")
+        self.assertNotIn("must-not-leak", json.dumps(value))
+        code, _, page = self.request(path="/", decode=False)
+        self.assertEqual(code, 200)
+        self.assertIn("Realized P&amp;L · gross", page)
+        self.assertIn("Fixture preview · Paper fills", page)
+        self.assertIn("Fees, net P&amp;L and account return remain unknown", page)
+        self.assertIn("performance(null, false)", page)
+        self.assertNotIn("-12.3400", page)
 
     def test_account_evidence_requires_session_and_expected_host(self):
         for headers, expected in (({"X-Dwight-Session": ""}, 401),

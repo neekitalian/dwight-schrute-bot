@@ -121,6 +121,9 @@ def main():
     p = commands.add_parser('paper-worker', help='Run private Alpaca paper supervision; entries require console authorization')
     p.add_argument('--directory', type=Path, required=True)
     p.add_argument('--once', action='store_true', help='Read-only initial preflight; do not enable a new campaign')
+    p = commands.add_parser('paper-report', help='Read genuine Alpaca paper fills and freeze a private gross P&L report; no orders')
+    p.add_argument('--directory', type=Path, required=True)
+    p.add_argument('--html-output', type=Path, required=True, help='New private directory for the frozen report')
     p = commands.add_parser('paper-console', help='Serve the private paper control console on loopback only')
     p.add_argument('--directory', type=Path, required=True)
     p.add_argument('--port', type=int, default=8787)
@@ -338,6 +341,16 @@ def main():
         elif args.command == 'paper-worker':
             from .paper_worker import run_paper_worker
             result = run_paper_worker(args.directory, once=args.once)
+        elif args.command == 'paper-report':
+            from .paper_market import HardenedAlpacaPaperClient
+            from .paper_reporting import collect_paper_report, render_paper_report
+            from .paper_worker import private_directory
+            root = private_directory(args.directory)
+            if args.html_output.exists() or args.html_output.is_symlink():
+                raise ValueError('Use a new private report directory')
+            report = collect_paper_report(HardenedAlpacaPaperClient.from_env(), root / 'execution.sqlite3',
+                                          root / 'reporting.sqlite3')
+            result = render_paper_report(report, args.html_output)
         elif args.command == 'paper-console':
             import webbrowser
             from .paper_console import make_console_server

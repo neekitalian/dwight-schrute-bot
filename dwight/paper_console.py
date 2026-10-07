@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 import hashlib
 import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -36,6 +37,7 @@ import secrets
 MAX_BODY_BYTES = 8192
 MAX_STATUS_BYTES = 262144
 MAX_STATUS_AGE_SECONDS = 30
+MAX_PERFORMANCE_AGE_SECONDS = 180
 _CAPABILITY = re.compile(r"[A-Za-z0-9_-]{32,128}\Z")
 _IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z")
 _AMOUNT_FIELDS = {"allocation_usd", "max_order_notional_usd",
@@ -81,6 +83,77 @@ def _time(value):
         return stamp.astimezone(timezone.utc)
     except (ValueError, OverflowError):
         raise ConsoleError("Use an expiry with an explicit time zone") from None
+
+
+def _report_amount(value, *, nonnegative=False):
+    """Normalize bounded decimal evidence without accepting provider text."""
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        return None
+    raw = str(value)
+    if len(raw) > 80 or not re.fullmatch(r"-?(?:0|[1-9][0-9]{0,19})(?:\.[0-9]{1,18})?", raw):
+        return None
+    try:
+        amount = Decimal(raw)
+        if not amount.is_finite() or abs(amount) > Decimal("1000000000000000000"):
+            return None
+        if nonnegative and amount < 0:
+            return None
+        return "0" if amount == 0 else format(amount, "f")
+    except InvalidOperation:
+        return None
+
+
+def _performance(value, account, *, now, account_current):
+    """Withhold unbound, stale or unreconciled execution performance."""
+    result = {
+        "status": "unavailable", "as_of": None, "fixture": False,
+        "gross_realized_pnl_usd": None, "open_quantity": None,
+        "fees_usd": None, "net_realized_pnl_usd": None,
+        "account_return_pct": None, "owned_fill_count": None,
+        "excluded_fill_count": None, "reconciliation": "unverified",
+    }
+    if not isinstance(value, dict):
+        return result
+    result["fixture"] = value.get("fixture") is True
+    account_id = account.get("id")
+    if (not account_current or account.get("provider") != "alpaca"
+            or account.get("mode") != "paper" or not isinstance(account_id, str)
+            or not _IDENTIFIER.fullmatch(account_id)
+            or value.get("account_id") != account_id):
+        return result
+    try:
+        as_of = _time(value.get("as_of"))
+        if not 0 <= (now - as_of).total_seconds() <= MAX_PERFORMANCE_AGE_SECONDS:
+            return result
+    except (ConsoleError, TypeError):
+        return result
+    state = value.get("status")
+    if not isinstance(state, str) or state not in {"ready", "reconciliation_required", "no_evidence", "waiting", "unavailable"}:
+        return result
+    counts = {}
+    for key in ("owned_fill_count", "excluded_fill_count"):
+        count = value.get(key)
+        if isinstance(count, bool) or not isinstance(count, int) or not 0 <= count <= 1000000:
+            return result
+        counts[key] = count
+    reconciliation = value.get("reconciliation")
+    if isinstance(reconciliation, dict):
+        reconciliation = reconciliation.get("status")
+    if not isinstance(reconciliation, str) or reconciliation not in {"matched", "mismatch", "unverified"}:
+        reconciliation = "unverified"
+    gross = _report_amount(value.get("gross_realized_pnl_usd"))
+    quantity = _report_amount(value.get("open_quantity"), nonnegative=True)
+    if ((value.get("gross_realized_pnl_usd") is not None and gross is None)
+            or (value.get("open_quantity") is not None and quantity is None)):
+        return result
+    result.update(counts, as_of=as_of.isoformat(), reconciliation=reconciliation)
+    if state in {"waiting", "no_evidence"} or counts["owned_fill_count"] == 0:
+        result["status"] = "waiting"
+    elif state == "ready" and reconciliation == "matched":
+        result.update(status="ready", gross_realized_pnl_usd=gross, open_quantity=quantity)
+    elif state == "reconciliation_required" or (state == "ready" and reconciliation != "matched"):
+        result["status"] = "reconciliation_required"
+    return result
 
 
 def _decode(raw):
@@ -154,7 +227,7 @@ def sanitize_status(value, *, now=None):
         "authorization": _fields(value.get("authorization"), ("id", "state", "allocation_usd", "expires_at")),
         "health": {}, "positions": [], "orders": [], "commands": [],
         "equity_usd": _scalar(value.get("equity_usd")),
-        # The worker does not yet have reconciled PnL accounting.
+        # Net PnL is never inferred from gross fills or account equity.
         "pnl_usd": None,
     }
     policy_fields = ("max_order_notional", "max_position_notional", "max_gross_notional",
@@ -208,6 +281,10 @@ def sanitize_status(value, *, now=None):
         failures.append("Worker status is missing or stale; new entries remain blocked")
     result["readiness"] = {"ready": readiness.get("ready") is True and not stale,
                            "failures": failures}
+    broker = result["health"].get("broker")
+    broker = broker.get("state") if isinstance(broker, dict) else broker
+    result["performance"] = _performance(value.get("performance"), result["account"],
+                                          now=current, account_current=not stale and broker == "connected")
     return result
 
 
@@ -241,6 +318,18 @@ const text = (id, value) => { $(id).textContent = value == null || value === '' 
 const money = value => value == null ? 'Not available' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format(Number(value));
 const localTime = value => value ? new Date(value).toLocaleString() : 'Not recorded';
 function health(value) { return typeof value === 'object' && value ? value.state || 'unknown' : value || 'unknown'; }
+function performance(value, brokerKnown) {
+  const report = value && brokerKnown ? value : {}, matched = report.status === 'ready' && report.reconciliation === 'matched';
+  text('gross-pnl', matched && report.gross_realized_pnl_usd != null ? money(report.gross_realized_pnl_usd) : 'Unknown');
+  text('owned-fills', report.owned_fill_count == null ? 'Unknown' : report.owned_fill_count);
+  text('open-shares', matched && report.open_quantity != null ? report.open_quantity : 'Unknown');
+  text('performance-label', report.fixture ? 'Fixture preview · Paper fills' : 'Paper fills');
+  const note = report.status === 'ready' ? 'Reconciled through ' + localTime(report.as_of)
+    : report.status === 'waiting' ? 'No owned fills recorded; performance unmeasured'
+    : report.status === 'reconciliation_required' ? 'Fill reconciliation required; P&L withheld'
+    : 'Awaiting a current reconciled fill report';
+  text('performance-note', note);
+}
 function rows(id, values, columns, empty) {
   const target = $(id); target.replaceChildren();
   if (!values.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = empty; target.appendChild(p); return; }
@@ -269,6 +358,7 @@ function render(value) {
   text('feed', value.strategy.feed ? value.strategy.feed.toUpperCase() + ' feed' : 'Feed unverified');
   text('revision', value.strategy.revision);
   text('equity', money(brokerKnown ? value.equity_usd : null));
+  performance(value.performance, brokerKnown);
   text('updated', 'Updated ' + localTime(value.updated_at));
   text('worker-health', 'Worker: ' + health(value.health.worker));
   text('data-health', 'Data: ' + health(value.health.data));
@@ -308,7 +398,7 @@ async function api(path, options = {}) {
 async function refresh() {
   if (!capability) { text('message','Launch the private console with --open to unlock this tab'); controls(); return; }
   try { render(await api('/api/status')); }
-  catch (error) { text('message', error.message); if (latest) { latest.stale = true; latest.readiness.ready = false; } text('state','Worker unavailable'); controls(); }
+  catch (error) { text('message', error.message); if (latest) { latest.stale = true; latest.readiness.ready = false; } text('state','Worker unavailable'); performance(null, false); controls(); }
 }
 async function command(action, payload) {
   busy = true; controls(); text('message','Sending control request');
@@ -336,6 +426,7 @@ _HTML = """<!doctype html>
 <div class="grid"><section class="panel wide"><h2><span class="step">1</span>Verify the account</h2><div class="facts"><div class="fact"><div class="label">Broker</div><strong id="provider">Account unverified</strong></div><div class="fact"><div class="label">Account</div><strong id="account">Awaiting worker</strong></div><div class="fact"><div class="label">Strategy</div><strong id="strategy">QQQ VWAP · 5 min</strong><small id="feed">Feed unverified</small></div><div class="fact"><div class="label">Broker equity</div><strong id="equity">Not available</strong></div></div><div class="health"><span id="worker-health">Worker: unknown</span><span id="data-health">Data: unknown</span><span id="broker-health">Broker: unknown</span></div><ul class="failures" id="failures"></ul><details><summary class="muted">Pinned strategy revision</summary><p class="scope" id="revision">Awaiting worker</p></details><p class="notice" id="setup">Start the private worker to verify the account and readiness. Paper API keys belong in your private .env file.</p></section>
 <section class="panel"><h2><span class="step">2</span>Authorize the session</h2><p class="scope">Authorize QQQ long entries on completed five-minute bars in the verified Alpaca paper account.</p><form id="scope-form"><div class="formgrid"><div><label for="allocation">Allocation · USD</label><input id="allocation" type="number" min="0.01" step="0.01" required placeholder="Enter amount"></div><div><label for="max-order">Maximum order · USD</label><input id="max-order" type="number" min="0.01" step="0.01" required placeholder="Enter amount"></div><div><label for="daily-loss">Daily loss limit · USD</label><input id="daily-loss" type="number" min="0.01" step="0.01" required placeholder="Enter amount"></div><div><label for="stop-risk">Planned risk per trade · USD</label><input id="stop-risk" type="number" min="0.01" step="0.01" required placeholder="Enter amount"></div><div class="wide"><label for="expiry">Authorization expiry · your local time</label><input id="expiry" type="datetime-local" required></div></div><p class="notice" id="fixed-policy">Position and gross exposure capped at your allocation. Awaiting fixed policy and feed.</p><p class="notice">The worker cancels unfilled entry remainders after 120 seconds. It reconciles then cancels or closes owned partial or unprotected exposure when safe. Session closing begins five minutes before market close. Stop prices and fills are not guaranteed.</p><label class="consent"><input id="consent" type="checkbox" required><span>I authorize the displayed paper account and pinned QQQ strategy, selected feed, allocation, complete risk and supervision policy, and expiry for paper entries.</span></label><button class="primary" id="approve" type="submit" disabled>Approve paper session</button></form></section>
 <section class="panel"><h2><span class="step">3</span>Control paper entries</h2><p class="scope" id="authorization">No session authorization recorded</p><p id="readiness">Entries blocked</p><div class="actions"><button class="primary" id="start" type="button" disabled>Start paper trading</button><button id="pause" type="button" disabled>Pause new entries</button></div><p class="notice">Pause blocks new entries. Keep the worker running to supervise existing orders and positions.</p><p class="notice" id="message" role="status" aria-live="polite"></p></section>
+<section class="panel wide"><h2>Execution results <small id="performance-label">Paper fills</small></h2><div class="facts"><div class="fact"><div class="label">Realized P&amp;L · gross</div><strong id="gross-pnl">Unknown</strong></div><div class="fact"><div class="label">Owned fills</div><strong id="owned-fills">Unknown</strong></div><div class="fact"><div class="label">Open shares</div><strong id="open-shares">Unknown</strong></div><div class="fact"><div class="label">Costs and returns</div><strong>Unknown</strong></div></div><p class="notice" id="performance-note">Awaiting a current reconciled fill report</p><details><summary class="muted">Accounting details</summary><p class="scope">Gross P&amp;L uses owned paper executions. Fees, net P&amp;L and account return remain unknown.</p></details></section>
 <section class="panel"><h2>Positions</h2><div class="tablewrap" id="positions"><p class="empty">Awaiting broker evidence</p></div></section><section class="panel"><h2>Open orders</h2><div class="tablewrap" id="orders"><p class="empty">Awaiting broker evidence</p></div></section></div>
 <p class="footer">Local operator access · Paper pilot · Actual fills require verification · Controls await worker confirmation</p></main><script>""" + _SCRIPT + """</script></body></html>"""
 
