@@ -4,7 +4,7 @@ The product direction is a private web console backed by a persistent Python exe
 
 This is the target experience, not a description of current execution support. The [automatic paper product specification](automatic-paper-product.md) defines the first version, acceptance criteria and unfinished work. The first proposed execution integration is Alpaca Paper; the existing selected account remains Paper Trading by TradingView until the operator explicitly chooses a separate execution account. No existing campaign or account is migrated by this product decision.
 
-The published Dwight toolkit remains a research preview for one QQQ strategy and one private workspace. Its working flow prepares data, replays a baseline, tests added features, inspects evidence, connects observations and keeps a manual paper journal.
+The published Dwight toolkit remains a research preview for one QQQ market and a small fixed strategy set in one private workspace. Its working flow prepares data, replays a baseline, tests added features, inspects evidence, connects observations and keeps a manual paper journal. The first research-ticket foundation now freezes and verifies a private comparison definition before a run; the visual ticket form, synchronized cohort runner and cross-ticket holdout-consumption ledger remain future work.
 
 The downloadable toolkit contains source, configuration templates, a workspace initializer, data validation, research commands, private reports, a TradingView observation inbox and deployment runbooks. The Hugging Face app is a public demonstration using synthetic data. Neither package includes a proven profitable model or a managed brokerage account.
 
@@ -34,6 +34,8 @@ Market-data redistribution rights and model-weight licenses remain separate. Kee
 6. Review proposals and manually place orders in TradingView's native paper account.
 7. Import normalized executions and review discrepancies before any broader integration.
 8. Review private reports at fixed 12, 24, 48 and 168 hour deadlines using the [native paper milestone workflow](manual-milestones.md). Keep source evidence, email delivery records and corrections with the experiment.
+
+The [research ticket contract](research-tickets.md) records an inclusive time window, verified dataset identity, the current fixed strategy cohort, shared simulator settings and coverage. Freezing is not a replay or account action. It does not yet enforce holdout reuse across tickets.
 
 An Alpaca API paper account is a separate future execution route. Native TradingView paper automation is not implemented or advertised. The inbox cannot turn a received alert into an order or a recorded fill.
 

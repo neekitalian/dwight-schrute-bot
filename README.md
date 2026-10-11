@@ -99,6 +99,8 @@ CSV schema: `timestamp,open,high,low,close,volume`. Supply one instrument, timez
 
 Each replay creates `runs/<unique-id>/` containing the exact `input.csv`, `manifest.json`, `summary.json`, and `trades.json`. The manifest records the resolved settings, input and source hashes, and original VWAP commit. `runs/journal.sqlite3` stores successful runs and trade/equity records transactionally. Invalid data leaves a `failed.json` marker, never a successful journal row. Keep the whole runs directory private; it includes input data.
 
+Before comparing the current two-strategy cohort, `dwight research-ticket-freeze` can save a private, checksummed definition for a shared date window, verified dataset, capital, costs and fill assumptions. `dwight research-ticket-verify` checks that definition, data and implementation later. This is a pre-run record only: it does not run strategies, prevent holdout reuse across tickets, or authorize account activity. See [research tickets](docs/research-tickets.md).
+
 The original detailed CSV/SVG report command is also preserved:
 
 ```sh

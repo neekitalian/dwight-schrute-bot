@@ -184,6 +184,12 @@ def main():
     p.add_argument('--synthetic', action='store_true', help='Smoke test only; cannot deploy to live shadow')
     p.add_argument('--tracking-uri', help='Local SQLite MLflow URI')
     p.add_argument('--output', type=Path, default=Path('runs/experiments'))
+    p = commands.add_parser('research-ticket-freeze', help='Freeze a private strategy-comparison definition; does not run a replay')
+    p.add_argument('--config', type=Path, required=True, help='Private JSON research-ticket definition')
+    p.add_argument('--workspace', type=Path, required=True, help='Private initialized Dwight workspace')
+    p = commands.add_parser('research-ticket-verify', help='Verify frozen ticket, data and strategy identity; read only')
+    p.add_argument('ticket', type=Path)
+    p.add_argument('--workspace', type=Path, required=True, help='Private initialized Dwight workspace')
     p = commands.add_parser('walkforward', help='Offline QQQ walk-forward comparison with an unscored final holdout')
     p.add_argument('--data', type=Path, required=True)
     p.add_argument('--out', type=Path, required=True)
@@ -437,6 +443,13 @@ def main():
             if args.tracking_uri:
                 config['tracking_uri'] = args.tracking_uri
             result = experiment(args.data,args.symbol,args.output,args.synthetic,config)
+        elif args.command == 'research-ticket-freeze':
+            from .research_ticket import freeze_ticket
+            from .toolkit import _read_object as _read_private_ticket_object
+            result = freeze_ticket(_read_private_ticket_object(args.config), args.workspace)
+        elif args.command == 'research-ticket-verify':
+            from .research_ticket import verify_ticket
+            result = verify_ticket(args.ticket, args.workspace)
         elif args.command == 'walkforward':
             from .walkforward import run_walkforward
             config = _read_object(args.config) if args.config else {}
