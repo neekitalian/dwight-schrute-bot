@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Prepare a private QQQ strategy comparison ticket for local validation with Dwight.">
+  <meta name="theme-color" content="#090909">
+  <title>Dwight · Research ticket</title>
+  <style>
+    :root { color-scheme:dark; --bg:#090909; --panel:#111; --raised:#171717; --ink:#f5f5f5; --muted:#aaa; --line:#2c2c2c; --good:#a9c9ae; --error:#f0aaa3; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+    button,input,select { font:inherit; }
+    button,a { -webkit-tap-highlight-color:transparent; }
+    a { color:inherit; text-underline-offset:4px; }
+    button { color:inherit; cursor:pointer; }
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #eee; outline-offset:3px; }
+    button:disabled { cursor:default; opacity:.42; }
+    [hidden] { display:none !important; }
+    .shell { max-width:1240px; margin:auto; padding:0 40px; }
+    .topbar { border-bottom:1px solid var(--line); }
+    .topbar-inner { min-height:78px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+    .brand { font-size:20px; font-weight:600; text-decoration:none; letter-spacing:-.4px; }
+    .brand span { color:var(--muted); font-weight:400; }
+    nav { display:flex; align-items:center; gap:28px; }
+    nav a { color:var(--muted); text-decoration:none; }
+    nav a[aria-current="page"] { color:var(--ink); }
+    .mode,.status { border:1px solid var(--line); padding:5px 10px; color:var(--muted); font-size:12px; white-space:nowrap; }
+    main { padding:36px 0 42px; }
+    .page-head { margin-bottom:28px; }
+    .eyebrow { margin:0 0 8px; color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+    h1 { margin:0; font-size:32px; line-height:1.2; font-weight:500; letter-spacing:-.8px; }
+    .lede { max-width:790px; margin:10px 0 14px; color:#c4c4c4; font-size:16px; }
+    .stepbar { display:flex; gap:22px; align-items:stretch; border-bottom:1px solid var(--line); margin-bottom:26px; }
+    .step { min-height:48px; display:flex; align-items:center; gap:8px; padding:8px 0 11px; border:0; border-bottom:2px solid transparent; background:none; color:var(--muted); }
+    .step[aria-current="step"] { color:var(--ink); border-bottom-color:var(--ink); }
+    .step-index { width:22px; height:22px; display:grid; place-items:center; border:1px solid var(--line); font-size:11px; }
+    .layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:34px; align-items:start; }
+    .main-panel { min-width:0; }
+    .section-intro { margin-bottom:20px; }
+    h2 { margin:0; font-size:19px; line-height:1.35; font-weight:500; }
+    h3 { margin:0; font-size:14px; font-weight:500; }
+    .section-intro p { margin:5px 0 0; color:var(--muted); }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px 18px; }
+    .field { min-width:0; }
+    .field.full { grid-column:1/-1; }
+    label,.field-label { display:block; margin-bottom:6px; font-size:12px; font-weight:500; }
+    input,select { width:100%; min-height:43px; padding:9px 11px; border:1px solid #383838; border-radius:2px; background:#111; color:var(--ink); }
+    input::placeholder { color:#777; }
+    input[type="checkbox"] { width:17px; height:17px; min-height:0; margin:2px 0 0; accent-color:#eee; flex:0 0 auto; }
+    .hint { margin:5px 0 0; color:var(--muted); font-size:12px; }
+    .strategy-row { display:flex; align-items:flex-start; gap:12px; padding:15px 0; border-bottom:1px solid var(--line); }
+    .strategy-copy { flex:1; }
+    .strategy-copy strong { display:block; font-weight:500; }
+    .strategy-copy p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+    .version { color:var(--muted); font-size:11px; white-space:nowrap; }
+    .notice { margin-top:18px; padding:13px 15px; background:var(--raised); color:#c5c5c5; font-size:12px; }
+    .assumption-box { margin-top:19px; border-top:1px solid var(--line); padding-top:16px; }
+    .assumption-box p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+    .review-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px 20px; }
+    .review-item { min-width:0; }
+    .review-item dt { color:var(--muted); font-size:11px; }
+    .review-item dd { margin:3px 0 0; overflow-wrap:anywhere; }
+    .confirm { display:flex; align-items:flex-start; gap:10px; margin-top:21px; padding:14px; background:var(--raised); }
+    .confirm label { margin:0; font-weight:400; }
+    .actions { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:24px; padding-top:16px; border-top:1px solid var(--line); }
+    .action-group { display:flex; gap:9px; }
+    .button { min-height:40px; padding:9px 15px; border:1px solid #444; border-radius:2px; background:transparent; text-decoration:none; }
+    .button.primary { background:#eee; border-color:#eee; color:#090909; }
+    .button:hover:not(:disabled) { border-color:#eee; }
+    .validation { min-height:20px; margin:8px 0 0; color:var(--muted); font-size:12px; }
+    .validation.error { color:var(--error); }
+    .aside { border-left:1px solid var(--line); padding-left:22px; }
+    .aside h2 { margin-bottom:13px; font-size:16px; }
+    .rule { padding:12px 0; border-top:1px solid var(--line); }
+    .rule strong { display:block; font-size:12px; font-weight:500; }
+    .rule p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+    .summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:22px; padding-top:14px; border-top:1px solid var(--line); }
+    .summary div { color:var(--muted); font-size:11px; }
+    .summary strong { display:block; margin-top:3px; color:var(--ink); font-size:12px; font-weight:500; }
+    .done { padding-top:5px; }
+    .done .ok { color:var(--good); }
+    .done-box { margin-top:16px; padding:16px; background:var(--raised); }
+    .done-box p { margin:5px 0 0; color:var(--muted); }
+    pre { overflow:auto; margin:14px 0; padding:13px; border:1px solid var(--line); color:#d8d8d8; font:12px/1.5 ui-monospace,SFMono-Regular,monospace; }
+    .footnote { margin-top:30px; padding-top:13px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
+    @media (max-width:900px) { .shell { padding:0 26px; } .layout { grid-template-columns:minmax(0,1fr) 270px; gap:24px; } nav { gap:18px; } }
+    @media (max-width:700px) { .shell { padding:0 19px; } .topbar-inner { min-height:68px; } nav { gap:14px; font-size:12px; } nav .mode { display:none; } main { padding-top:27px; } h1 { font-size:28px; } .lede { font-size:14px; } .stepbar { gap:13px; overflow-x:auto; } .step { flex:0 0 auto; font-size:12px; } .layout { grid-template-columns:1fr; gap:25px; } .aside { border-left:0; border-top:1px solid var(--line); padding:17px 0 0; } }
+    @media (max-width:430px) { .shell { padding:0 15px; } nav { gap:11px; } nav a { font-size:11px; } nav a[data-go-step]:not([aria-current="page"]) { display:none; } .fields,.review-list { grid-template-columns:1fr; } .field.full { grid-column:auto; } .stepbar { gap:10px; } .step { gap:5px; font-size:11px; } .step-index { width:20px; height:20px; } .actions { align-items:stretch; } .action-group { margin-left:auto; } .button { padding:8px 11px; font-size:12px; } }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="/">Dwight <span>/ Research</span></a>
+      <nav aria-label="Research sections">
+        <a href="#ticket-window" data-go-step="0" aria-current="page">Tickets</a>
+        <a href="#ticket-strategies" data-go-step="1">Strategies</a>
+        <a href="#ticket-review" data-go-step="3">Evidence</a>
+        <span class="mode">Research only · no orders</span>
+      </nav>
+    </div>
+  </header>
+  <main class="shell" id="ticket-window">
+    <header class="page-head">
+      <p class="eyebrow">QQQ · 5 minute bars</p>
+      <h1>Create an experiment ticket</h1>
+      <p class="lede">Set one time window and shared test assumptions for every strategy in the comparison.</p>
+      <span class="status" id="ticket-state">Draft · not run</span>
+    </header>
+
+    <nav class="stepbar" aria-label="Ticket steps">
+      <button class="step" type="button" data-step="0" aria-current="step"><span class="step-index">1</span>Window</button>
+      <button class="step" type="button" data-step="1"><span class="step-index">2</span>Strategies</button>
+      <button class="step" type="button" data-step="2"><span class="step-index">3</span>Assumptions</button>
+      <button class="step" type="button" data-step="3"><span class="step-index">4</span>Review</button>
+    </nav>
+
+    <div class="layout" id="ticket-edit">
+      <section class="main-panel" aria-live="polite">
+        <section class="step-panel" data-panel="0" id="window-panel">
+          <div class="section-intro"><h2>Set the market window</h2><p>Use the same session dates for all selected strategies.</p></div>
+          <div class="fields">
+            <div class="field full"><label for="ticket-title">Ticket name</label><input id="ticket-title" type="text" maxlength="120" value="QQQ opening range study" autocomplete="off"><p class="hint">Give the test a short name. The ticket keeps its dates and assumptions.</p></div>
+            <div class="field"><span class="field-label">Market</span><div>QQQ · Nasdaq 100 ETF</div></div>
+            <div class="field"><span class="field-label">Bar interval</span><div>5 minutes</div></div>
+            <div class="field"><label for="ticket-start">Start date</label><input id="ticket-start" type="date"></div>
+            <div class="field"><label for="ticket-end">End date</label><input id="ticket-end" type="date"></div>
+            <div class="field full"><label for="dataset-manifest">Dataset manifest path</label><input id="dataset-manifest" type="text" value="private-data/qqq/manifest.json" spellcheck="false" autocomplete="off"><p class="hint">Path inside your private workspace. The local CLI checks the manifest, bars and session coverage.</p></div>
+          </div>
+        </section>
+
+        <section class="step-panel" data-panel="1" id="ticket-strategies" hidden>
+          <div class="section-intro"><h2>Choose strategies</h2><p>The ticket requires at least two strategies to compare.</p></div>
+          <label class="strategy-row"><input type="checkbox" name="strategy" value="vwap_baseline" checked><span class="strategy-copy"><strong>QQQ VWAP baseline</strong><p>Long only · fixed VWAP rules</p></span><span class="version">v1</span></label>
+          <label class="strategy-row"><input type="checkbox" name="strategy" value="relative_volume_filter" checked><span class="strategy-copy"><strong>VWAP with relative volume filter</strong><p>Same baseline with a fixed volume condition</p></span><span class="version">v1</span></label>
+          <p class="notice">This is the current fixed comparison set. The strategy list is not yet user extensible.</p>
+        </section>
+
+        <section class="step-panel" data-panel="2" hidden>
+          <div class="section-intro"><h2>Set shared assumptions</h2><p>These values apply to every strategy in the ticket.</p></div>
+          <div class="fields">
+            <div class="field"><label for="capital">Starting capital per strategy</label><input id="capital" type="number" min="1" step="100" value="10000"></div>
+            <div class="field"><label for="commission">Commission per share</label><input id="commission" type="number" min="0" step="0.001" value="0.005"></div>
+            <div class="field"><label for="slippage">Slippage per share</label><input id="slippage" type="number" min="0" step="0.001" value="0.01"></div>
+            <div class="field"><label for="stress">Cost stress multiplier</label><input id="stress" type="number" min="1" step="0.25" value="2"><p class="hint">Recorded in the ticket. Stress results are not calculated yet.</p></div>
+            <div class="field full"><label for="evaluation-role">Evaluation purpose</label><select id="evaluation-role"><option value="exploratory">Exploratory</option><option value="validation">Validation</option><option value="final_holdout">Final holdout</option></select><p class="hint">This label is recorded. Dwight does not yet prevent reuse of the same dates in another ticket.</p></div>
+          </div>
+          <div class="assumption-box"><h3>Fill rules</h3><p>The selected strategy engine defines simulated fills. Its code fingerprint is checked when Dwight freezes the ticket. Simulated fills are not account fills.</p></div>
+        </section>
+
+        <section class="step-panel" data-panel="3" id="ticket-review" hidden>
+          <div class="section-intro"><h2>Review the ticket</h2><p>Download the config, save it inside your private workspace, then set its file permissions before freezing the ticket.</p></div>
+          <dl class="review-list">
+            <div class="review-item"><dt>Ticket</dt><dd id="review-title">QQQ opening range study</dd></div>
+            <div class="review-item"><dt>Market</dt><dd>QQQ · 5 minute bars</dd></div>
+            <div class="review-item"><dt>Window</dt><dd id="review-window">Dates required</dd></div>
+            <div class="review-item"><dt>Strategies</dt><dd id="review-strategies">2 selected</dd></div>
+            <div class="review-item"><dt>Capital</dt><dd id="review-capital">$10,000 per strategy</dd></div>
+            <div class="review-item"><dt>Data and costs</dt><dd id="review-data">Dataset path not set</dd></div>
+            <div class="review-item"><dt>Evaluation purpose</dt><dd id="review-role">Exploratory</dd></div>
+            <div class="review-item"><dt>Evidence</dt><dd>Not run</dd></div>
+          </dl>
+          <label class="confirm"><input id="confirm-local" type="checkbox"><span>I understand this downloads a config file only. No data is uploaded and no replay or account action starts here.</span></label>
+        </section>
+
+        <div class="actions" id="ticket-actions">
+          <button class="button" type="button" id="back" disabled>Back</button>
+          <div class="action-group"><button class="button primary" type="button" id="continue">Continue</button><button class="button primary" type="button" id="download" hidden disabled>Download config</button></div>
+        </div>
+        <p class="validation" id="validation" role="status" aria-live="polite"></p>
+
+        <section class="done" id="done" tabindex="-1" hidden aria-live="polite">
+          <h2 class="ok">Config downloaded</h2>
+          <div class="done-box"><strong id="done-title"></strong><p id="done-summary"></p><p>Move the downloaded file into your private workspace. These commands set private permissions, then check the dataset and freeze the definition.</p></div>
+          <pre>mkdir -p /path/to/workspace/configs
+cp ~/Downloads/research-ticket.json /path/to/workspace/configs/research-ticket.json
+chmod 600 /path/to/workspace/configs/research-ticket.json
+dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/workspace/configs/research-ticket.json</pre>
+          <p class="hint">The ticket remains unverified until the local command succeeds. No replay has run.</p>
+          <div class="actions"><a class="button" href="/">Platform setup</a><a class="button" href="https://github.com/neekitalian/dwight-schrute-bot/blob/main/docs/research-tickets.md" target="_blank" rel="noopener noreferrer">Ticket instructions</a></div>
+        </section>
+      </section>
+
+      <aside class="aside" aria-label="Ticket rules">
+        <h2>Comparison rules</h2>
+        <div class="rule"><strong>Same data and dates</strong><p>Every strategy uses the ticket's QQQ bars and session window.</p></div>
+        <div class="rule"><strong>Same capital and costs</strong><p>Settings are shared across the cohort.</p></div>
+        <div class="rule"><strong>Report what happened</strong><p>No-trade windows and missing sessions stay visible.</p></div>
+        <div class="rule"><strong>Keep evidence separate</strong><p>Historical simulation, paper fills and live fills use different labels.</p></div>
+        <div class="notice"><strong>Holdout status</strong><br>Opening a test result is not tracked across tickets yet.</div>
+        <div class="summary" aria-live="polite"><div>Window<strong id="summary-window">Not set</strong></div><div>Strategies<strong id="summary-count">2 selected</strong></div><div>Evidence<strong>Not run</strong></div></div>
+      </aside>
+    </div>
+    <p class="footnote">Config files download to your device. Data stays in your private workspace. The page does not read market data, run strategies or connect to an account.</p>
+  </main>
+  <script>
+    (() => {
+      const $ = id => document.getElementById(id);
+      const steps = [...document.querySelectorAll('.step[data-step]')];
+      const sectionLinks = [...document.querySelectorAll('[data-go-step]')];
+      const panels = [...document.querySelectorAll('.step-panel[data-panel]')];
+      const strategyInputs = [...document.querySelectorAll('input[name="strategy"]')];
+      let step = 0;
+      function selectedStrategies() { return strategyInputs.filter(input => input.checked); }
+      function validStep(index) {
+        if (index === 0) {
+          const start = $('ticket-start').value, end = $('ticket-end').value;
+          const path = $('dataset-manifest').value.trim();
+          return Boolean($('ticket-title').value.trim() && $('ticket-title').value.trim().length <= 120
+            && start && end && start <= end && path && !path.startsWith('/') && !path.includes('://')
+            && !path.split(/[\\/]+/).includes('..'));
+        }
+        if (index === 1) return selectedStrategies().length >= 2;
+        if (index === 2) {
+          const capital = Number($('capital').value), commission = Number($('commission').value);
+          const slippage = Number($('slippage').value), stress = Number($('stress').value);
+          return Number.isFinite(capital) && capital > 0 && Number.isFinite(commission) && commission >= 0
+            && Number.isFinite(slippage) && slippage >= 0 && Number.isFinite(stress) && stress >= 1;
+        }
+        return $('confirm-local').checked;
+      }
+      function hint() {
+        if (!validStep(step)) return [
+          'Enter a name, date range and relative manifest path.',
+          'Select at least two strategies.',
+          'Enter valid capital and cost values.',
+          'Confirm that this downloads a config only.'
+        ][step];
+        return '';
+      }
+      function prettyRole() { return $('evaluation-role').selectedOptions[0].textContent; }
+      function updateSummary() {
+        const start = $('ticket-start').value, end = $('ticket-end').value;
+        const windowText = start && end ? `${start} to ${end}` : 'Not set';
+        $('summary-window').textContent = windowText;
+        $('summary-count').textContent = `${selectedStrategies().length} selected`;
+        $('review-title').textContent = $('ticket-title').value.trim() || 'Untitled ticket';
+        $('review-window').textContent = windowText === 'Not set' ? 'Dates required' : windowText;
+        $('review-strategies').textContent = selectedStrategies().map(item => item.parentElement.querySelector('strong').textContent).join(', ') || 'None selected';
+        $('review-capital').textContent = `$${Number($('capital').value || 0).toLocaleString()} per strategy`;
+        $('review-data').textContent = $('dataset-manifest').value.trim() || 'Dataset path not set';
+        $('review-role').textContent = prettyRole();
+      }
+      function paint() {
+        panels.forEach((panel, index) => panel.hidden = index !== step);
+        steps.forEach((button, index) => index === step ? button.setAttribute('aria-current', 'step') : button.removeAttribute('aria-current'));
+        const currentSection = step === 0 ? 0 : step === 3 ? 2 : 1;
+        sectionLinks.forEach((link, index) => index === currentSection ? link.setAttribute('aria-current', 'page') : link.removeAttribute('aria-current'));
+        steps.forEach(button => { button.disabled = Number(button.dataset.step) > step && !validStep(step); });
+        $('back').disabled = step === 0;
+        $('continue').hidden = step === 3;
+        $('download').hidden = step !== 3;
+        $('continue').disabled = !validStep(step);
+        $('download').disabled = !validStep(3);
+        $('validation').textContent = hint();
+        $('validation').classList.toggle('error', !validStep(step));
+        updateSummary();
+      }
+      function goTo(target) {
+        if (target > step) {
+          const firstInvalid = Array.from({length:target}, (_, index) => index).find(index => !validStep(index));
+          if (firstInvalid !== undefined) {
+            step = firstInvalid;
+            paint();
+            $('validation').textContent = hint();
+            $('validation').classList.add('error');
+            return;
+          }
+        }
+        if (target < 0 || target > 3) {
+          $('validation').textContent = 'Choose one of the four ticket steps.';
+          $('validation').classList.add('error');
+          return;
+        }
+        step = target;
+        paint();
+        document.querySelector('.stepbar').scrollIntoView({behavior:'smooth', block:'start'});
+      }
+      function config() {
+        return {
+          title: $('ticket-title').value.trim(),
+          window: {start:$('ticket-start').value, end:$('ticket-end').value},
+          dataset_manifest: $('dataset-manifest').value.trim(),
+          strategies: selectedStrategies().map(input => input.value),
+          engine_config: {
+            capital: Number($('capital').value),
+            commission: Number($('commission').value),
+            slippage: Number($('slippage').value)
+          },
+          evaluation_role: $('evaluation-role').value,
+          cost_stress_multiplier: Number($('stress').value)
+        };
+      }
+      function downloadConfig() {
+        if (!validStep(3)) return;
+        const blob = new Blob([JSON.stringify(config(), null, 2) + '\n'], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'research-ticket.json';
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        $('ticket-edit').querySelectorAll('.step-panel, #ticket-actions, #validation').forEach(node => node.hidden = true);
+        $('ticket-state').textContent = 'Config downloaded · not verified';
+        $('done-title').textContent = $('ticket-title').value.trim();
+        $('done-summary').textContent = `${$('ticket-start').value} to ${$('ticket-end').value} · ${selectedStrategies().length} strategies · $${Number($('capital').value).toLocaleString()} each`;
+        $('done').hidden = false;
+        $('done').focus();
+      }
+      steps.forEach(button => button.addEventListener('click', () => goTo(Number(button.dataset.step))));
+      document.querySelectorAll('[data-go-step]').forEach(link => link.addEventListener('click', event => {
+        event.preventDefault();
+        goTo(Number(link.dataset.goStep));
+      }));
+      $('continue').addEventListener('click', () => { if (validStep(step)) goTo(step + 1); });
+      $('back').addEventListener('click', () => { if (step > 0) goTo(step - 1); });
+      $('download').addEventListener('click', downloadConfig);
+      document.querySelectorAll('input,select').forEach(input => {
+        input.addEventListener('input', paint);
+        input.addEventListener('change', paint);
+      });
+      paint();
+    })();
+  </script>
+</body>
+</html>

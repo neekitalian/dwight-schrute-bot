@@ -14,6 +14,7 @@ from dwight.connection_catalog import CAPABILITY_SCHEMA_VERSION, PLATFORMS, buil
 
 
 PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "index.html"
+RESEARCH_PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "research.html"
 CAPABILITIES = {
     "mode": "public_setup",
     "account_connected": False,
@@ -26,8 +27,8 @@ def _json(value):
     return json.dumps(value, allow_nan=False, ensure_ascii=False).encode("utf-8")
 
 
-def _page():
-    body = PAGE.read_text(encoding="utf-8").replace("__VERSION__", __version__)
+def _page(source=PAGE):
+    body = source.read_text(encoding="utf-8").replace("__VERSION__", __version__)
     # Hash only the reviewed inline assets, rather than allowing arbitrary script.
     import base64
     hashes = {}
@@ -54,8 +55,8 @@ def app(environ, start_response):
     if method not in ("GET", "HEAD"):
         status, body = "405 Method Not Allowed", _json({"error": "Read-only portal"})
         headers.append(("Allow", "GET, HEAD"))
-    elif path == "/" and not query:
-        body, policy = _page()
+    elif path in ("/", "/research") and not query:
+        body, policy = _page(RESEARCH_PAGE if path == "/research" else PAGE)
         content_type = "text/html; charset=utf-8"
         headers.append(("Content-Security-Policy", policy))
     elif path in ("/health", "/api/health") and not query:
