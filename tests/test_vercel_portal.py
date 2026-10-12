@@ -33,15 +33,27 @@ class VercelPortalTests(unittest.TestCase):
         self.assertEqual(empty, b"")
         self.assertEqual(int(response["headers"]["Content-Length"]), len(body))
         self.assertIn(b"Dwight", body)
-        self.assertIn(b"Create a research ticket", body)
-        self.assertIn(b"Ticket flow", body)
-        self.assertIn(b"Replays are not available yet", body)
-        self.assertNotIn(b"Planned private service", body)
+        self.assertIn(b"Research workspace", body)
+        self.assertIn(b"Compare QQQ strategies over the same market window.", body)
+        self.assertIn(b"New ticket", body)
+        self.assertIn(b"Current comparison cohort", body)
+        self.assertNotIn(b"Public setup guide", body)
+        self.assertNotIn(b"Execution disabled", body)
         self.assertNotIn(b"__VERSION__", body)
         policy = response["headers"]["Content-Security-Policy"]
         self.assertIn("connect-src 'self'", policy)
-        self.assertIn("script-src 'sha256-", policy)
+        self.assertIn("script-src 'none'", policy)
+        self.assertIn("style-src 'sha256-", policy)
         self.assertNotIn("'unsafe-inline'", policy)
+
+    def test_platform_setup_has_its_own_route(self):
+        response, body = self.request("/setup")
+        self.assertEqual(response["status"], "200 OK")
+        self.assertIn(b"Platform setup", body)
+        self.assertIn(b"Choose a platform", body)
+        self.assertNotIn(b"Public setup guide", body)
+        self.assertNotIn(b"No account connected", body)
+        self.assertNotIn(b"Execution disabled", body)
 
     def test_research_ticket_flow_is_served_without_private_data_or_mutation(self):
         response, body = self.request("/research")
@@ -52,7 +64,11 @@ class VercelPortalTests(unittest.TestCase):
         self.assertIn(b"Create an experiment ticket", body)
         self.assertIn(b"Download config", body)
         self.assertIn(b"chmod 600", body)
-        self.assertIn(b"No data is uploaded", body)
+        self.assertIn(b"Save the ticket file in your workspace", body)
+        self.assertNotIn("Draft · not run".encode(), body)
+        self.assertNotIn(b"Config files download to your device", body)
+        self.assertNotIn(b"No data is uploaded", body)
+        self.assertNotIn(b"Evidence</strong>Not run", body)
         self.assertNotIn(b"fetch(", body)
         self.assertNotIn(b"localStorage", body)
         policy = response["headers"]["Content-Security-Policy"]
@@ -125,7 +141,7 @@ class VercelPortalTests(unittest.TestCase):
     def test_runtime_never_reads_credentials_or_imports_research(self):
         sentinel = "PRIVATE_CREDENTIAL_MUST_NOT_APPEAR"
         with patch.dict("os.environ", {"APCA_API_KEY_ID": sentinel, "DATABENTO_API_KEY": sentinel}):
-            for route in ("/", "/research", "/api/health", "/api/platforms", "/api/profile/alpaca"):
+            for route in ("/", "/research", "/setup", "/api/health", "/api/platforms", "/api/profile/alpaca"):
                 self.assertNotIn(sentinel.encode(), self.request(route)[1])
         result = subprocess.run([sys.executable, "-c", "import app,sys,json; print(json.dumps(list(sys.modules)))"],
                                 cwd=ROOT, check=True, capture_output=True, text=True)
@@ -149,7 +165,7 @@ class VercelPortalTests(unittest.TestCase):
         ignore = (ROOT / ".vercelignore").read_text()
         self.assertIn("/*", ignore)
         for allowed in ("!/app.py", "!/dwight/connection_catalog.py", "!/deploy/vercel/index.html",
-                        "!/deploy/vercel/research.html"):
+                        "!/deploy/vercel/research.html", "!/deploy/vercel/setup.html"):
             self.assertIn(allowed, ignore)
 
 

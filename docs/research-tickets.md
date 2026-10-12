@@ -18,10 +18,9 @@ is not copied into the ticket.
 ## Freeze a ticket
 
 The public app's `/research` page gathers the title, date window, dataset
-manifest path, strategy cohort, and shared settings. It runs in the browser and
-downloads a JSON configuration file. It does not send the form to the server,
-read market data, or freeze a ticket. Save the file inside the private workspace
-and use the local command below to verify it and create the frozen record.
+manifest path, strategy cohort, and shared settings. It downloads a JSON
+configuration file. Save the file inside the private workspace and use the
+local command below to verify it and create the frozen record.
 
 Create a private JSON definition inside an initialized workspace. For example:
 

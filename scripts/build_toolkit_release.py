@@ -59,7 +59,7 @@ def allowed_path(name):
         return True
     if any(part.startswith(".") for part in path.parts):
         return False
-    if name in {"examples/tradingview/qqq_observer.pine", "deploy/linux/tradingview-nginx.conf.example", "examples/github-actions-tests.yml", "deploy/vercel/index.html", "deploy/vercel/research.html"}:
+    if name in {"examples/tradingview/qqq_observer.pine", "deploy/linux/tradingview-nginx.conf.example", "examples/github-actions-tests.yml", "deploy/vercel/index.html", "deploy/vercel/research.html", "deploy/vercel/setup.html"}:
         return True
     if name == "examples/manual-fills.csv":
         return True  # Contents are also required to explicitly declare synthetic.

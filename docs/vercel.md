@@ -5,10 +5,9 @@ and the **Python** framework preset. Leave build and output directory overrides
 empty. `pyproject.toml` explicitly points to the WSGI application `app:app`.
 No account credentials are required for this public deployment.
 
-The portal offers platform setup guides and credential-free configuration
-downloads. It links to the installable toolkit and the separate Hugging Face
-synthetic research demo. It does not run the Gradio app, train a model, connect
-accounts, accept alerts or submit orders.
+The portal's home page is the QQQ research workspace. Platform setup guides are
+available at `/setup`, and the ticket form is at `/research`. The site links to
+the installable toolkit and the separate Hugging Face research demo.
 
 ## Local preview
 
@@ -25,7 +24,9 @@ it is not evidence that a trading worker is running.
 
 | Route | Result |
 | --- | --- |
-| `/` | Platform setup page |
+| `/` | Research workspace, strategy cohort and example report |
+| `/research` | Four-step comparison ticket form |
+| `/setup` | Platform setup guides |
 | `/api/health` | Portal version and capability boundaries |
 | `/api/platforms` | Public platform catalog |
 | `/api/profile/alpaca?feed=sip` | Downloadable, read-only configuration |

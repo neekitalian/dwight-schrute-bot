@@ -26,7 +26,6 @@
     nav { display:flex; align-items:center; gap:28px; }
     nav a { color:var(--muted); text-decoration:none; }
     nav a[aria-current="page"] { color:var(--ink); }
-    .mode,.status { border:1px solid var(--line); padding:5px 10px; color:var(--muted); font-size:12px; white-space:nowrap; }
     main { padding:36px 0 42px; }
     .page-head { margin-bottom:28px; }
     .eyebrow { margin:0 0 8px; color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
@@ -62,8 +61,6 @@
     .review-item { min-width:0; }
     .review-item dt { color:var(--muted); font-size:11px; }
     .review-item dd { margin:3px 0 0; overflow-wrap:anywhere; }
-    .confirm { display:flex; align-items:flex-start; gap:10px; margin-top:21px; padding:14px; background:var(--raised); }
-    .confirm label { margin:0; font-weight:400; }
     .actions { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:24px; padding-top:16px; border-top:1px solid var(--line); }
     .action-group { display:flex; gap:9px; }
     .button { min-height:40px; padding:9px 15px; border:1px solid #444; border-radius:2px; background:transparent; text-decoration:none; }
@@ -76,9 +73,6 @@
     .rule { padding:12px 0; border-top:1px solid var(--line); }
     .rule strong { display:block; font-size:12px; font-weight:500; }
     .rule p { margin:3px 0 0; color:var(--muted); font-size:12px; }
-    .summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:22px; padding-top:14px; border-top:1px solid var(--line); }
-    .summary div { color:var(--muted); font-size:11px; }
-    .summary strong { display:block; margin-top:3px; color:var(--ink); font-size:12px; font-weight:500; }
     .done { padding-top:5px; }
     .done .ok { color:var(--good); }
     .done-box { margin-top:16px; padding:16px; background:var(--raised); }
@@ -95,11 +89,11 @@
   <header class="topbar">
     <div class="shell topbar-inner">
       <a class="brand" href="/">Dwight <span>/ Research</span></a>
-      <nav aria-label="Research sections">
-        <a href="#ticket-window" data-go-step="0" aria-current="page">Tickets</a>
+      <nav aria-label="Ticket navigation">
+        <a href="#ticket-window" data-go-step="0" aria-current="page">Window</a>
         <a href="#ticket-strategies" data-go-step="1">Strategies</a>
-        <a href="#ticket-review" data-go-step="3">Evidence</a>
-        <span class="mode">Research only · no orders</span>
+        <a href="#ticket-review" data-go-step="3">Review</a>
+        <a href="/setup">Setup</a>
       </nav>
     </div>
   </header>
@@ -107,8 +101,7 @@
     <header class="page-head">
       <p class="eyebrow">QQQ · 5 minute bars</p>
       <h1>Create an experiment ticket</h1>
-      <p class="lede">Set one time window and shared test assumptions for every strategy in the comparison.</p>
-      <span class="status" id="ticket-state">Draft · not run</span>
+      <p class="lede">Set one market window and shared assumptions for the strategy comparison.</p>
     </header>
 
     <nav class="stepbar" aria-label="Ticket steps">
@@ -121,14 +114,14 @@
     <div class="layout" id="ticket-edit">
       <section class="main-panel" aria-live="polite">
         <section class="step-panel" data-panel="0" id="window-panel">
-          <div class="section-intro"><h2>Set the market window</h2><p>Use the same session dates for all selected strategies.</p></div>
+          <div class="section-intro"><h2>Set the market window</h2><p>One ticket is one fixed QQQ period. Every selected strategy uses these dates.</p></div>
           <div class="fields">
-            <div class="field full"><label for="ticket-title">Ticket name</label><input id="ticket-title" type="text" maxlength="120" value="QQQ opening range study" autocomplete="off"><p class="hint">Give the test a short name. The ticket keeps its dates and assumptions.</p></div>
+            <div class="field full"><label for="ticket-title">Experiment name</label><input id="ticket-title" type="text" maxlength="120" value="QQQ opening range study" autocomplete="off"><p class="hint">Name the market question or event.</p></div>
             <div class="field"><span class="field-label">Market</span><div>QQQ · Nasdaq 100 ETF</div></div>
             <div class="field"><span class="field-label">Bar interval</span><div>5 minutes</div></div>
             <div class="field"><label for="ticket-start">Start date</label><input id="ticket-start" type="date"></div>
             <div class="field"><label for="ticket-end">End date</label><input id="ticket-end" type="date"></div>
-            <div class="field full"><label for="dataset-manifest">Dataset manifest path</label><input id="dataset-manifest" type="text" value="private-data/qqq/manifest.json" spellcheck="false" autocomplete="off"><p class="hint">Path inside your private workspace. The local CLI checks the manifest, bars and session coverage.</p></div>
+            <div class="field full"><label for="dataset-manifest">Dataset manifest path</label><input id="dataset-manifest" type="text" value="private-data/qqq/manifest.json" spellcheck="false" autocomplete="off"><p class="hint">Workspace-relative path to your QQQ data manifest.</p></div>
           </div>
         </section>
 
@@ -136,7 +129,6 @@
           <div class="section-intro"><h2>Choose strategies</h2><p>The ticket requires at least two strategies to compare.</p></div>
           <label class="strategy-row"><input type="checkbox" name="strategy" value="vwap_baseline" checked><span class="strategy-copy"><strong>QQQ VWAP baseline</strong><p>Long only · fixed VWAP rules</p></span><span class="version">v1</span></label>
           <label class="strategy-row"><input type="checkbox" name="strategy" value="relative_volume_filter" checked><span class="strategy-copy"><strong>VWAP with relative volume filter</strong><p>Same baseline with a fixed volume condition</p></span><span class="version">v1</span></label>
-          <p class="notice">This is the current fixed comparison set. The strategy list is not yet user extensible.</p>
         </section>
 
         <section class="step-panel" data-panel="2" hidden>
@@ -145,14 +137,12 @@
             <div class="field"><label for="capital">Starting capital per strategy</label><input id="capital" type="number" min="1" step="100" value="10000"></div>
             <div class="field"><label for="commission">Commission per share</label><input id="commission" type="number" min="0" step="0.001" value="0.005"></div>
             <div class="field"><label for="slippage">Slippage per share</label><input id="slippage" type="number" min="0" step="0.001" value="0.01"></div>
-            <div class="field"><label for="stress">Cost stress multiplier</label><input id="stress" type="number" min="1" step="0.25" value="2"><p class="hint">Recorded in the ticket. Stress results are not calculated yet.</p></div>
-            <div class="field full"><label for="evaluation-role">Evaluation purpose</label><select id="evaluation-role"><option value="exploratory">Exploratory</option><option value="validation">Validation</option><option value="final_holdout">Final holdout</option></select><p class="hint">This label is recorded. Dwight does not yet prevent reuse of the same dates in another ticket.</p></div>
+            <div class="field"><label for="stress">Cost stress multiplier</label><input id="stress" type="number" min="1" step="0.25" value="2"></div>
           </div>
-          <div class="assumption-box"><h3>Fill rules</h3><p>The selected strategy engine defines simulated fills. Its code fingerprint is checked when Dwight freezes the ticket. Simulated fills are not account fills.</p></div>
         </section>
 
         <section class="step-panel" data-panel="3" id="ticket-review" hidden>
-          <div class="section-intro"><h2>Review the ticket</h2><p>Download the config, save it inside your private workspace, then set its file permissions before freezing the ticket.</p></div>
+          <div class="section-intro"><h2>Review the ticket</h2><p>Check the period, strategy cohort, dataset, capital and costs.</p></div>
           <dl class="review-list">
             <div class="review-item"><dt>Ticket</dt><dd id="review-title">QQQ opening range study</dd></div>
             <div class="review-item"><dt>Market</dt><dd>QQQ · 5 minute bars</dd></div>
@@ -160,10 +150,7 @@
             <div class="review-item"><dt>Strategies</dt><dd id="review-strategies">2 selected</dd></div>
             <div class="review-item"><dt>Capital</dt><dd id="review-capital">$10,000 per strategy</dd></div>
             <div class="review-item"><dt>Data and costs</dt><dd id="review-data">Dataset path not set</dd></div>
-            <div class="review-item"><dt>Evaluation purpose</dt><dd id="review-role">Exploratory</dd></div>
-            <div class="review-item"><dt>Evidence</dt><dd>Not run</dd></div>
           </dl>
-          <label class="confirm"><input id="confirm-local" type="checkbox"><span>I understand this downloads a config file only. No data is uploaded and no replay or account action starts here.</span></label>
         </section>
 
         <div class="actions" id="ticket-actions">
@@ -174,13 +161,13 @@
 
         <section class="done" id="done" tabindex="-1" hidden aria-live="polite">
           <h2 class="ok">Config downloaded</h2>
-          <div class="done-box"><strong id="done-title"></strong><p id="done-summary"></p><p>Move the downloaded file into your private workspace. These commands set private permissions, then check the dataset and freeze the definition.</p></div>
+          <div class="done-box"><strong id="done-title"></strong><p id="done-summary"></p><p>Save the ticket file in your workspace, then run the local check below.</p></div>
           <pre>mkdir -p /path/to/workspace/configs
 cp ~/Downloads/research-ticket.json /path/to/workspace/configs/research-ticket.json
 chmod 600 /path/to/workspace/configs/research-ticket.json
 dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/workspace/configs/research-ticket.json</pre>
-          <p class="hint">The ticket remains unverified until the local command succeeds. No replay has run.</p>
-          <div class="actions"><a class="button" href="/">Platform setup</a><a class="button" href="https://github.com/neekitalian/dwight-schrute-bot/blob/main/docs/research-tickets.md" target="_blank" rel="noopener noreferrer">Ticket instructions</a></div>
+          <p class="hint">The local command checks the dataset and freezes the ticket definition.</p>
+          <div class="actions"><a class="button" href="/setup">Platform setup</a><a class="button" href="https://github.com/neekitalian/dwight-schrute-bot/blob/main/docs/research-tickets.md" target="_blank" rel="noopener noreferrer">Ticket instructions</a></div>
         </section>
       </section>
 
@@ -188,13 +175,10 @@ dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/w
         <h2>Comparison rules</h2>
         <div class="rule"><strong>Same data and dates</strong><p>Every strategy uses the ticket's QQQ bars and session window.</p></div>
         <div class="rule"><strong>Same capital and costs</strong><p>Settings are shared across the cohort.</p></div>
-        <div class="rule"><strong>Report what happened</strong><p>No-trade windows and missing sessions stay visible.</p></div>
+        <div class="rule"><strong>Check data coverage</strong><p>The local check reports missing sessions.</p></div>
         <div class="rule"><strong>Keep evidence separate</strong><p>Historical simulation, paper fills and live fills use different labels.</p></div>
-        <div class="notice"><strong>Holdout status</strong><br>Opening a test result is not tracked across tickets yet.</div>
-        <div class="summary" aria-live="polite"><div>Window<strong id="summary-window">Not set</strong></div><div>Strategies<strong id="summary-count">2 selected</strong></div><div>Evidence<strong>Not run</strong></div></div>
       </aside>
     </div>
-    <p class="footnote">Config files download to your device. Data stays in your private workspace. The page does not read market data, run strategies or connect to an account.</p>
   </main>
   <script>
     (() => {
@@ -220,29 +204,25 @@ dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/w
           return Number.isFinite(capital) && capital > 0 && Number.isFinite(commission) && commission >= 0
             && Number.isFinite(slippage) && slippage >= 0 && Number.isFinite(stress) && stress >= 1;
         }
-        return $('confirm-local').checked;
+        return true;
       }
       function hint() {
         if (!validStep(step)) return [
           'Enter a name, date range and relative manifest path.',
           'Select at least two strategies.',
           'Enter valid capital and cost values.',
-          'Confirm that this downloads a config only.'
+          ''
         ][step];
         return '';
       }
-      function prettyRole() { return $('evaluation-role').selectedOptions[0].textContent; }
-      function updateSummary() {
+      function updateReview() {
         const start = $('ticket-start').value, end = $('ticket-end').value;
         const windowText = start && end ? `${start} to ${end}` : 'Not set';
-        $('summary-window').textContent = windowText;
-        $('summary-count').textContent = `${selectedStrategies().length} selected`;
         $('review-title').textContent = $('ticket-title').value.trim() || 'Untitled ticket';
         $('review-window').textContent = windowText === 'Not set' ? 'Dates required' : windowText;
         $('review-strategies').textContent = selectedStrategies().map(item => item.parentElement.querySelector('strong').textContent).join(', ') || 'None selected';
         $('review-capital').textContent = `$${Number($('capital').value || 0).toLocaleString()} per strategy`;
         $('review-data').textContent = $('dataset-manifest').value.trim() || 'Dataset path not set';
-        $('review-role').textContent = prettyRole();
       }
       function paint() {
         panels.forEach((panel, index) => panel.hidden = index !== step);
@@ -257,7 +237,7 @@ dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/w
         $('download').disabled = !validStep(3);
         $('validation').textContent = hint();
         $('validation').classList.toggle('error', !validStep(step));
-        updateSummary();
+        updateReview();
       }
       function goTo(target) {
         if (target > step) {
@@ -290,7 +270,7 @@ dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/w
             commission: Number($('commission').value),
             slippage: Number($('slippage').value)
           },
-          evaluation_role: $('evaluation-role').value,
+          evaluation_role: 'exploratory',
           cost_stress_multiplier: Number($('stress').value)
         };
       }
@@ -306,7 +286,6 @@ dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/w
         anchor.remove();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
         $('ticket-edit').querySelectorAll('.step-panel, #ticket-actions, #validation').forEach(node => node.hidden = true);
-        $('ticket-state').textContent = 'Config downloaded · not verified';
         $('done-title').textContent = $('ticket-title').value.trim();
         $('done-summary').textContent = `${$('ticket-start').value} to ${$('ticket-end').value} · ${selectedStrategies().length} strategies · $${Number($('capital').value).toLocaleString()} each`;
         $('done').hidden = false;
