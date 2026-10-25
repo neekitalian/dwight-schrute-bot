@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Predict, replay and reflect on a weekly QQQ strategy comparison ticket.">
+<meta name="theme-color" content="#11120f">
+<title>Dwight · Learning ticket</title>
+<style>
+:root{--bg:#11120f;--panel:#181916;--ink:#f1f2ec;--muted:#a0a299;--line:#30322c;--lime:#a3c77a;--green:#a3c77a;--blue:#91a8bd;--sand:#c0a47a;--red:#d88374;--content:1190px}
+*{box-sizing:border-box}html{background:var(--bg);color:var(--ink);font-family:"Helvetica Neue","Avenir Next",Arial,sans-serif;-webkit-font-smoothing:antialiased}body{margin:0;min-width:320px;background:var(--bg)}button,input{font:inherit;color:inherit}button{cursor:pointer}.shell{max-width:1440px;margin:auto;padding:0 52px}.topbar{height:78px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.brand{font-family:"Arial Narrow","Avenir Next Condensed","Helvetica Neue",sans-serif;font-stretch:condensed;font-weight:700;font-size:25px;letter-spacing:-.075em;color:inherit;text-decoration:none}.brand span{color:#a0a299;font-weight:450}.nav{display:flex;gap:37px;color:#a0a299;font-size:13px}.nav a{color:inherit;text-decoration:none}.nav a:visited{color:inherit}.nav a:first-child{color:var(--ink)}.preview{font-size:10px;color:#b0b1aa;background:#1a1b18;border:1px solid #33342f;border-radius:100px;padding:8px 11px;letter-spacing:.06em;text-transform:uppercase}
+main{max-width:var(--content);margin:auto;padding:58px 0 70px}.hero{position:relative;padding:0 0 34px;border-bottom:1px solid var(--line)}.eyebrow{display:flex;align-items:center;gap:10px;font-size:10px;font-weight:620;color:#a0a299;letter-spacing:.15em;text-transform:uppercase}.dot{width:7px;height:7px;border-radius:50%;background:var(--lime)}.hero h1,.question,.result-head h2{font-family:"Arial Narrow","Avenir Next Condensed","Helvetica Neue",Arial,sans-serif;font-stretch:condensed;letter-spacing:-.045em;font-weight:700}.hero h1{font-size:clamp(40px,5.2vw,70px);line-height:.96;max-width:820px;margin:24px 0 23px}.hero h1 em{font-style:normal;color:var(--ink)}.ticket-meta{display:flex;align-items:center;gap:0;color:#a0a299;font-size:12px}.ticket-meta span{padding:0 14px;border-left:1px solid #383a34}.ticket-meta span:first-child{padding-left:0;border:0;font-weight:650;color:var(--ink)}.ticket-meta .sample{margin-left:14px;border:1px solid #3b4035;border-radius:100px;color:#b2bd9f;font-size:9px;letter-spacing:.1em;padding:6px 9px;text-transform:uppercase}
+.steps{display:flex;gap:28px;padding:22px 0 25px;border-bottom:1px solid var(--line);color:#85877f;font-size:11px}.step{display:flex;align-items:center;gap:8px}.step.active{color:var(--ink)}.step.done{color:#c1df9b}.step-num{width:20px;height:20px;border:1px solid #41433d;border-radius:50%;display:grid;place-items:center;font-size:9px}.step.active .step-num{background:#f1f2ec;border-color:#f1f2ec;color:#171815}.step.done .step-num{border-color:#7b9560;color:#c1df9b}
+.content{padding:35px 0 0;max-width:840px}.section-label{color:#a0a299;font-size:10px;font-weight:620;letter-spacing:.15em;text-transform:uppercase}.question{font-size:clamp(26px,3vw,36px);line-height:1.06;margin:11px 0 20px}.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.choice{min-height:98px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:12px;padding:16px;border:1px solid #32342e;border-radius:9px;background:var(--panel);transition:background .18s,border-color .18s,transform .18s}.choice:hover{border-color:#7e9f4c;transform:translateY(-2px)}.choice.selected{border-color:#6a6d64;background:#1e1f1b;box-shadow:0 0 0 1px #f1f2ec10}.choice-title{font-size:14px;font-weight:570;letter-spacing:-.015em}.choice-desc{font-size:11px;color:#a0a299;line-height:1.4}.choice-mark{width:14px;height:14px;border:1px solid #73766d;border-radius:50%;align-self:flex-end;position:relative}.selected .choice-mark{border-color:var(--lime)}.selected .choice-mark:after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--lime)}.actions{display:flex;align-items:center;gap:16px;margin-top:19px}.primary{border:0;border-radius:100px;background:#f1f2ec;color:#171815;font-size:13px;font-weight:650;padding:13px 20px;transition:.18s}.primary:hover{background:#fff;transform:translateY(-1px)}.skip{background:none;border:0;color:#a0a299;font-size:11px;padding:10px 0}.skip:hover{color:var(--ink)}.result{display:none;margin-top:34px;padding-top:28px;border-top:1px solid var(--line)}.result.visible{display:block;animation:rise .35s ease}@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}.result-head{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:17px}.result-head h2{font-size:29px;line-height:1.02;margin:0}.illustrative{font-size:9px;color:#ddc69e;border:1px solid #494132;border-radius:100px;padding:7px 9px;letter-spacing:.1em;white-space:nowrap}.chartbox{background:var(--panel);border:1px solid #32342e;border-radius:10px;padding:17px 18px 10px}.chart-title{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:560;color:#e6e7e0}.chart-title span{font-size:10px;font-weight:420;color:#a0a299}.chart{width:100%;height:220px;display:block;margin-top:10px}.chart-label{font:10px "Helvetica Neue",Arial,sans-serif;fill:#a0a299}.metric-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.metric{padding:15px 16px;border-right:1px solid var(--line)}.metric:first-child{padding-left:0}.metric:last-child{border:0}.metric-head{font-size:11px;color:#c5c7be;display:flex;align-items:center;gap:7px}.line-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);display:inline-block}.metric:nth-child(2) .line-dot{background:var(--blue)}.metric:nth-child(3) .line-dot{background:var(--sand)}.metric-value{font-size:23px;letter-spacing:-.05em;margin-top:12px;font-weight:550}.metric-note{font-size:10px;color:#a0a299;margin-top:4px}.replay-control{display:flex;align-items:center;gap:13px;margin:17px 0 0}.play{width:32px;height:32px;flex:none;border:1px solid #41433d;border-radius:50%;background:transparent;display:grid;place-items:center;font-size:10px}.play:hover{border-color:var(--lime);color:var(--lime)}.range-wrap{flex:1}.range-labels{display:flex;justify-content:space-between;font-size:9px;color:#a0a299;margin-bottom:7px}.range{width:100%;height:3px;accent-color:var(--lime)}.reflection{margin-top:21px;display:flex;align-items:center;justify-content:space-between;gap:16px}.reflection p{margin:0;color:#b7b9b0;font-size:12px}.reflection b{color:var(--ink);font-weight:560}.journal{border:1px solid #41433d;color:#e4e5de;background:transparent;border-radius:100px;padding:10px 14px;font-size:11px;white-space:nowrap}.journal:hover{border-color:var(--lime);color:var(--lime)}
+@media(max-width:900px){.shell{padding:0 30px}main{padding-top:46px}.hero h1{max-width:700px}.content{max-width:100%}.chart{height:190px}}
+@media(max-width:600px){.shell{padding:0 18px}.topbar{height:66px}.brand{font-size:23px}.nav{gap:15px;font-size:11px}.nav a:last-child{display:none}.preview{font-size:8px;padding:7px 8px}main{padding:34px 0 44px}.hero{padding-bottom:24px}.hero h1{font-size:40px;line-height:1.02;margin:19px 0}.ticket-meta{flex-wrap:wrap;row-gap:10px;font-size:10px}.ticket-meta span{padding:0 9px}.ticket-meta .sample{margin-left:8px}.steps{gap:16px;padding:18px 0 20px;font-size:10px}.step{gap:6px;white-space:nowrap}.step-num{width:18px;height:18px}.content{padding-top:27px}.question{font-size:26px;margin-bottom:16px}.choices{grid-template-columns:1fr;gap:8px}.choice{min-height:68px;display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 14px;gap:3px 12px}.choice-title{grid-column:1}.choice-desc{grid-column:1}.choice-mark{grid-column:2;grid-row:1/3}.actions{margin-top:15px}.primary{font-size:12px;padding:12px 16px}.result{margin-top:27px;padding-top:22px}.result-head h2{font-size:23px}.chartbox{padding:13px 11px 7px}.chart{height:165px}.metric{padding:12px 8px}.metric-head{font-size:9px;gap:5px}.metric-value{font-size:19px}.metric-note{font-size:9px;line-height:1.35}.reflection{align-items:flex-start;flex-direction:column}.journal{align-self:flex-start}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="topbar">
+  <a class="brand" href="/">Dwight<span> / Learn</span></a>
+  <nav class="nav" aria-label="Main navigation"><a href="/">Research</a><a href="/research">Experiment</a></nav>
+  <span class="preview">Illustrative preview</span>
+</header>
+<main>
+  <section class="hero">
+    <div class="eyebrow"><i class="dot"></i> Weekly ticket · 04</div>
+    <h1>Does the opening range hold up <em>against VWAP?</em></h1>
+    <div class="ticket-meta"><span>QQQ</span><span>5 min</span><span>Oct 12–16</span><span class="sample">Sample week</span></div>
+  </section>
+  <div class="steps" aria-label="Ticket progress">
+    <div class="step active" id="step1"><i class="step-num">1</i> Your call</div>
+    <div class="step" id="step2"><i class="step-num">2</i> Replay</div>
+    <div class="step" id="step3"><i class="step-num">3</i> Journal</div>
+  </div>
+  <section class="content">
+    <div class="section-label" id="promptLabel">Before the replay</div>
+    <h2 class="question" id="promptTitle">Which approach comes out ahead?</h2>
+    <div class="choices" id="choices">
+      <button class="choice selected" data-choice="Opening range" aria-pressed="true"><span class="choice-title">Opening range</span><span class="choice-desc">Break above the first 30 minutes</span><i class="choice-mark"></i></button>
+      <button class="choice" data-choice="VWAP" aria-pressed="false"><span class="choice-title">VWAP reclaim</span><span class="choice-desc">Recover the session average</span><i class="choice-mark"></i></button>
+      <button class="choice" data-choice="Buy & hold" aria-pressed="false"><span class="choice-title">Buy and hold</span><span class="choice-desc">Hold through Friday close</span><i class="choice-mark"></i></button>
+    </div>
+    <div class="actions" id="actions"><button class="primary" id="reveal">Reveal the week <span aria-hidden="true">↗</span></button><button class="skip" id="skip">Skip</button></div>
+    <div class="result" id="result">
+      <div class="result-head"><h2>Same week.<br>Three outcomes.</h2><span class="illustrative">ILLUSTRATIVE DATA</span></div>
+      <div class="chartbox">
+        <div class="chart-title">Value through the ticket <span>Indexed to 100</span></div>
+        <svg class="chart" viewBox="0 0 850 210" role="img" aria-label="Illustrative value paths for three strategies">
+          <g stroke="#e4e6df" stroke-width="1"><path d="M44 20H836M44 59H836M44 98H836M44 137H836M44 176H836"/><path d="M44 18V177M202 18V177M360 18V177M518 18V177M676 18V177M836 18V177" stroke-dasharray="2 5"/></g>
+          <g class="chart-label"><text x="9" y="23">104</text><text x="9" y="62">102</text><text x="9" y="101">100</text><text x="9" y="140">98</text><text x="9" y="179">96</text><text x="42" y="199">Mon</text><text x="200" y="199">Tue</text><text x="358" y="199">Wed</text><text x="516" y="199">Thu</text><text x="810" y="199">Fri</text></g>
+          <path d="M44 98 L95 79 L146 94 L202 66 L253 77 L309 51 L360 72 L411 46 L467 62 L518 37 L569 57 L625 43 L676 59 L728 29 L779 46 L836 24" fill="none" stroke="#82a96f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M44 98 L95 109 L146 92 L202 101 L253 84 L309 98 L360 77 L411 91 L467 74 L518 88 L569 79 L625 70 L676 83 L728 66 L779 74 L836 61" fill="none" stroke="#738da8" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M44 98 L95 103 L146 90 L202 97 L253 90 L309 84 L360 91 L411 82 L467 75 L518 84 L569 78 L625 71 L676 78 L728 65 L779 59 L836 52" fill="none" stroke="#b49b74" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="playhead" x1="44" x2="44" y1="18" y2="177" stroke="#a7b69f" stroke-width="1" stroke-dasharray="3 4"/>
+        </svg>
+      </div>
+      <div class="metric-list">
+        <div class="metric"><div class="metric-head"><i class="line-dot"></i>Opening range</div><div class="metric-value">+1.8%</div><div class="metric-note">2 trades · 1.2% drawdown</div></div>
+        <div class="metric"><div class="metric-head"><i class="line-dot"></i>VWAP reclaim</div><div class="metric-value">+0.6%</div><div class="metric-note">3 trades · 0.9% drawdown</div></div>
+        <div class="metric"><div class="metric-head"><i class="line-dot"></i>Buy and hold</div><div class="metric-value">−0.4%</div><div class="metric-note">Held for five sessions</div></div>
+      </div>
+      <div class="replay-control"><button class="play" id="play" aria-label="Play replay">▶</button><div class="range-wrap"><div class="range-labels"><span>Mon open</span><span>Fri close</span></div><input class="range" id="time" type="range" min="0" max="100" value="0" aria-label="Replay time"></div></div>
+      <div class="reflection"><p><b>Your call:</b> <span id="answer">Opening range</span> · <span style="color:#62864f">First in this example</span></p><button class="journal" id="journal">Write a note ↗</button></div>
+    </div>
+  </section>
+</main>
+</div>
+<script>
+const choices=[...document.querySelectorAll('.choice')];let selected='Opening range';let timer=null;
+choices.forEach(button=>button.addEventListener('click',()=>{choices.forEach(x=>{x.classList.remove('selected');x.setAttribute('aria-pressed','false')});button.classList.add('selected');button.setAttribute('aria-pressed','true');selected=button.dataset.choice}));
+function reveal(){document.getElementById('answer').textContent=selected;document.getElementById('result').classList.add('visible');document.getElementById('step1').classList.remove('active');document.getElementById('step1').classList.add('done');document.getElementById('step2').classList.add('active');document.getElementById('promptLabel').textContent='Prediction recorded';document.getElementById('promptTitle').textContent='Move through the week.';document.getElementById('choices').style.display='none';document.getElementById('actions').innerHTML='<button class="skip" id="backToCall">← Change your call</button>';document.getElementById('backToCall').onclick=()=>location.reload();document.getElementById('result').scrollIntoView({behavior:'smooth',block:'nearest'})}
+document.getElementById('reveal').addEventListener('click',reveal);document.getElementById('skip').addEventListener('click',()=>{selected='No prediction';reveal()});
+const range=document.getElementById('time'),playhead=document.getElementById('playhead');range.addEventListener('input',()=>{const x=44+(792*Number(range.value)/100);playhead.setAttribute('x1',x);playhead.setAttribute('x2',x)});
+document.getElementById('play').addEventListener('click',e=>{if(timer){clearInterval(timer);timer=null;e.currentTarget.textContent='▶';return}e.currentTarget.textContent='Ⅱ';timer=setInterval(()=>{let v=Number(range.value)+1;if(v>100){clearInterval(timer);timer=null;e.currentTarget.textContent='▶';v=100}range.value=v;range.dispatchEvent(new Event('input'))},65)});
+document.getElementById('journal').addEventListener('click',e=>{e.currentTarget.textContent='Note added ✓';e.currentTarget.style.borderColor='#a3c77a';e.currentTarget.style.color='#a3c77a';document.getElementById('step2').classList.remove('active');document.getElementById('step2').classList.add('done');document.getElementById('step3').classList.add('active')});
+</script>
+</body>
+</html>

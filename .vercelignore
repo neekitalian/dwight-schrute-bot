@@ -15,5 +15,6 @@
 !/deploy/vercel
 /deploy/vercel/*
 !/deploy/vercel/index.html
+!/deploy/vercel/learn.html
 !/deploy/vercel/research.html
 !/deploy/vercel/setup.html

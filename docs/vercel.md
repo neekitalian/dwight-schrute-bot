@@ -5,9 +5,11 @@ and the **Python** framework preset. Leave build and output directory overrides
 empty. `pyproject.toml` explicitly points to the WSGI application `app:app`.
 No account credentials are required for this public deployment.
 
-The portal's home page is the QQQ research workspace. Platform setup guides are
-available at `/setup`, and the ticket form is at `/research`. The site links to
-the installable toolkit and the separate Hugging Face research demo.
+The portal's home page is the QQQ research workspace. `/learn` demonstrates a
+weekly prediction, replay and note flow using illustrative values.
+Platform setup guides are available at `/setup`, and the experiment definition
+form is at `/research`. The site links to the installable toolkit and the
+separate Hugging Face research demo.
 
 ## Local preview
 
@@ -25,6 +27,7 @@ it is not evidence that a trading worker is running.
 | Route | Result |
 | --- | --- |
 | `/` | Research workspace, strategy cohort and example report |
+| `/learn` | Weekly prediction and replay learning ticket with illustrative values |
 | `/research` | Four-step comparison ticket form |
 | `/setup` | Platform setup guides |
 | `/api/health` | Portal version and capability boundaries |

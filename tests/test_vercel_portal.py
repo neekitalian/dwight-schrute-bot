@@ -36,6 +36,7 @@ class VercelPortalTests(unittest.TestCase):
         self.assertIn(b"Research workspace", body)
         self.assertIn(b"Compare QQQ strategies over the same market window.", body)
         self.assertIn(b"New ticket", body)
+        self.assertIn(b'href="/learn">Learn</a>', body)
         self.assertIn(b"Current comparison cohort", body)
         self.assertNotIn(b"Public setup guide", body)
         self.assertNotIn(b"Execution disabled", body)
@@ -76,6 +77,25 @@ class VercelPortalTests(unittest.TestCase):
         self.assertNotIn("'unsafe-inline'", policy)
         for method in ("POST", "PUT", "DELETE"):
             changed, _ = self.request("/research", method=method)
+            self.assertEqual(changed["status"], "405 Method Not Allowed")
+
+    def test_learning_ticket_is_a_public_illustrative_replay(self):
+        response, body = self.request("/learn")
+        head, empty = self.request("/learn", method="HEAD")
+        self.assertEqual(response["status"], "200 OK")
+        self.assertEqual(head, response)
+        self.assertEqual(empty, b"")
+        self.assertIn(b"Does the opening range hold up", body)
+        self.assertIn(b"Reveal the week", body)
+        self.assertIn(b"Same week.", body)
+        self.assertIn(b"ILLUSTRATIVE DATA", body)
+        self.assertIn(b"Write a note", body)
+        self.assertNotIn(b"fetch(", body)
+        self.assertNotIn(b"localStorage", body)
+        policy = response["headers"]["Content-Security-Policy"]
+        self.assertIn("script-src 'sha256-", policy)
+        for method in ("POST", "PUT", "DELETE"):
+            changed, _ = self.request("/learn", method=method)
             self.assertEqual(changed["status"], "405 Method Not Allowed")
 
     def test_health_is_public_capability_not_worker_health(self):
@@ -141,7 +161,8 @@ class VercelPortalTests(unittest.TestCase):
     def test_runtime_never_reads_credentials_or_imports_research(self):
         sentinel = "PRIVATE_CREDENTIAL_MUST_NOT_APPEAR"
         with patch.dict("os.environ", {"APCA_API_KEY_ID": sentinel, "DATABENTO_API_KEY": sentinel}):
-            for route in ("/", "/research", "/setup", "/api/health", "/api/platforms", "/api/profile/alpaca"):
+            for route in ("/", "/learn", "/research", "/setup", "/api/health",
+                          "/api/platforms", "/api/profile/alpaca"):
                 self.assertNotIn(sentinel.encode(), self.request(route)[1])
         result = subprocess.run([sys.executable, "-c", "import app,sys,json; print(json.dumps(list(sys.modules)))"],
                                 cwd=ROOT, check=True, capture_output=True, text=True)
@@ -165,7 +186,8 @@ class VercelPortalTests(unittest.TestCase):
         ignore = (ROOT / ".vercelignore").read_text()
         self.assertIn("/*", ignore)
         for allowed in ("!/app.py", "!/dwight/connection_catalog.py", "!/deploy/vercel/index.html",
-                        "!/deploy/vercel/research.html", "!/deploy/vercel/setup.html"):
+                        "!/deploy/vercel/learn.html", "!/deploy/vercel/research.html",
+                        "!/deploy/vercel/setup.html"):
             self.assertIn(allowed, ignore)
 
 
