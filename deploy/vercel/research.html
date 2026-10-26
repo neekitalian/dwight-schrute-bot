@@ -3,308 +3,104 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Prepare a private QQQ strategy comparison ticket for local validation with Dwight.">
-  <meta name="theme-color" content="#090909">
-  <title>Dwight · Research ticket</title>
+  <meta name="description" content="Define one QQQ period and download a private strategy comparison ticket.">
+  <meta name="theme-color" content="#11120f">
+  <title>Dwight · Research</title>
   <style>
-    :root { color-scheme:dark; --bg:#090909; --panel:#111; --raised:#171717; --ink:#f5f5f5; --muted:#aaa; --line:#2c2c2c; --good:#a9c9ae; --error:#f0aaa3; }
-    * { box-sizing:border-box; }
-    html { scroll-behavior:smooth; }
-    body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
-    button,input,select { font:inherit; }
-    button,a { -webkit-tap-highlight-color:transparent; }
-    a { color:inherit; text-underline-offset:4px; }
-    button { color:inherit; cursor:pointer; }
-    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #eee; outline-offset:3px; }
-    button:disabled { cursor:default; opacity:.42; }
-    [hidden] { display:none !important; }
-    .shell { max-width:1240px; margin:auto; padding:0 40px; }
-    .topbar { border-bottom:1px solid var(--line); }
-    .topbar-inner { min-height:78px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
-    .brand { font-size:20px; font-weight:600; text-decoration:none; letter-spacing:-.4px; }
-    .brand span { color:var(--muted); font-weight:400; }
-    nav { display:flex; align-items:center; gap:28px; }
-    nav a { color:var(--muted); text-decoration:none; }
-    nav a[aria-current="page"] { color:var(--ink); }
-    main { padding:36px 0 42px; }
-    .page-head { margin-bottom:28px; }
-    .eyebrow { margin:0 0 8px; color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
-    h1 { margin:0; font-size:32px; line-height:1.2; font-weight:500; letter-spacing:-.8px; }
-    .lede { max-width:790px; margin:10px 0 14px; color:#c4c4c4; font-size:16px; }
-    .stepbar { display:flex; gap:22px; align-items:stretch; border-bottom:1px solid var(--line); margin-bottom:26px; }
-    .step { min-height:48px; display:flex; align-items:center; gap:8px; padding:8px 0 11px; border:0; border-bottom:2px solid transparent; background:none; color:var(--muted); }
-    .step[aria-current="step"] { color:var(--ink); border-bottom-color:var(--ink); }
-    .step-index { width:22px; height:22px; display:grid; place-items:center; border:1px solid var(--line); font-size:11px; }
-    .layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:34px; align-items:start; }
-    .main-panel { min-width:0; }
-    .section-intro { margin-bottom:20px; }
-    h2 { margin:0; font-size:19px; line-height:1.35; font-weight:500; }
-    h3 { margin:0; font-size:14px; font-weight:500; }
-    .section-intro p { margin:5px 0 0; color:var(--muted); }
-    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px 18px; }
-    .field { min-width:0; }
-    .field.full { grid-column:1/-1; }
-    label,.field-label { display:block; margin-bottom:6px; font-size:12px; font-weight:500; }
-    input,select { width:100%; min-height:43px; padding:9px 11px; border:1px solid #383838; border-radius:2px; background:#111; color:var(--ink); }
-    input::placeholder { color:#777; }
-    input[type="checkbox"] { width:17px; height:17px; min-height:0; margin:2px 0 0; accent-color:#eee; flex:0 0 auto; }
-    .hint { margin:5px 0 0; color:var(--muted); font-size:12px; }
-    .strategy-row { display:flex; align-items:flex-start; gap:12px; padding:15px 0; border-bottom:1px solid var(--line); }
-    .strategy-copy { flex:1; }
-    .strategy-copy strong { display:block; font-weight:500; }
-    .strategy-copy p { margin:3px 0 0; color:var(--muted); font-size:12px; }
-    .version { color:var(--muted); font-size:11px; white-space:nowrap; }
-    .notice { margin-top:18px; padding:13px 15px; background:var(--raised); color:#c5c5c5; font-size:12px; }
-    .assumption-box { margin-top:19px; border-top:1px solid var(--line); padding-top:16px; }
-    .assumption-box p { margin:4px 0 0; color:var(--muted); font-size:12px; }
-    .review-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px 20px; }
-    .review-item { min-width:0; }
-    .review-item dt { color:var(--muted); font-size:11px; }
-    .review-item dd { margin:3px 0 0; overflow-wrap:anywhere; }
-    .actions { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:24px; padding-top:16px; border-top:1px solid var(--line); }
-    .action-group { display:flex; gap:9px; }
-    .button { min-height:40px; padding:9px 15px; border:1px solid #444; border-radius:2px; background:transparent; text-decoration:none; }
-    .button.primary { background:#eee; border-color:#eee; color:#090909; }
-    .button:hover:not(:disabled) { border-color:#eee; }
-    .validation { min-height:20px; margin:8px 0 0; color:var(--muted); font-size:12px; }
-    .validation.error { color:var(--error); }
-    .aside { border-left:1px solid var(--line); padding-left:22px; }
-    .aside h2 { margin-bottom:13px; font-size:16px; }
-    .rule { padding:12px 0; border-top:1px solid var(--line); }
-    .rule strong { display:block; font-size:12px; font-weight:500; }
-    .rule p { margin:3px 0 0; color:var(--muted); font-size:12px; }
-    .done { padding-top:5px; }
-    .done .ok { color:var(--good); }
-    .done-box { margin-top:16px; padding:16px; background:var(--raised); }
-    .done-box p { margin:5px 0 0; color:var(--muted); }
-    pre { overflow:auto; margin:14px 0; padding:13px; border:1px solid var(--line); color:#d8d8d8; font:12px/1.5 ui-monospace,SFMono-Regular,monospace; }
-    .footnote { margin-top:30px; padding-top:13px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; }
-    @media (max-width:900px) { .shell { padding:0 26px; } .layout { grid-template-columns:minmax(0,1fr) 270px; gap:24px; } nav { gap:18px; } }
-    @media (max-width:700px) { .shell { padding:0 19px; } .topbar-inner { min-height:68px; } nav { gap:14px; font-size:12px; } nav .mode { display:none; } main { padding-top:27px; } h1 { font-size:28px; } .lede { font-size:14px; } .stepbar { gap:13px; overflow-x:auto; } .step { flex:0 0 auto; font-size:12px; } .layout { grid-template-columns:1fr; gap:25px; } .aside { border-left:0; border-top:1px solid var(--line); padding:17px 0 0; } }
-    @media (max-width:430px) { .shell { padding:0 15px; } nav { gap:11px; } nav a { font-size:11px; } nav a[data-go-step]:not([aria-current="page"]) { display:none; } .fields,.review-list { grid-template-columns:1fr; } .field.full { grid-column:auto; } .stepbar { gap:10px; } .step { gap:5px; font-size:11px; } .step-index { width:20px; height:20px; } .actions { align-items:stretch; } .action-group { margin-left:auto; } .button { padding:8px 11px; font-size:12px; } }
-    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    :root{color-scheme:dark;--bg:#11120f;--panel:#181916;--ink:#f1f2ec;--muted:#a0a299;--line:#30322c;--lime:#a3c77a;--red:#d88374;--content:1160px}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Helvetica Neue","Avenir Next",Arial,sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit;color:inherit}a{color:inherit;text-underline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--lime);outline-offset:3px}[hidden]{display:none!important}
+    .shell{max-width:1320px;margin:auto;padding:0 48px}.topbar{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.brand{font:700 25px/1 "Arial Narrow","Avenir Next Condensed",Arial,sans-serif;letter-spacing:-.075em;text-decoration:none}.nav{display:flex;gap:34px;color:var(--muted);font-size:13px}.nav a{text-decoration:none}.nav a[aria-current="page"]{color:var(--ink)}
+    main{max-width:var(--content);margin:auto;padding:48px clamp(18px,4vw,48px) 54px}.eyebrow{margin:0 0 12px;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}h1,h2,h3,p{margin-top:0}h1{margin-bottom:8px;font:700 clamp(38px,5vw,58px)/.98 "Arial Narrow","Avenir Next Condensed",Arial,sans-serif;letter-spacing:-.045em}h2{margin-bottom:8px;font-size:16px;font-weight:560}.lede{margin:0;color:var(--muted);font-size:13px}.form-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:48px;margin-top:36px;align-items:start}.form-main{min-width:0}.group{padding:0 0 26px;margin-bottom:25px;border-bottom:1px solid var(--line)}.group:last-of-type{margin-bottom:0}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}.field{min-width:0}.field.full{grid-column:1/-1}label,.label{display:block;margin:0 0 7px;font-size:11px;font-weight:550}.fixed-value{height:43px;display:flex;align-items:center;padding:0 12px;border:1px solid var(--line);background:#141512;font-size:12px}.market-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:17px}.market-chip{display:flex;justify-content:space-between;align-items:center;padding:12px 13px;border:1px solid var(--line);background:#141512;color:#dedfd8;font-size:12px}.market-chip span+span{color:var(--muted);font-size:10px}input{width:100%;min-height:43px;padding:9px 11px;border:1px solid #3a3c35;border-radius:3px;background:#141512}input::placeholder{color:#72746b}.hint{margin:6px 0 0;color:#85877f;font-size:10px}.cohort{display:grid;grid-template-columns:1fr 1fr;gap:10px}.strategy{padding:13px;border:1px solid var(--line);background:#141512}.strategy small{display:block;margin-bottom:9px;color:var(--muted);font-size:9px;letter-spacing:.1em;text-transform:uppercase}.strategy strong{font-size:12px;font-weight:550}.advanced{margin-top:17px;border-top:1px solid var(--line)}.advanced summary{padding:15px 0 2px;cursor:pointer;color:#d8d9d2;font-size:11px;list-style:none}.advanced summary::-webkit-details-marker{display:none}.advanced summary:after{content:"+";float:right;color:var(--muted)}.advanced[open] summary:after{content:"−"}.costs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 14px;padding-top:15px}.costs input{min-height:38px;font-size:11px}
+    .summary{position:sticky;top:22px;padding:20px;border:1px solid var(--line);background:var(--panel)}.summary h2{margin-bottom:16px;font-size:15px}.summary dl{margin:0}.summary-row{display:flex;justify-content:space-between;gap:15px;padding:11px 0;border-top:1px solid #30322c;font-size:11px}.summary-row dt{color:var(--muted)}.summary-row dd{max-width:58%;margin:0;text-align:right;overflow-wrap:anywhere}.primary{width:100%;min-height:43px;margin-top:17px;border:0;border-radius:3px;background:#f1f2ec;color:#171815;font-weight:620;font-size:12px;cursor:pointer}.primary:hover:not(:disabled){background:#fff}.primary:disabled{opacity:.4;cursor:default}.validation{min-height:0;margin:7px 0 0;color:var(--red);font-size:10px}.result{margin-top:16px;padding:15px 0 0;border-top:1px solid var(--line)}.result strong{font-size:12px;font-weight:560}.result p{margin:5px 0 0;color:var(--muted);font-size:10px}.result pre{overflow:auto;margin:11px 0 0;padding:11px;border:1px solid var(--line);color:#dedfd8;font:10px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere}.summary-links{display:flex;flex-wrap:wrap;gap:15px;margin-top:18px;color:var(--muted);font-size:10px}.summary-links a{text-decoration:none}.summary-links a:hover{color:var(--ink)}footer{max-width:var(--content);margin:auto;padding:17px clamp(18px,4vw,48px) 25px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:15px;color:#85877f;font-size:10px}footer nav{display:flex;gap:18px}footer a{text-decoration:none}
+    @media(max-width:800px){.shell{padding:0 28px}.form-layout{grid-template-columns:1fr;gap:28px}.summary{position:static}.summary dl{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}.summary-row{align-items:flex-start}.primary{max-width:260px}}
+    @media(max-width:520px){.shell{padding:0 18px}.topbar{height:66px}.nav{gap:19px;font-size:12px}main{padding:34px 18px 40px}h1{font-size:40px}.form-layout{margin-top:26px;gap:24px}.summary{padding:16px}.summary dl{grid-template-columns:1fr 1fr}.summary-row{font-size:10px}.row,.cohort{grid-template-columns:1fr}.field.full{grid-column:auto}.costs{gap:11px}.market-row{gap:8px}.market-chip{padding:10px;font-size:11px}footer{margin:0 18px;padding:17px 0 25px;flex-direction:column;gap:10px}footer nav{gap:14px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="shell topbar-inner">
-      <a class="brand" href="/">Dwight <span>/ Research</span></a>
-      <nav aria-label="Ticket navigation">
-        <a href="/learn">Learn</a>
-        <a href="#ticket-window" data-go-step="0" aria-current="page">Window</a>
-        <a href="#ticket-strategies" data-go-step="1">Strategies</a>
-        <a href="#ticket-review" data-go-step="3">Review</a>
-        <a href="/setup">Setup</a>
-      </nav>
-    </div>
+  <header class="shell topbar">
+    <a class="brand" href="/" aria-label="Dwight home">Dwight</a>
+    <nav class="nav" aria-label="Main navigation"><a href="/">Learn</a><a href="/research" aria-current="page">Research</a></nav>
   </header>
-  <main class="shell" id="ticket-window">
-    <header class="page-head">
-      <p class="eyebrow">QQQ · 5 minute bars</p>
-      <h1>Create an experiment ticket</h1>
-      <p class="lede">Set one market window and shared assumptions for the strategy comparison.</p>
-    </header>
-
-    <nav class="stepbar" aria-label="Ticket steps">
-      <button class="step" type="button" data-step="0" aria-current="step"><span class="step-index">1</span>Window</button>
-      <button class="step" type="button" data-step="1"><span class="step-index">2</span>Strategies</button>
-      <button class="step" type="button" data-step="2"><span class="step-index">3</span>Assumptions</button>
-      <button class="step" type="button" data-step="3"><span class="step-index">4</span>Review</button>
-    </nav>
-
-    <div class="layout" id="ticket-edit">
-      <section class="main-panel" aria-live="polite">
-        <section class="step-panel" data-panel="0" id="window-panel">
-          <div class="section-intro"><h2>Set the market window</h2><p>One ticket is one fixed QQQ period. Every selected strategy uses these dates.</p></div>
-          <div class="fields">
-            <div class="field full"><label for="ticket-title">Experiment name</label><input id="ticket-title" type="text" maxlength="120" value="QQQ opening range study" autocomplete="off"><p class="hint">Name the market question or event.</p></div>
-            <div class="field"><span class="field-label">Market</span><div>QQQ · Nasdaq 100 ETF</div></div>
-            <div class="field"><span class="field-label">Bar interval</span><div>5 minutes</div></div>
-            <div class="field"><label for="ticket-start">Start date</label><input id="ticket-start" type="date"></div>
-            <div class="field"><label for="ticket-end">End date</label><input id="ticket-end" type="date"></div>
-            <div class="field full"><label for="dataset-manifest">Dataset manifest path</label><input id="dataset-manifest" type="text" value="private-data/qqq/manifest.json" spellcheck="false" autocomplete="off"><p class="hint">Workspace-relative path to your QQQ data manifest.</p></div>
+  <main>
+    <p class="eyebrow">Research · QQQ</p>
+    <h1>Build a comparison</h1>
+    <p class="lede">Choose a period. The same two strategies replay against the same data and costs.</p>
+    <div class="form-layout">
+      <form class="form-main" id="ticket-form" novalidate>
+        <section class="group" aria-labelledby="window-title">
+          <h2 id="window-title">Market window</h2>
+          <div class="market-row" aria-label="Fixed market settings"><div class="market-chip"><span>QQQ</span><span>NASDAQ 100 ETF</span></div><div class="market-chip"><span>5 min</span><span>Bar interval</span></div></div>
+          <div class="row">
+            <div class="field"><label for="ticket-start">Start</label><input id="ticket-start" type="date" required></div>
+            <div class="field"><label for="ticket-end">End</label><input id="ticket-end" type="date" required></div>
+            <div class="field full"><label for="dataset-manifest">Dataset manifest</label><input id="dataset-manifest" type="text" placeholder="private-data/qqq/manifest.json" autocomplete="off" spellcheck="false" required><p class="hint">Path inside your private workspace.</p></div>
           </div>
         </section>
-
-        <section class="step-panel" data-panel="1" id="ticket-strategies" hidden>
-          <div class="section-intro"><h2>Choose strategies</h2><p>The ticket requires at least two strategies to compare.</p></div>
-          <label class="strategy-row"><input type="checkbox" name="strategy" value="vwap_baseline" checked><span class="strategy-copy"><strong>QQQ VWAP baseline</strong><p>Long only · fixed VWAP rules</p></span><span class="version">v1</span></label>
-          <label class="strategy-row"><input type="checkbox" name="strategy" value="relative_volume_filter" checked><span class="strategy-copy"><strong>VWAP with relative volume filter</strong><p>Same baseline with a fixed volume condition</p></span><span class="version">v1</span></label>
-        </section>
-
-        <section class="step-panel" data-panel="2" hidden>
-          <div class="section-intro"><h2>Set shared assumptions</h2><p>These values apply to every strategy in the ticket.</p></div>
-          <div class="fields">
-            <div class="field"><label for="capital">Starting capital per strategy</label><input id="capital" type="number" min="1" step="100" value="10000"></div>
+        <section class="group" aria-labelledby="cohort-title">
+          <h2 id="cohort-title">Strategy cohort</h2>
+          <div class="cohort"><div class="strategy"><small>Baseline · v1</small><strong>QQQ VWAP</strong></div><div class="strategy"><small>Comparator · v1</small><strong>VWAP + relative volume</strong></div></div>
+          <details class="advanced"><summary>Capital and costs</summary><div class="costs">
+            <div class="field"><label for="capital">Capital per strategy</label><input id="capital" type="number" min="1" step="100" value="10000"></div>
             <div class="field"><label for="commission">Commission per share</label><input id="commission" type="number" min="0" step="0.001" value="0.005"></div>
             <div class="field"><label for="slippage">Slippage per share</label><input id="slippage" type="number" min="0" step="0.001" value="0.01"></div>
-            <div class="field"><label for="stress">Cost stress multiplier</label><input id="stress" type="number" min="1" step="0.25" value="2"></div>
-          </div>
+            <div class="field"><label for="stress">Cost stress</label><input id="stress" type="number" min="1" step="0.25" value="2"></div>
+          </div></details>
         </section>
-
-        <section class="step-panel" data-panel="3" id="ticket-review" hidden>
-          <div class="section-intro"><h2>Review the ticket</h2><p>Check the period, strategy cohort, dataset, capital and costs.</p></div>
-          <dl class="review-list">
-            <div class="review-item"><dt>Ticket</dt><dd id="review-title">QQQ opening range study</dd></div>
-            <div class="review-item"><dt>Market</dt><dd>QQQ · 5 minute bars</dd></div>
-            <div class="review-item"><dt>Window</dt><dd id="review-window">Dates required</dd></div>
-            <div class="review-item"><dt>Strategies</dt><dd id="review-strategies">2 selected</dd></div>
-            <div class="review-item"><dt>Capital</dt><dd id="review-capital">$10,000 per strategy</dd></div>
-            <div class="review-item"><dt>Data and costs</dt><dd id="review-data">Dataset path not set</dd></div>
-          </dl>
-        </section>
-
-        <div class="actions" id="ticket-actions">
-          <button class="button" type="button" id="back" disabled>Back</button>
-          <div class="action-group"><button class="button primary" type="button" id="continue">Continue</button><button class="button primary" type="button" id="download" hidden disabled>Download config</button></div>
-        </div>
+      </form>
+      <aside class="summary" aria-label="Ticket summary">
+        <h2>Ticket</h2>
+        <dl>
+          <div class="summary-row"><dt>Window</dt><dd id="summary-window">Choose dates</dd></div>
+          <div class="summary-row"><dt>Strategies</dt><dd>2 fixed</dd></div>
+          <div class="summary-row"><dt>Capital</dt><dd id="summary-capital">$10,000 each</dd></div>
+          <div class="summary-row"><dt>Data</dt><dd id="summary-data">Not set</dd></div>
+        </dl>
+        <button class="primary" id="download" type="button" disabled>Download ticket</button>
         <p class="validation" id="validation" role="status" aria-live="polite"></p>
-
-        <section class="done" id="done" tabindex="-1" hidden aria-live="polite">
-          <h2 class="ok">Config downloaded</h2>
-          <div class="done-box"><strong id="done-title"></strong><p id="done-summary"></p><p>Save the ticket file in your workspace, then run the local check below.</p></div>
-          <pre>mkdir -p /path/to/workspace/configs
-cp ~/Downloads/research-ticket.json /path/to/workspace/configs/research-ticket.json
-chmod 600 /path/to/workspace/configs/research-ticket.json
-dwight research-ticket-freeze --workspace /path/to/workspace --config /path/to/workspace/configs/research-ticket.json</pre>
-          <p class="hint">The local command checks the dataset and freezes the ticket definition.</p>
-          <div class="actions"><a class="button" href="/setup">Platform setup</a><a class="button" href="https://github.com/neekitalian/dwight-schrute-bot/blob/main/docs/research-tickets.md" target="_blank" rel="noopener noreferrer">Ticket instructions</a></div>
+        <section class="result" id="result" hidden tabindex="-1">
+          <strong>Ticket downloaded</strong>
+          <p>Move it to your workspace and check data coverage with:</p>
+          <pre>dwight research-ticket-freeze --workspace PATH --config PATH/configs/research-ticket.json</pre>
         </section>
-      </section>
-
-      <aside class="aside" aria-label="Ticket rules">
-        <h2>Comparison rules</h2>
-        <div class="rule"><strong>Same data and dates</strong><p>Every strategy uses the ticket's QQQ bars and session window.</p></div>
-        <div class="rule"><strong>Same capital and costs</strong><p>Settings are shared across the cohort.</p></div>
-        <div class="rule"><strong>Check data coverage</strong><p>The local check reports missing sessions.</p></div>
-        <div class="rule"><strong>Keep evidence separate</strong><p>Historical simulation, paper fills and live fills use different labels.</p></div>
+        <nav class="summary-links" aria-label="Research resources"><a href="/setup">Connections</a><a href="https://github.com/neekitalian/dwight-schrute-bot/blob/main/docs/research-tickets.md" target="_blank" rel="noopener noreferrer">Ticket guide</a></nav>
       </aside>
     </div>
   </main>
+  <footer><span>Dwight · QQQ research</span><nav aria-label="More"><a href="/">Learn</a><a href="/setup">Connections</a><a href="https://github.com/neekitalian/dwight-schrute-bot" target="_blank" rel="noopener noreferrer">Source</a></nav></footer>
   <script>
-    (() => {
-      const $ = id => document.getElementById(id);
-      const steps = [...document.querySelectorAll('.step[data-step]')];
-      const sectionLinks = [...document.querySelectorAll('[data-go-step]')];
-      const panels = [...document.querySelectorAll('.step-panel[data-panel]')];
-      const strategyInputs = [...document.querySelectorAll('input[name="strategy"]')];
-      let step = 0;
-      function selectedStrategies() { return strategyInputs.filter(input => input.checked); }
-      function validStep(index) {
-        if (index === 0) {
-          const start = $('ticket-start').value, end = $('ticket-end').value;
-          const path = $('dataset-manifest').value.trim();
-          return Boolean($('ticket-title').value.trim() && $('ticket-title').value.trim().length <= 120
-            && start && end && start <= end && path && !path.startsWith('/') && !path.includes('://')
-            && !path.split(/[\\/]+/).includes('..'));
-        }
-        if (index === 1) return selectedStrategies().length >= 2;
-        if (index === 2) {
-          const capital = Number($('capital').value), commission = Number($('commission').value);
-          const slippage = Number($('slippage').value), stress = Number($('stress').value);
-          return Number.isFinite(capital) && capital > 0 && Number.isFinite(commission) && commission >= 0
-            && Number.isFinite(slippage) && slippage >= 0 && Number.isFinite(stress) && stress >= 1;
-        }
-        return true;
+    (()=>{
+      const $=id=>document.getElementById(id), fields=[...document.querySelectorAll('input')];
+      const pathValid=path=>Boolean(path.trim()&&!path.startsWith('/')&&!path.includes('://')&&!path.split(/[\\/]+/).includes('..'));
+      function valid(){
+        const start=$('ticket-start').value,end=$('ticket-end').value,path=$('dataset-manifest').value;
+        const capital=Number($('capital').value),commission=Number($('commission').value),slippage=Number($('slippage').value),stress=Number($('stress').value);
+        return Boolean(start&&end&&start<=end&&pathValid(path)&&Number.isFinite(capital)&&capital>0&&Number.isFinite(commission)&&commission>=0&&Number.isFinite(slippage)&&slippage>=0&&Number.isFinite(stress)&&stress>=1);
       }
-      function hint() {
-        if (!validStep(step)) return [
-          'Enter a name, date range and relative manifest path.',
-          'Select at least two strategies.',
-          'Enter valid capital and cost values.',
-          ''
-        ][step];
-        return '';
+      function update(){
+        const start=$('ticket-start').value,end=$('ticket-end').value,path=$('dataset-manifest').value.trim();
+        $('summary-window').textContent=start&&end?`${start} to ${end}`:'Choose dates';
+        $('summary-capital').textContent=`$${Number($('capital').value||0).toLocaleString()} each`;
+        $('summary-data').textContent=path||'Not set';
+        $('download').disabled=!valid();
+        $('validation').textContent=valid()?'':(start||end||path.trim()?'Choose a valid date range and workspace dataset path.':'');
       }
-      function updateReview() {
-        const start = $('ticket-start').value, end = $('ticket-end').value;
-        const windowText = start && end ? `${start} to ${end}` : 'Not set';
-        $('review-title').textContent = $('ticket-title').value.trim() || 'Untitled ticket';
-        $('review-window').textContent = windowText === 'Not set' ? 'Dates required' : windowText;
-        $('review-strategies').textContent = selectedStrategies().map(item => item.parentElement.querySelector('strong').textContent).join(', ') || 'None selected';
-        $('review-capital').textContent = `$${Number($('capital').value || 0).toLocaleString()} per strategy`;
-        $('review-data').textContent = $('dataset-manifest').value.trim() || 'Dataset path not set';
-      }
-      function paint() {
-        panels.forEach((panel, index) => panel.hidden = index !== step);
-        steps.forEach((button, index) => index === step ? button.setAttribute('aria-current', 'step') : button.removeAttribute('aria-current'));
-        const currentSection = step === 0 ? 0 : step === 3 ? 2 : 1;
-        sectionLinks.forEach((link, index) => index === currentSection ? link.setAttribute('aria-current', 'page') : link.removeAttribute('aria-current'));
-        steps.forEach(button => { button.disabled = Number(button.dataset.step) > step && !validStep(step); });
-        $('back').disabled = step === 0;
-        $('continue').hidden = step === 3;
-        $('download').hidden = step !== 3;
-        $('continue').disabled = !validStep(step);
-        $('download').disabled = !validStep(3);
-        $('validation').textContent = hint();
-        $('validation').classList.toggle('error', !validStep(step));
-        updateReview();
-      }
-      function goTo(target) {
-        if (target > step) {
-          const firstInvalid = Array.from({length:target}, (_, index) => index).find(index => !validStep(index));
-          if (firstInvalid !== undefined) {
-            step = firstInvalid;
-            paint();
-            $('validation').textContent = hint();
-            $('validation').classList.add('error');
-            return;
-          }
-        }
-        if (target < 0 || target > 3) {
-          $('validation').textContent = 'Choose one of the four ticket steps.';
-          $('validation').classList.add('error');
-          return;
-        }
-        step = target;
-        paint();
-        document.querySelector('.stepbar').scrollIntoView({behavior:'smooth', block:'start'});
-      }
-      function config() {
-        return {
-          title: $('ticket-title').value.trim(),
-          window: {start:$('ticket-start').value, end:$('ticket-end').value},
-          dataset_manifest: $('dataset-manifest').value.trim(),
-          strategies: selectedStrategies().map(input => input.value),
-          engine_config: {
-            capital: Number($('capital').value),
-            commission: Number($('commission').value),
-            slippage: Number($('slippage').value)
-          },
-          evaluation_role: 'exploratory',
-          cost_stress_multiplier: Number($('stress').value)
-        };
-      }
-      function downloadConfig() {
-        if (!validStep(3)) return;
-        const blob = new Blob([JSON.stringify(config(), null, 2) + '\n'], {type:'application/json'});
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'research-ticket.json';
-        document.body.append(anchor);
-        anchor.click();
-        anchor.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        $('ticket-edit').querySelectorAll('.step-panel, #ticket-actions, #validation').forEach(node => node.hidden = true);
-        $('done-title').textContent = $('ticket-title').value.trim();
-        $('done-summary').textContent = `${$('ticket-start').value} to ${$('ticket-end').value} · ${selectedStrategies().length} strategies · $${Number($('capital').value).toLocaleString()} each`;
-        $('done').hidden = false;
-        $('done').focus();
-      }
-      steps.forEach(button => button.addEventListener('click', () => goTo(Number(button.dataset.step))));
-      document.querySelectorAll('[data-go-step]').forEach(link => link.addEventListener('click', event => {
-        event.preventDefault();
-        goTo(Number(link.dataset.goStep));
-      }));
-      $('continue').addEventListener('click', () => { if (validStep(step)) goTo(step + 1); });
-      $('back').addEventListener('click', () => { if (step > 0) goTo(step - 1); });
-      $('download').addEventListener('click', downloadConfig);
-      document.querySelectorAll('input,select').forEach(input => {
-        input.addEventListener('input', paint);
-        input.addEventListener('change', paint);
+      function makeConfig(){return{
+        title:`QQQ comparison ${$('ticket-start').value} to ${$('ticket-end').value}`,
+        window:{start:$('ticket-start').value,end:$('ticket-end').value},
+        dataset_manifest:$('dataset-manifest').value.trim(),
+        strategies:['vwap_baseline','relative_volume_filter'],
+        engine_config:{capital:Number($('capital').value),commission:Number($('commission').value),slippage:Number($('slippage').value)},
+        evaluation_role:'exploratory',cost_stress_multiplier:Number($('stress').value)
+      }}
+      fields.forEach(input=>{input.addEventListener('input',update);input.addEventListener('change',update)});
+      $('download').addEventListener('click',()=>{
+        if(!valid())return;
+        const blob=new Blob([JSON.stringify(makeConfig(),null,2)+'\n'],{type:'application/json'}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
+        anchor.href=url;anchor.download='research-ticket.json';document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        $('result').hidden=false;$('result').focus();
       });
-      paint();
+      update();
     })();
   </script>
 </body>

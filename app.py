@@ -16,7 +16,6 @@ from dwight.connection_catalog import CAPABILITY_SCHEMA_VERSION, PLATFORMS, buil
 PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "index.html"
 RESEARCH_PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "research.html"
 SETUP_PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "setup.html"
-LEARN_PAGE = Path(__file__).resolve().parent / "deploy" / "vercel" / "learn.html"
 CAPABILITIES = {
     "mode": "public_setup",
     "account_connected": False,
@@ -59,9 +58,10 @@ def app(environ, start_response):
     if method not in ("GET", "HEAD"):
         status, body = "405 Method Not Allowed", _json({"error": "Read-only portal"})
         headers.append(("Allow", "GET, HEAD"))
-    elif path in ("/", "/research", "/setup", "/learn") and not query:
-        source = {"/": PAGE, "/research": RESEARCH_PAGE, "/setup": SETUP_PAGE,
-                  "/learn": LEARN_PAGE}[path]
+    elif path in ("/", "/learn", "/research", "/setup") and not query:
+        # /learn remains an alias for existing links; the learning ticket is home.
+        source = {"/": PAGE, "/learn": PAGE, "/research": RESEARCH_PAGE,
+                  "/setup": SETUP_PAGE}[path]
         body, policy = _page(source)
         content_type = "text/html; charset=utf-8"
         headers.append(("Content-Security-Policy", policy))

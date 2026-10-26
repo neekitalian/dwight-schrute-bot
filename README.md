@@ -6,7 +6,7 @@ Current `main` also contains a private [QQQ and QQQx market comparison](docs/tok
 
 **0.7.1 research preview:** [download the toolkit](https://github.com/neekitalian/dwight-schrute-bot/releases/tag/v0.7.1), follow the [private workspace setup](docs/quickstart.md), or explore the [public research demo](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot). No profitable model or connected account is bundled. [Product scope](docs/product.md) explains the reusable core and the remaining execution work.
 
-The public site is organized around QQQ research: the home page shows the current strategy cohort and an example report, `/research` prepares a four-step experiment ticket, and `/setup` contains platform guides. The ticket form downloads a config for local validation; it does not run a comparison online. The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, private Alpaca, Databento and Massive checks, and downloadable setup profiles. [Market data connections](docs/data-providers.md) covers local key entry and QQQ history downloads. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
+The public site opens directly to a weekly QQQ learning ticket: predict, replay the sample week and compare three approaches on the same path. `/research` is a one-page form that downloads a comparison definition for local data validation; it does not run a comparison online. `/setup` contains optional platform guides. The [Connections hub](docs/connections.md) adds public Coinbase, Binance, Kraken and Polymarket checks, private Alpaca, Databento and Massive checks, and downloadable setup profiles. [Market data connections](docs/data-providers.md) covers local key entry and QQQ history downloads. TradingView remains a manual paper workflow; IBKR and Schwab adapters are planned. Crypto checks do not enable a crypto strategy or authenticated account.
 
 Current `main` adds a private [automatic QQQ paper pilot](docs/automatic-paper-quickstart.md), with a loopback control console, continuous Alpaca paper worker, [bounded authorization](docs/paper-authorization.md), [owned-order supervision](docs/paper-supervision.md) and [read-only fill reporting](docs/paper-performance.md). These additions are fixture-tested and are not in the existing 0.7.1 archive. Reports reconcile owned gross realized P&L; fees, net returns, real broker lifecycle validation and remote activation remain pending. The public websites cannot start this worker.
 
@@ -47,11 +47,10 @@ interface is separate from the continuous shadow/paper worker.
 
 Open the public [Dwight QQQ Research Lab](https://huggingface.co/spaces/neekthekid/dwight-schrute-bot).
 
-The [Vercel web portal](docs/vercel.md) provides the QQQ research workspace, a
-weekly learning-ticket walkthrough with illustrative values, the experiment
-ticket form, and platform setup guides. It has an explicit Python entrypoint and
-needs no model training or account secrets. The continuous worker remains a
-separate private Linux deployment.
+The [Vercel web portal](docs/vercel.md) opens to the illustrative learning ticket,
+with research configuration and platform guides kept as secondary tools. It has
+an explicit Python entrypoint and needs no model training or account secrets.
+The continuous worker remains a separate private Linux deployment.
 
 An optional [FinRL research adapter](docs/finrl-research.md) lets an offline policy
 accept or skip existing long QQQ VWAP candidates while preserving the replay's

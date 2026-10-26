@@ -5,11 +5,14 @@ and the **Python** framework preset. Leave build and output directory overrides
 empty. `pyproject.toml` explicitly points to the WSGI application `app:app`.
 No account credentials are required for this public deployment.
 
-The portal's home page is the QQQ research workspace. `/learn` demonstrates a
-weekly prediction, replay and note flow using illustrative values.
-Platform setup guides are available at `/setup`, and the experiment definition
-form is at `/research`. The site links to the installable toolkit and the
-separate Hugging Face research demo.
+The home page is the weekly QQQ learning ticket. Visitors make a prediction,
+replay the sample week and compare three approaches on the same path. The values
+are illustrative. `/learn` remains an alias for the home ticket.
+
+`/research` is an optional one-page form for downloading a comparison definition
+to validate in a private workspace. The strategy cohort stays fixed; capital and
+cost assumptions are collapsed by default. `/setup` contains optional platform
+guides. Neither secondary page is required to use the learning ticket.
 
 ## Local preview
 
@@ -26,9 +29,9 @@ it is not evidence that a trading worker is running.
 
 | Route | Result |
 | --- | --- |
-| `/` | Research workspace, strategy cohort and example report |
-| `/learn` | Weekly prediction and replay learning ticket with illustrative values |
-| `/research` | Four-step comparison ticket form |
+| `/` | Weekly prediction, replay and comparison learning ticket |
+| `/learn` | Alias for the home learning ticket |
+| `/research` | One-page comparison definition form |
 | `/setup` | Platform setup guides |
 | `/api/health` | Portal version and capability boundaries |
 | `/api/platforms` | Public platform catalog |
